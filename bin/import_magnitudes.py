@@ -4,16 +4,17 @@ import importlib
 import json
 import sys
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
+from vmdb.utils import check_period, custom_formatwarning
 
 
 def import_magn(files_list, cur):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS imported_magn')
+        cur.execute('DROP TABLE IF EXISTS imported_magnitude')
 
     cur.execute('''
-        CREATE TABLE imported_magn
+        CREATE TABLE imported_magnitude
         (
             id integer NOT NULL,
             session_id integer NOT NULL,
@@ -22,11 +23,11 @@ def import_magn(files_list, cur):
             "end" timestamp NOT NULL,
             user_id integer NOT NULL,
             magn text NOT NULL,
-            CONSTRAINT imported_magn_pkey PRIMARY KEY (id)
+            CONSTRAINT imported_magnitude_pkey PRIMARY KEY (id)
         )
     ''')
     insert_stmt = '''
-        INSERT INTO imported_magn (
+        INSERT INTO imported_magnitude (
             id,
             session_id,
             shower,
@@ -59,12 +60,14 @@ def import_magn(files_list, cur):
 
                 row = dict(zip(column_names, row))
                 if '' == row['magnitude id']:
+                    warnings.warn("Observation found without an id. Discarded.")
                     continue
 
+                magn_id = row['magnitude id']
                 period_start = datetime.strptime(row['start date'], '%Y-%m-%d %H:%M:%S')
                 period_end = datetime.strptime(row['end date'], '%Y-%m-%d %H:%M:%S')
-
-                if period_end <= period_start:
+                period_start, period_end = check_period(magn_id, period_start, period_end, timedelta(1))
+                if period_start is None or period_end is None:
                     continue
 
                 magn = {}
@@ -85,7 +88,7 @@ def import_magn(files_list, cur):
                     shower = None
 
                 record = {
-                    'id': int(row['magnitude id']),
+                    'id': int(magn_id),
                     'session_id': int(row['obs session id']),
                     'shower': shower,
                     'start': row['start date'],
@@ -104,9 +107,7 @@ Syntax: import_magnitudes.py <options> files ...
 
 
 def main():
-    if len(sys.argv) < 2:
-        usage()
-        sys.exit(1)
+    config = None
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
@@ -131,6 +132,12 @@ def main():
             usage()
             sys.exit(2)
 
+    if config is None:
+        usage()
+        sys.exit(1)
+
+    warnings.formatwarning = custom_formatwarning
+    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
     db_config = config['database']
     db = importlib.import_module(db_config['module'])
     conn = db.connect(**db_config['connection'])

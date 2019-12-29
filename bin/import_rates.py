@@ -4,7 +4,8 @@ import importlib
 import json
 import sys
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
+from vmdb.utils import check_period, custom_formatwarning
 
 
 def import_rate(files_list, cur):
@@ -71,32 +72,40 @@ def import_rate(files_list, cur):
 
                 row = dict(zip(column_names, row))
                 if '' == row['rate id']:
+                    warnings.warn("Observation found without a rate id. Discarded.")
                     continue
 
+                rate_id = row['rate id']
                 shower = row['shower'].strip()
+
                 if '' == shower or 'SPO' == shower.upper():
                     shower = None
 
                 period_start = datetime.strptime(row['start date'], '%Y-%m-%d %H:%M:%S')
                 period_end = datetime.strptime(row['end date'], '%Y-%m-%d %H:%M:%S')
-
-                if period_end <= period_start:
+                period_start, period_end = check_period(rate_id, period_start, period_end, timedelta(0, 3600 * 12))
+                if period_start is None or period_end is None:
                     continue
 
                 t_eff = float(row['teff'])
                 if t_eff <= 0.0:
+                    warnings.warn(
+                        "Observation %s has an invalid observation time %s. Discarded." % (rate_id, str(t_eff)))
                     continue
 
                 f = float(row['f'])
                 if f < 1.0:
+                    warnings.warn("Observation %s has an invalid time correction %s. Discarded." % (rate_id, str(f)))
                     continue
 
                 count = int(row['number'])
                 if count < 0:
+                    warnings.warn(
+                        "Observation %s has an invalid count of %s meteors. Discarded." % (rate_id, str(count)))
                     continue
 
                 record = {
-                    'id': int(row['rate id']),
+                    'id': int(rate_id),
                     'user_id': int(row['user id']),
                     'session_id': int(row['obs session id']),
                     'start': row['start date'],
@@ -119,9 +128,7 @@ Syntax: import_rates.py <options> files ...
 
 
 def main():
-    if len(sys.argv) < 2:
-        usage()
-        sys.exit(1)
+    config = None
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
@@ -146,6 +153,12 @@ def main():
             usage()
             sys.exit(2)
 
+    if config is None:
+        usage()
+        sys.exit(1)
+
+    warnings.formatwarning = custom_formatwarning
+    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
     db_config = config['database']
     db = importlib.import_module(db_config['module'])
     conn = db.connect(**db_config['connection'])

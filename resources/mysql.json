@@ -7,5 +7,6 @@
             "sql_mode": "ANSI"
         }
     },
-    "process_count": 1
+    "warnings": "default",
+    "process_count": 10
 }

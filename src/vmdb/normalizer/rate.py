@@ -1,7 +1,23 @@
 import math
-import sys
 from astropy.time import Time as AstropyTime
 from astropy import units as u
+
+
+class Location(object):
+
+    def __init__(self, long, lat):
+        self.long = long
+        self.lat = lat
+
+    def get_radiant_alt(self, time, radiant):
+        obstime = AstropyTime(time, format='datetime', scale='utc')
+        sidtime = obstime.sidereal_time('mean', longitude=self.long * u.deg).rad
+        rad_alt = math.cos(math.radians(self.lat))
+        rad_alt *= math.cos(math.radians(radiant.dec))
+        rad_alt *= math.cos(sidtime - math.radians(radiant.ra))
+        rad_alt += math.sin(math.radians(self.lat)) * math.sin(math.radians(radiant.dec))
+
+        return math.degrees(math.asin(rad_alt))
 
 
 class Rate(object):
@@ -79,19 +95,11 @@ class Rate(object):
             if not drop_tables:
                 write_cur.execute('DELETE FROM rate WHERE id = %s', (record['id'],))
 
-            if record['user_id'] != record['observer_id']:
-                print(
-                    'WARN in ' + record['id'] + ' : user_id ' + record['user_id'] + ' != observer_id ' + record[
-                        'observer_id'],
-                    file=sys.stderr
-                )
-
             t_abs = record['end'] - record['start']
             t_mean = record['start'] + t_abs / 2
             sl_start = solarlongs.get(record['start'])
             sl_end = solarlongs.get(record['end'])
             iau_code = record['shower']
-            iau_code = None if iau_code == 'SPO' else iau_code
 
             rad_alt = None
             t_zenith = None
@@ -99,16 +107,11 @@ class Rate(object):
             radiant = shower.get_radiant(t_mean) if shower is not None else None
 
             if radiant is not None:
-                obstime = AstropyTime(t_mean, format='datetime', scale='utc')
-                loc = (math.radians(record['longitude']), math.radians(record['latitude']))
-                sidtime = obstime.sidereal_time('mean', longitude=loc[0] * u.rad).rad
-                radiant = (math.radians(radiant.ra), math.radians(radiant.dec))
-                rad_alt = math.sin(loc[1]) * math.sin(radiant[1])
-                rad_alt += math.cos(loc[1]) * math.cos(radiant[1]) * math.cos(sidtime - radiant[0])
+                loc = Location(record['longitude'], record['latitude'])
+                rad_alt = loc.get_radiant_alt(t_mean, radiant)
                 z = math.sqrt(125 + shower.v * shower.v)
-                t_zenith = record['t_eff'] * (z + shower.v * (rad_alt - 1)) / z
+                t_zenith = record['t_eff'] * (z + shower.v * (math.sin(math.radians(rad_alt)) - 1)) / z
                 t_zenith /= float(record['f'])
-                rad_alt = math.degrees(math.asin(rad_alt))
 
             rate = {
                 'shower': iau_code,

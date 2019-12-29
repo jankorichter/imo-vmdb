@@ -4,6 +4,7 @@ import importlib
 import json
 import sys
 import warnings
+from vmdb.utils import custom_formatwarning
 
 
 def import_sessions(files_list, cur):
@@ -15,7 +16,7 @@ def import_sessions(files_list, cur):
         CREATE TABLE imported_session
         (
             id integer PRIMARY KEY,
-            observer_id integer NOT NULL,
+            observer_id integer NULL,
             longitude real NOT NULL,
             latitude real NOT NULL,
             elevation real NOT NULL
@@ -50,21 +51,30 @@ def import_sessions(files_list, cur):
                     continue
 
                 row = dict(zip(column_names, row))
-                if '' == row['session id'] or '' == row['observer id']:
+                if '' == row['session id']:
+                    warnings.warn("Session found without a session id. Discarded.")
                     continue
+
+                session_id = row['session id']
+                observer_id = row['observer id']
+                if '' == observer_id:
+                    warnings.warn("Session %s has no observer id. Ignored." % (session_id,))
+                    observer_id = None
 
                 lat = float(row['latitude'])
                 if lat < -90 or lat > 90:
+                    warnings.warn("Session %s has not a valid site latitude. Discarded." % (session_id,))
                     continue
 
                 long = float(row['longitude'])
                 if long < -180 or long > 180:
+                    warnings.warn("Session %s has not a valid site longitude. Discarded." % (session_id,))
                     continue
 
                 elevation = float(row['elevation'])
                 record = {
-                    'id': int(row['session id']),
-                    'observer_id': int(row['observer id']),
+                    'id': int(session_id),
+                    'observer_id': int(observer_id) if observer_id is not None else None,
                     'latitude': lat,
                     'longitude': long,
                     'elevation': elevation
@@ -81,9 +91,7 @@ Syntax: import_sessions.py <options> files ...
 
 
 def main():
-    if len(sys.argv) < 2:
-        usage()
-        sys.exit(1)
+    config = None
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
@@ -108,6 +116,12 @@ def main():
             usage()
             sys.exit(2)
 
+    if config is None:
+        usage()
+        sys.exit(1)
+
+    warnings.formatwarning = custom_formatwarning
+    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
     db_config = config['database']
     db = importlib.import_module(db_config['module'])
     conn = db.connect(**db_config['connection'])

@@ -19,7 +19,7 @@ class Magnitude(object):
                 m."start",
                 m."end",
                 m.magn
-            FROM imported_magn as m
+            FROM imported_magnitude as m
             INNER JOIN imported_session as s ON s.id = m.session_id
             WHERE
                 m."start" < m."end" AND
@@ -81,7 +81,6 @@ class Magnitude(object):
             sl_start = solarlongs.get(record['start'])
             sl_end = solarlongs.get(record['end'])
             iau_code = record['shower']
-            iau_code = None if iau_code == 'SPO' else iau_code
 
             magn = {
                 'shower': iau_code,

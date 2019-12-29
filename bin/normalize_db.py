@@ -50,7 +50,7 @@ def create_tables(drop_tables, conn):
                 sl_start double precision NOT NULL,
                 sl_end double precision NOT NULL,
                 session_id integer NOT NULL,
-                observer_id integer NOT NULL,
+                observer_id integer NULL,
                 freq integer NOT NULL,
                 lim_mag real NOT NULL,
                 t_eff real NOT NULL,
@@ -68,7 +68,7 @@ def create_tables(drop_tables, conn):
                 sl_start double precision NOT NULL,
                 sl_end double precision NOT NULL,
                 session_id integer NOT NULL,
-                observer_id integer NOT NULL,
+                observer_id integer NULL,
                 freq integer NOT NULL,
                 mean double precision NOT NULL,
                 lim_mag real NULL,
@@ -129,7 +129,6 @@ def create_rate_magn(conn):
             INNER JOIN magnitude as m
                 ON
                    r.session_id = m.session_id AND
-                   r.observer_id = m.observer_id AND
                    (
                        r.shower = m.shower OR
                        (r.shower IS NULL AND m.shower IS NULL)
