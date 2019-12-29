@@ -3,11 +3,15 @@ import getopt
 import importlib
 import json
 import sys
+import warnings
 from datetime import datetime
 
 
 def import_rate(files_list, cur):
-    cur.execute('DROP TABLE IF EXISTS imported_rate')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute('DROP TABLE IF EXISTS imported_rate')
+
     cur.execute('''
         CREATE TABLE imported_rate
         (
@@ -42,14 +46,14 @@ def import_rate(files_list, cur):
             %(id)s,
             %(user_id)s,
             %(session_id)s,
-            %("start")s,
-            %("end")s,
+            %(start)s,
+            %(end)s,
             %(t_eff)s,
             %(f)s,
             %(lm)s,
             %(shower)s,
             %(method)s,
-            %("number")s
+            %(number)s
         )
     '''
 
@@ -95,14 +99,14 @@ def import_rate(files_list, cur):
                     'id': int(row['rate id']),
                     'user_id': int(row['user id']),
                     'session_id': int(row['obs session id']),
-                    '"start"': row['start date'],
-                    '"end"': row['end date'],
+                    'start': row['start date'],
+                    'end': row['end date'],
                     't_eff': t_eff,
                     'f': f,
                     'lm': float(row['lm']),
                     'shower': shower,
                     'method': row['method'],
-                    '"number"': count,
+                    'number': count,
                 }
                 cur.execute(insert_stmt, record)
 

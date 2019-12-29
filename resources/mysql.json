@@ -1,0 +1,11 @@
+{
+    "database": {
+        "module": "pymysql",
+        "connection": {
+            "database": "vmdb",
+            "user": "vmdb",
+            "sql_mode": "ANSI"
+        }
+    },
+    "process_count": 1
+}

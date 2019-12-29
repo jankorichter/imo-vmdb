@@ -3,11 +3,15 @@ import getopt
 import importlib
 import json
 import sys
+import warnings
 from datetime import datetime
 
 
 def import_magn(files_list, cur):
-    cur.execute('DROP TABLE IF EXISTS imported_magn')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute('DROP TABLE IF EXISTS imported_magn')
+
     cur.execute('''
         CREATE TABLE imported_magn
         (
@@ -34,8 +38,8 @@ def import_magn(files_list, cur):
             %(id)s,
             %(session_id)s,
             %(shower)s,
-            %("start")s,
-            %("end")s,
+            %(start)s,
+            %(end)s,
             %(user_id)s,
             %(magn)s
         )
@@ -84,8 +88,8 @@ def import_magn(files_list, cur):
                     'id': int(row['magnitude id']),
                     'session_id': int(row['obs session id']),
                     'shower': shower,
-                    '"start"': row['start date'],
-                    '"end"': row['end date'],
+                    'start': row['start date'],
+                    'end': row['end date'],
                     'user_id': int(row['user id']),
                     'magn': magn
                 }

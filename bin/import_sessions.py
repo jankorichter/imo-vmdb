@@ -3,10 +3,14 @@ import getopt
 import importlib
 import json
 import sys
+import warnings
 
 
 def import_sessions(files_list, cur):
-    cur.execute('DROP TABLE IF EXISTS imported_session')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute('DROP TABLE IF EXISTS imported_session')
+
     cur.execute('''
         CREATE TABLE imported_session
         (

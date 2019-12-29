@@ -1,5 +1,6 @@
 import datetime
 import numpy as np
+import warnings
 from astropy.coordinates import solar_system_ephemeris, get_body, EarthLocation
 from astropy.coordinates import BarycentricTrueEcliptic
 from astropy.time import Time as AstropyTime
@@ -50,12 +51,14 @@ class Solarlong(object):
 
     def load(self, conn):
         cur = conn.cursor()
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS imported_solarlong (
-                date DATE NOT NULL,
-                sl double precision NOT NULL,
-                CONSTRAINT imported_solarlong_pkey PRIMARY KEY (date)
-            )''')
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS imported_solarlong (
+                    date DATE NOT NULL,
+                    sl double precision NOT NULL,
+                    CONSTRAINT imported_solarlong_pkey PRIMARY KEY (date)
+                )''')
 
         cur.execute('''SELECT date, sl FROM imported_solarlong''')
         column_names = [desc[0] for desc in cur.description]

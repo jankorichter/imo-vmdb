@@ -1,7 +1,8 @@
-from datetime import datetime, timedelta
 import getopt
 import json
 import sys
+import warnings
+from datetime import datetime, timedelta
 from vmdb.model.solarlong import Solarlong
 from vmdb.utils import connection_decorator
 
@@ -9,13 +10,16 @@ from vmdb.utils import connection_decorator
 @connection_decorator
 def truncate_table(conn):
     cur = conn.cursor()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute('DROP TABLE IF EXISTS imported_solarlong')
+
     cur.execute('''
-        CREATE TABLE IF NOT EXISTS imported_solarlong (
+        CREATE TABLE imported_solarlong (
             date DATE NOT NULL,
             sl double precision NOT NULL,
             CONSTRAINT imported_solarlong_pkey PRIMARY KEY (date)
     )''')
-    cur.execute('TRUNCATE imported_solarlong')
     cur.close()
 
 
@@ -59,7 +63,7 @@ def import_solarlongs(start_date, end_date, conn):
         for z in zip(time_list, sl_list):
             record = {
                 'date': z[0].strftime("%Y-%m-%d"),
-                'sl': z[1],
+                'sl': float(z[1]),
             }
             cur.execute(insert_stmt, record)
 

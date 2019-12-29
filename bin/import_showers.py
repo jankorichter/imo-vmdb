@@ -3,6 +3,7 @@ import getopt
 import importlib
 import json
 import sys
+import warnings
 
 
 def create_date(date_str):
@@ -48,11 +49,14 @@ def create_date(date_str):
 
 
 def import_showers(shower_path, cur):
-    cur.execute('DROP TABLE IF EXISTS shower')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute('DROP TABLE IF EXISTS shower')
+
     cur.execute('''
         CREATE TABLE shower (
             id integer NOT NULL,
-            iau_code text NOT NULL,
+            iau_code char(3) NOT NULL,
             name text NOT NULL,
             start_month integer NOT NULL,
             start_day integer NOT NULL,
@@ -96,7 +100,7 @@ def import_showers(shower_path, cur):
             %(peak_month)s,
             %(peak_day)s,
             %(ra)s,
-            %("dec")s,
+            %(dec)s,
             %(v)s,
             %(r)s,
             %(zhr)s
@@ -140,7 +144,7 @@ def import_showers(shower_path, cur):
                 'peak_month': peak[0],
                 'peak_day': peak[1],
                 'ra': ra,
-                '"dec"': dec,
+                'dec': dec,
                 'v': float(v) if '' != v else None,
                 'r': float(r) if '' != r else None,
                 'zhr': zhr if '' != zhr else None,
@@ -150,11 +154,14 @@ def import_showers(shower_path, cur):
 
 
 def import_radiants(radiants_path, cur):
-    cur.execute('DROP TABLE IF EXISTS imported_radiant')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute('DROP TABLE IF EXISTS imported_radiant')
+
     cur.execute('''
         CREATE TABLE imported_radiant
         (
-            shower text NOT NULL,
+            shower char(3) NOT NULL,
             "month" integer NOT NULL,
             "day" integer NOT NULL,
             ra real NOT NULL,
@@ -166,9 +173,9 @@ def import_radiants(radiants_path, cur):
         INSERT INTO imported_radiant (
             shower,
             ra,
-            dec,
-            month,
-            day
+            "dec",
+            "month",
+            "day"
         ) VALUES (
             %(shower)s,
             %(ra)s,
