@@ -98,10 +98,7 @@ class Record(object):
 
         return True
 
-    def __add__(self, other):
-        if self != other:
-            return None
-
+    def merge(self, other):
         have_same_period = self.start == other.start and self.end == other.end
         if other in self and not have_same_period:
             # we discard here a probably already aggregated observation
@@ -217,9 +214,8 @@ class Normalizer(object):
                 prev_record = record
                 continue
 
-            merged_record = prev_record + record
-            if merged_record is not None:
-                prev_record = merged_record
+            if prev_record == record:
+                prev_record = prev_record.merge(record)
                 continue
 
             prev_record.write(write_cur, solarlongs)
