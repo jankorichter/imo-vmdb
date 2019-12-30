@@ -6,9 +6,9 @@ import warnings
 from vmdb.model.radiant import Storage as RadiantStorage
 from vmdb.model.shower import Storage as ShowerStorage
 from vmdb.model.solarlong import Solarlong
-from vmdb.normalizer.rate import Rate
-from vmdb.normalizer.magnitude import Magnitude
-from vmdb.utils import connection_decorator
+from vmdb.normalizer.rate import Normalizer as RateNormalizer
+from vmdb.normalizer.magnitude import Normalizer as MagnitudeNormalizer
+from vmdb.utils import connection_decorator, custom_formatwarning
 
 
 class Normalizer(object):
@@ -25,8 +25,8 @@ class Normalizer(object):
         radiants = radiant_storage.load()
         shower_storage = ShowerStorage(conn)
         showers = shower_storage.load(radiants)
-        Rate(conn, solarlongs, showers)(self._drop_tables, self._process_count, self._mod)
-        Magnitude(conn, solarlongs)(self._drop_tables, self._process_count, self._mod)
+        RateNormalizer(conn, solarlongs, showers)(self._drop_tables, self._process_count, self._mod)
+        MagnitudeNormalizer(conn, solarlongs)(self._drop_tables, self._process_count, self._mod)
 
 
 @connection_decorator
@@ -38,7 +38,9 @@ def create_tables(drop_tables, conn):
         if drop_tables:
             cur.execute('DROP TABLE IF EXISTS rate_magnitude CASCADE')
             cur.execute('DROP TABLE IF EXISTS magnitude_detail CASCADE')
+            cur.execute('DROP TABLE IF EXISTS magnitude_ref CASCADE')
             cur.execute('DROP TABLE IF EXISTS magnitude CASCADE')
+            cur.execute('DROP TABLE IF EXISTS rate_ref CASCADE')
             cur.execute('DROP TABLE IF EXISTS rate CASCADE')
 
         cur.execute('''
@@ -60,6 +62,16 @@ def create_tables(drop_tables, conn):
                 CONSTRAINT rate_pkey PRIMARY KEY (id)
             )''')
         cur.execute('''
+            CREATE TABLE IF NOT EXISTS rate_ref (
+                rate_id integer NOT NULL,
+                id integer NOT NULL,
+                CONSTRAINT rate_ref_pkey PRIMARY KEY (rate_id),
+                CONSTRAINT rate_ref_fk FOREIGN KEY (id)
+                    REFERENCES rate(id) MATCH SIMPLE
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
+            )''')
+        cur.execute('''
             CREATE TABLE IF NOT EXISTS magnitude (
                 id integer NOT NULL,
                 shower char(5) NULL,
@@ -73,6 +85,16 @@ def create_tables(drop_tables, conn):
                 mean double precision NOT NULL,
                 lim_mag real NULL,
                 CONSTRAINT magnitude_pkey PRIMARY KEY (id)
+            )''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS magnitude_ref (
+                magn_id integer NOT NULL,
+                id integer NOT NULL,
+                CONSTRAINT magnitude_ref_pkey PRIMARY KEY (magn_id),
+                CONSTRAINT magnitude_ref_fk FOREIGN KEY (id)
+                    REFERENCES magnitude(id) MATCH SIMPLE
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
             )''')
         cur.execute('''
             CREATE TABLE IF NOT EXISTS magnitude_detail (
@@ -230,8 +252,14 @@ def create_rate_magn(conn):
     cur.close()
 
 
-def process(config, drop_tables, mod):
+def process_init(config):
+    warnings.formatwarning = custom_formatwarning
+    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
     sys.modules['vmdb.utils'].config = config
+
+
+def process(config, drop_tables, mod):
+    process_init(config)
     obj = Normalizer(drop_tables, int(config['process_count']), mod)
     obj.run()
 
@@ -245,9 +273,7 @@ Syntax: normalize.py <options>
 
 
 def main():
-    if len(sys.argv) < 2:
-        usage()
-        sys.exit(1)
+    config = None
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hdc:", ['help', 'delete', 'config'])
@@ -275,7 +301,11 @@ def main():
             usage()
             sys.exit(2)
 
-    sys.modules['vmdb.utils'].config = config
+    if config is None:
+        usage()
+        sys.exit(1)
+
+    process_init(config)
     create_tables(drop_tables)
 
     process_count = int(config['process_count'])

@@ -26,6 +26,7 @@ def import_magn(files_list, cur):
             CONSTRAINT imported_magnitude_pkey PRIMARY KEY (id)
         )
     ''')
+
     insert_stmt = '''
         INSERT INTO imported_magnitude (
             id,
@@ -81,6 +82,10 @@ def import_magn(files_list, cur):
                     if m > 0.0:
                         magn[str(column)] = m
 
+                freq = int(sum(m for m in magn.values()))
+                if 0 == freq:
+                    continue
+
                 magn = json.dumps(magn)
 
                 shower = row['shower'].strip()
@@ -97,6 +102,16 @@ def import_magn(files_list, cur):
                     'magn': magn
                 }
                 cur.execute(insert_stmt, record)
+
+    cur.execute('''
+        CREATE INDEX imported_magnitude_order_key ON
+            imported_magnitude(
+                session_id,
+                shower,
+                "start",
+                "end"
+            )
+    ''')
 
 
 def usage():

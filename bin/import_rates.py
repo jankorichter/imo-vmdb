@@ -119,6 +119,16 @@ def import_rate(files_list, cur):
                 }
                 cur.execute(insert_stmt, record)
 
+    cur.execute('''
+        CREATE INDEX imported_rate_order_key ON
+            imported_rate(
+                session_id,
+                shower,
+                "start",
+                "end"
+            )
+    ''')
+
 
 def usage():
     print('''Imports VMDB rates.

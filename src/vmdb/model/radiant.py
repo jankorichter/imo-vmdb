@@ -1,8 +1,30 @@
+import math
+from astropy.time import Time as AstropyTime
+from astropy import units as u
+
+
+class Location(object):
+
+    def __init__(self, long, lat):
+        self.long = long
+        self.lat = lat
+
+
 class Position(object):
 
     def __init__(self, ra, dec):
         self.ra = ra
         self.dec = dec
+
+    def get_altitude(self, loc, time):
+        obstime = AstropyTime(time, format='datetime', scale='utc')
+        sidtime = obstime.sidereal_time('mean', longitude=loc.long * u.deg).rad
+        rad_alt = math.cos(math.radians(loc.lat))
+        rad_alt *= math.cos(math.radians(self.dec))
+        rad_alt *= math.cos(sidtime - math.radians(self.ra))
+        rad_alt += math.sin(math.radians(loc.lat)) * math.sin(math.radians(self.dec))
+
+        return math.degrees(math.asin(rad_alt))
 
 
 class Drift(object):
