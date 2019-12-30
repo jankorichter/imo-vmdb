@@ -56,7 +56,7 @@ def import_showers(shower_path, cur):
     cur.execute('''
         CREATE TABLE shower (
             id integer NOT NULL,
-            iau_code char(3) NOT NULL,
+            iau_code varchar(6) NOT NULL,
             name text NOT NULL,
             start_month integer NOT NULL,
             start_day integer NOT NULL,

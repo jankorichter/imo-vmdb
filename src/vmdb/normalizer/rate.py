@@ -1,6 +1,6 @@
 import math
 import warnings
-from vmdb.model.radiant import Location
+from vmdb.model.location import Location
 
 
 class Record(object):
@@ -174,7 +174,7 @@ class Normalizer(object):
         self._solarlongs = solarlongs
         self._showers = showers
 
-    def __call__(self, drop_tables, process_count, mod):
+    def __call__(self, drop_tables, divisor, mod):
         solarlongs = self._solarlongs
         showers = self._showers
         cur = self._conn.cursor()
@@ -203,7 +203,7 @@ class Normalizer(object):
                 r.shower ASC,
                 r."start" ASC,
                 r."end" DESC
-        ''', (process_count, mod))
+        ''', (divisor, mod))
 
         column_names = [desc[0] for desc in cur.description]
         write_cur = self._conn.cursor()

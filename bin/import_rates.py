@@ -18,7 +18,7 @@ def import_rate(files_list, cur):
         (
             id integer NOT NULL,
             session_id integer NOT NULL,
-            shower text NULL,
+            shower varchar(6) NULL,
             "start" timestamp NOT NULL,
             "end" timestamp NOT NULL,
             user_id integer NOT NULL,

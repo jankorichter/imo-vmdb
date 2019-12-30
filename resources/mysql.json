@@ -4,9 +4,10 @@
         "connection": {
             "database": "vmdb",
             "user": "vmdb",
-            "sql_mode": "ANSI"
+            "sql_mode": "ANSI",
+            "init_command": "SET innodb_lock_wait_timeout=3600"
         }
     },
-    "warnings": "default",
+    "warnings": "ignore",
     "process_count": 10
 }

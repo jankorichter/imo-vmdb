@@ -177,7 +177,7 @@ class Normalizer(object):
         self._conn = conn
         self._solarlongs = solarlongs
 
-    def __call__(self, drop_tables, process_count, mod):
+    def __call__(self, drop_tables, divisor, mod):
         solarlongs = self._solarlongs
         cur = self._conn.cursor()
         cur.execute('''
@@ -198,7 +198,7 @@ class Normalizer(object):
                 m.shower ASC,
                 m."start" ASC,
                 m."end" DESC
-        ''', (process_count, mod))
+        ''', (divisor, mod))
 
         column_names = [desc[0] for desc in cur.description]
         write_cur = self._conn.cursor()

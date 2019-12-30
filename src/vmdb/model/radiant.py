@@ -3,13 +3,6 @@ from astropy.time import Time as AstropyTime
 from astropy import units as u
 
 
-class Location(object):
-
-    def __init__(self, long, lat):
-        self.long = long
-        self.lat = lat
-
-
 class Position(object):
 
     def __init__(self, ra, dec):

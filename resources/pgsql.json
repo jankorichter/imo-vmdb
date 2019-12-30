@@ -6,6 +6,6 @@
             "user": "vmdb"
         }
     },
-    "warnings": "always",
+    "warnings": "ignore",
     "process_count": 10
 }
