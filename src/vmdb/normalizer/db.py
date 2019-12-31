@@ -11,9 +11,7 @@ def create_tables(drop_tables, conn):
         if drop_tables:
             cur.execute('DROP TABLE IF EXISTS rate_magnitude CASCADE')
             cur.execute('DROP TABLE IF EXISTS magnitude_detail CASCADE')
-            cur.execute('DROP TABLE IF EXISTS magnitude_ref CASCADE')
             cur.execute('DROP TABLE IF EXISTS magnitude CASCADE')
-            cur.execute('DROP TABLE IF EXISTS rate_ref CASCADE')
             cur.execute('DROP TABLE IF EXISTS rate CASCADE')
 
         cur.execute('''
@@ -39,20 +37,6 @@ def create_tables(drop_tables, conn):
             cur.execute('CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)')
 
         cur.execute('''
-            CREATE TABLE IF NOT EXISTS rate_ref (
-                rate_id integer NOT NULL,
-                id integer NOT NULL,
-                CONSTRAINT rate_ref_pkey PRIMARY KEY (rate_id),
-                CONSTRAINT rate_ref_fk FOREIGN KEY (id)
-                    REFERENCES rate(id) MATCH SIMPLE
-                    ON UPDATE CASCADE
-                    ON DELETE CASCADE
-            )''')
-
-        if drop_tables:
-            cur.execute('CREATE INDEX fki_rate_ref_fk ON rate_ref(id)')
-
-        cur.execute('''
             CREATE TABLE IF NOT EXISTS magnitude (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -70,20 +54,6 @@ def create_tables(drop_tables, conn):
 
         if drop_tables:
             cur.execute('CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)')
-
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS magnitude_ref (
-                magn_id integer NOT NULL,
-                id integer NOT NULL,
-                CONSTRAINT magnitude_ref_pkey PRIMARY KEY (magn_id),
-                CONSTRAINT magnitude_ref_fk FOREIGN KEY (id)
-                    REFERENCES magnitude(id) MATCH SIMPLE
-                    ON UPDATE CASCADE
-                    ON DELETE CASCADE
-            )''')
-
-        if drop_tables:
-            cur.execute('CREATE INDEX fki_magnitude_ref_fk ON magnitude_ref(id)')
 
         cur.execute('''
             CREATE TABLE IF NOT EXISTS magnitude_detail (

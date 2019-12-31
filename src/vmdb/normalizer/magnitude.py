@@ -29,16 +29,6 @@ class Record(object):
         )
     '''
 
-    _insert_ref_stmt = '''
-        INSERT INTO magnitude_ref (
-            magn_id,
-            id
-        ) VALUES (
-            %(magn_id)s,
-            %(id)s
-        )
-    '''
-
     _insert_detail_stmt = '''
         INSERT INTO magnitude_detail (
             id,
@@ -52,8 +42,7 @@ class Record(object):
     '''
 
     def __init__(self, record):
-        self.is_valid = True
-        self.ids = (record['id'],)
+        self.id = record['id']
         self.shower = record['shower']
         self.session_id = record['session_id']
         self.user_id = record['user_id']
@@ -80,58 +69,16 @@ class Record(object):
         return False
 
     def __contains__(self, other):
-        if not self.is_valid or not other.is_valid:
-            return False
-
         if self != other:
             return False
 
         if self.start > other.start or self.end < other.end:
             return False
 
-        for m, n in other.magn.items():
-            if m not in self.magn:
-                return False
-
-            if self.magn[m] < n:
-                return False
-
         return True
 
-    def merge(self, other):
-        have_same_period = self.start == other.start and self.end == other.end
-        if other in self and not have_same_period:
-            # we discard here a probably already aggregated observation
-            ids = ','.join(sorted(str(i) for i in self.ids))
-            warnings.warn("Probably already aggregated magnitude observations (%s) found. Discarded." % (ids,))
-
-            return other
-
-        self.is_valid = self.is_valid and other.is_valid and have_same_period
-        self.ids = self.ids + other.ids
-
-        if not self.is_valid:
-            self.start = min((self.start, other.start,))
-            self.end = max((self.end, other.end,))
-
-            return self
-
-        for m, n in other.magn.items():
-            if m not in self.magn:
-                self.magn[m] = 0
-
-            self.magn[m] += n
-
-        return self
-
     def write(self, cur, solarlongs):
-        if not self.is_valid:
-            ids = ','.join(sorted(str(i) for i in self.ids))
-            warnings.warn("Overlapping magnitude observations found (%s). Discarded." % (ids,))
-
-            return
-
-        mid = min(self.ids)
+        mid = self.id
         freq = int(sum(m for m in self.magn.values()))
         magn_items = self.magn.items()
         mean = sum(float(m) * float(n) for m, n in magn_items) / freq
@@ -151,13 +98,6 @@ class Record(object):
             'mean': mean,
         }
         cur.execute(self._insert_stmt, magn)
-
-        for magn_id in self.ids:
-            ref = {
-                'magn_id': magn_id,
-                'id': mid,
-            }
-            cur.execute(self._insert_ref_stmt, ref)
 
         for m, n in magn_items:
             magn = {
@@ -202,27 +142,29 @@ class Normalizer(object):
         prev_record = None
         for _record in cur:
             record = Record(dict(zip(column_names, _record)))
-
             if not drop_tables:
-                write_cur.execute('''
-                    DELETE FROM magnitude WHERE id IN (
-                        SELECT id FROM magnitude_ref WHERE magn_id = %s
-                    )
-                ''', (record.ids[0],))
+                write_cur.execute('DELETE FROM magnitude WHERE id = %s', (record.id,))
 
             if prev_record is None:
                 prev_record = record
                 continue
 
+            if record in prev_record:
+                msg = "Magnitude observation %s contains observation %s. Observation %s discarded."
+                warnings.warn(msg % (prev_record.id, record.id, prev_record.id))
+                prev_record = record
+                continue
+
             if prev_record == record:
-                prev_record = prev_record.merge(record)
+                msg = "Magnitude observation %s overlaps observation %s. Observation %s discarded."
+                warnings.warn(msg % (prev_record.id, record.id, record.id))
                 continue
 
             prev_record.write(write_cur, solarlongs)
             prev_record = record
 
         if prev_record is not None:
-            prev_record.write(write_cur, solarlongs)
+            prev_record.write(write_cur, solarlongs,)
 
         cur.close()
         write_cur.close()

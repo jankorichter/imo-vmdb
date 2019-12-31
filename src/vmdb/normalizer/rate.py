@@ -38,19 +38,8 @@ class Record(object):
         )
     '''
 
-    _insert_ref_stmt = '''
-        INSERT INTO rate_ref (
-            rate_id,
-            id
-        ) VALUES (
-            %(rate_id)s,
-            %(id)s
-        )
-    '''
-
     def __init__(self, record):
-        self.is_valid = True
-        self.ids = (record['id'],)
+        self.id = record['id']
         self.shower = record['shower']
         self.session_id = record['session_id']
         self.user_id = record['user_id']
@@ -81,45 +70,15 @@ class Record(object):
         return False
 
     def __contains__(self, other):
-        if not self.is_valid or not other.is_valid:
-            return False
-
         if self != other:
             return False
 
         if self.start > other.start or self.end < other.end:
             return False
 
-        return self.freq == other.freq
-
-    def merge(self, other):
-        have_same_period = self.start == other.start and self.end == other.end
-        if other in self and not have_same_period:
-            # we discard here a probably already aggregated observation
-            ids = ','.join(sorted(str(i) for i in self.ids))
-            warnings.warn("Probably already aggregated rate observations (%s) found. Discarded." % (ids,))
-
-            return other
-
-        self.is_valid = self.is_valid and other.is_valid and have_same_period
-        self.ids = self.ids + other.ids
-
-        if not self.is_valid:
-            self.start = min((self.start, other.start,))
-            self.end = max((self.end, other.end,))
-
-            return self
-
-        return self
+        return True
 
     def write(self, cur, solarlongs, showers):
-        if not self.is_valid:
-            ids = ','.join(sorted(str(i) for i in self.ids))
-            warnings.warn("Overlapping rate observations found (%s). Discarded." % (ids,))
-
-            return
-
-        rid = min(self.ids)
         t_abs = self.end - self.start
         t_mean = self.start + t_abs / 2
         sl_start = solarlongs.get(self.start)
@@ -138,7 +97,7 @@ class Record(object):
             t_zenith /= float(self.f)
 
         rate = {
-            'id': rid,
+            'id': self.id,
             'shower': iau_code,
             'period_start': self.start,
             'period_end': self.end,
@@ -155,13 +114,6 @@ class Record(object):
         }
 
         cur.execute(self.insert_stmt, rate)
-
-        for rate_id in self.ids:
-            ref = {
-                'rate_id': rate_id,
-                'id': rid,
-            }
-            cur.execute(self._insert_ref_stmt, ref)
 
 
 class Normalizer(object):
@@ -208,18 +160,21 @@ class Normalizer(object):
         for _record in cur:
             record = Record(dict(zip(column_names, _record)))
             if not drop_tables:
-                write_cur.execute('''
-                    DELETE FROM rate WHERE id IN (
-                        SELECT id FROM rate_ref WHERE rate_id = %s
-                    )
-                ''', (record.ids[0],))
+                write_cur.execute('DELETE FROM rate WHERE id = %s', (record.id,))
 
             if prev_record is None:
                 prev_record = record
                 continue
 
+            if record in prev_record:
+                msg = "Rate observation %s contains observation %s. Observation %s discarded."
+                warnings.warn(msg % (prev_record.id, record.id, prev_record.id))
+                prev_record = record
+                continue
+
             if prev_record == record:
-                prev_record = prev_record.merge(record)
+                msg = "Rate observation %s overlaps observation %s. Observation %s discarded."
+                warnings.warn(msg % (prev_record.id, record.id, record.id))
                 continue
 
             prev_record.write(write_cur, solarlongs, showers)
