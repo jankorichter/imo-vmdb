@@ -43,7 +43,6 @@ def import_sessions(files_list, cur):
         with open(session_path, mode='r', encoding='utf-8-sig') as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=';')
             is_head = True
-
             for row in csv_reader:
                 if is_head:
                     is_head = False
@@ -61,9 +60,17 @@ def import_sessions(files_list, cur):
                     warnings.warn("Session %s has no observer id. Ignored." % (session_id,))
                     observer_id = None
 
+                if '' == row['latitude']:
+                    warnings.warn("Session found without a site latitude. Discarded.")
+                    continue
+
                 lat = float(row['latitude'])
                 if lat < -90 or lat > 90:
                     warnings.warn("Session %s has not a valid site latitude. Discarded." % (session_id,))
+                    continue
+
+                if '' == row['longitude']:
+                    warnings.warn("Session found without a site longitude. Discarded.")
                     continue
 
                 long = float(row['longitude'])

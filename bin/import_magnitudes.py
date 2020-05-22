@@ -60,8 +60,16 @@ def import_magn(files_list, cur):
                     continue
 
                 row = dict(zip(column_names, row))
+                if '' == row['obs session id']:
+                    warnings.warn("Observation found without a obs session id. Discarded.")
+                    continue
+
                 if '' == row['magnitude id']:
                     warnings.warn("Observation found without an id. Discarded.")
+                    continue
+
+                if '' == row['user id']:
+                    warnings.warn("Observation found without a user id. Discarded.")
                     continue
 
                 magn_id = row['magnitude id']

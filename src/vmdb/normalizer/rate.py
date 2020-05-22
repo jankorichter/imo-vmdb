@@ -18,8 +18,8 @@ class Record(object):
             lim_mag,
             t_eff,
             f,
-            t_zenith,
-            rad_alt
+            rad_alt,
+            rad_corr
         ) VALUES (
             %(id)s,
             %(shower)s,
@@ -33,8 +33,8 @@ class Record(object):
             %(lim_mag)s,
             %(t_eff)s,
             %(f)s,
-            %(t_zenith)s,
-            %(rad_alt)s
+            %(rad_alt)s,
+            %(rad_corr)s
         )
     '''
 
@@ -86,15 +86,14 @@ class Record(object):
         iau_code = self.shower
 
         rad_alt = None
-        t_zenith = None
+        rad_corr = None
         shower = showers[iau_code] if iau_code in showers else None
         radiant = shower.get_radiant(t_mean) if shower is not None else None
 
         if radiant is not None:
             rad_alt = radiant.get_altitude(self.loc, t_mean)
             z = math.sqrt(125 + shower.v * shower.v)
-            t_zenith = self.t_eff * (z + shower.v * (math.sin(math.radians(rad_alt)) - 1)) / z
-            t_zenith /= float(self.f)
+            rad_corr = z / (z + shower.v * (math.sin(math.radians(rad_alt)) - 1))
 
         rate = {
             'id': self.id,
@@ -109,8 +108,8 @@ class Record(object):
             'lim_mag': self.lm,
             't_eff': self.t_eff,
             'f': self.f,
-            't_zenith': t_zenith,
-            'rad_alt': rad_alt
+            'rad_alt': rad_alt,
+            'rad_corr': rad_corr
         }
 
         cur.execute(self.insert_stmt, rate)

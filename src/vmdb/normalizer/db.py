@@ -28,8 +28,8 @@ def create_tables(drop_tables, conn):
                 lim_mag real NOT NULL,
                 t_eff real NOT NULL,
                 f real NOT NULL,
-                t_zenith double precision NULL,
                 rad_alt double precision NULL,
+                rad_corr double precision NULL,
                 CONSTRAINT rate_pkey PRIMARY KEY (id)
             )''')
 
@@ -236,8 +236,8 @@ def create_r_views(conn):
                     r.lim_mag as "magn.limit",
                     r.t_eff as "t.eff",
                     r.f as "f",
-                    r.t_zenith as "t.zenith",
                     r.rad_alt as "radiant.alt",
+                    r.rad_corr as "radiant.corr",
                     rm.magn_id as "magn.id"
                 FROM rate as r
                 LEFT JOIN rate_magnitude rm ON
