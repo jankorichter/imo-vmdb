@@ -1,10 +1,17 @@
 import math
 import warnings
-from vmdb.model.location import Location
+from datetime import datetime
+
+
+class Location(object):
+
+    def __init__(self, long, lat):
+        self.long = long
+        self.lat = lat
 
 
 class Record(object):
-    insert_stmt = '''
+    _insert_stmt = '''
         INSERT INTO rate (
             id,
             shower,
@@ -43,13 +50,26 @@ class Record(object):
         self.shower = record['shower']
         self.session_id = record['session_id']
         self.user_id = record['user_id']
-        self.start = record['start']
-        self.end = record['end']
+
+        if isinstance(record['start'], datetime):
+            self.start = record['start']
+        else:
+            self.start = datetime.strptime(record['start'], '%Y-%m-%d %H:%M:%S')
+
+        if isinstance(record['end'], datetime):
+            self.end = record['end']
+        else:
+            self.end = datetime.strptime(record['end'], '%Y-%m-%d %H:%M:%S')
+
         self.freq = record['freq']
         self.lm = record['lm']
         self.t_eff = record['t_eff']
         self.f = record['f']
         self.loc = Location(record['longitude'], record['latitude'])
+
+    @classmethod
+    def init_stmt(cls, db_conn):
+        cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
 
     def __eq__(self, other):
         return not self != other
@@ -112,21 +132,22 @@ class Record(object):
             'rad_corr': rad_corr
         }
 
-        cur.execute(self.insert_stmt, rate)
+        cur.execute(self._insert_stmt, rate)
 
 
 class Normalizer(object):
 
-    def __init__(self, conn, solarlongs, showers):
-        self._conn = conn
+    def __init__(self, db_conn, solarlongs, showers):
+        self._db_conn = db_conn
         self._solarlongs = solarlongs
         self._showers = showers
+        Record.init_stmt(db_conn)
 
     def __call__(self, drop_tables, divisor, mod):
         solarlongs = self._solarlongs
         showers = self._showers
-        cur = self._conn.cursor()
-        cur.execute('''
+        cur = self._db_conn.cursor()
+        cur.execute(self._db_conn.convert_stmt('''
             SELECT
                 r.id,
                 s.observer_id,
@@ -143,23 +164,24 @@ class Normalizer(object):
                 r.lm,
                 r."number" AS freq
             FROM imported_rate as r
-            INNER JOIN imported_session as s ON s.id = r.session_id
+            INNER JOIN obs_session as s ON s.id = r.session_id
             WHERE
-                r.session_id %% %s = %s
+                r.session_id %% %(divisor)s = %(mod)s
             ORDER BY
                 r.session_id ASC,
                 r.shower ASC,
                 r."start" ASC,
                 r."end" DESC
-        ''', (divisor, mod))
+        '''), {'divisor': divisor, 'mod': mod})
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = self._conn.cursor()
+        write_cur = self._db_conn.cursor()
         prev_record = None
+        delete_stmt = self._db_conn.convert_stmt('DELETE FROM rate WHERE id = %(id)s')
         for _record in cur:
             record = Record(dict(zip(column_names, _record)))
             if not drop_tables:
-                write_cur.execute('DELETE FROM rate WHERE id = %s', (record.id,))
+                write_cur.execute(delete_stmt, {'id': record.id})
 
             if prev_record is None:
                 prev_record = record

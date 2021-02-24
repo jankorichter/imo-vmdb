@@ -1,19 +1,20 @@
 import csv
 import getopt
-import importlib
 import json
 import sys
 import warnings
 from datetime import datetime, timedelta
-from vmdb.utils import check_period, custom_formatwarning
+from vmdb.utils import DBAdapter, check_period, custom_formatwarning
 
 
-def import_magn(files_list, cur):
+def import_magn(db_conn, files_list):
+    
+    cur = db_conn.cursor()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS imported_magnitude')
+        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_magnitude'))
 
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('''
         CREATE TABLE imported_magnitude
         (
             id integer NOT NULL,
@@ -25,9 +26,9 @@ def import_magn(files_list, cur):
             magn text NOT NULL,
             CONSTRAINT imported_magnitude_pkey PRIMARY KEY (id)
         )
-    ''')
+    '''))
 
-    insert_stmt = '''
+    insert_stmt = db_conn.convert_stmt('''
         INSERT INTO imported_magnitude (
             id,
             session_id,
@@ -45,7 +46,7 @@ def import_magn(files_list, cur):
             %(user_id)s,
             %(magn)s
         )
-    '''
+    ''')
 
     for magn_path in files_list:
 
@@ -111,7 +112,7 @@ def import_magn(files_list, cur):
                 }
                 cur.execute(insert_stmt, record)
 
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('''
         CREATE INDEX imported_magnitude_order_key ON
             imported_magnitude(
                 session_id,
@@ -119,21 +120,22 @@ def import_magn(files_list, cur):
                 "start",
                 "end"
             )
-    ''')
+    '''))
 
 
 def usage():
-    print('''Imports VMDB magnitudes.
-Syntax: import_magnitudes.py <options> files ...
+    print('''Imports magnitude observations.
+Syntax: import_magnitudes <options> files ...
         -c, --config ... path to config file
         -h, --help   ... prints this help''')
 
 
-def main():
+def main(command_args):
+
     config = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
+        opts, args = getopt.getopt(command_args, "hc:", ['help', 'config'])
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -160,16 +162,8 @@ def main():
         sys.exit(1)
 
     warnings.formatwarning = custom_formatwarning
-    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
-    db_config = config['database']
-    db = importlib.import_module(db_config['module'])
-    conn = db.connect(**db_config['connection'])
-    cur = conn.cursor()
-    import_magn(args, cur)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-if __name__ == "__main__":
-    main()
+    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')    
+    db_conn = DBAdapter(config['database'])
+    import_magn(db_conn, args)
+    db_conn.commit()
+    db_conn.close()

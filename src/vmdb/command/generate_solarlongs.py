@@ -4,23 +4,7 @@ import sys
 import warnings
 from datetime import datetime, timedelta
 from vmdb.model.solarlong import Solarlong
-from vmdb.utils import connection_decorator
-
-
-@connection_decorator
-def truncate_table(conn):
-    cur = conn.cursor()
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS imported_solarlong')
-
-    cur.execute('''
-        CREATE TABLE imported_solarlong (
-            date DATE NOT NULL,
-            sl double precision NOT NULL,
-            CONSTRAINT imported_solarlong_pkey PRIMARY KEY (date)
-    )''')
-    cur.close()
+from vmdb.utils import DBAdapter
 
 
 def date_generator(start_date, end_date, diff):
@@ -42,20 +26,31 @@ def date_generator(start_date, end_date, diff):
         yield data
 
 
-@connection_decorator
-def import_solarlongs(start_date, end_date, conn):
-    solarlong = Solarlong(conn)
+def import_solarlongs(db_conn, start_date, end_date):
+
+    cur = db_conn.cursor()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS solarlong_lookup'))
+
+    cur.execute(db_conn.convert_stmt('''
+        CREATE TABLE solarlong_lookup (
+            date DATE NOT NULL,
+            sl double precision NOT NULL,
+            CONSTRAINT solarlong_lookup_pkey PRIMARY KEY (date)
+    )'''))
+
+    solarlong = Solarlong(db_conn)
     diff = timedelta(days=1)
-    cur = conn.cursor()
-    insert_stmt = '''
-        INSERT INTO imported_solarlong (
+    insert_stmt = db_conn.convert_stmt('''
+        INSERT INTO solarlong_lookup (
             date,
             sl
         ) VALUES (
             %(date)s,
             %(sl)s
         )
-    '''
+    ''')
 
     for time_list in date_generator(start_date, end_date, diff):
         sl_list = solarlong.calculate(time_list)
@@ -71,8 +66,8 @@ def import_solarlongs(start_date, end_date, conn):
 
 
 def usage():
-    print('''Generates solarlongs.
-Syntax: import_solarlong.py <options>
+    print('''Generates a solarlong lookup table.
+Syntax: generate_solarlongs <options>
     options
         -c, --config ... path to config file
         -s, --start  ... start date (YYYY-MM-DD)
@@ -80,13 +75,13 @@ Syntax: import_solarlong.py <options>
         -h, --help   ... prints this help''')
 
 
-def main():
-    if len(sys.argv) < 6:
+def main(command_args):
+    if len(command_args) < 6:
         usage()
         sys.exit(1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:s:e:", ['help', 'config', 'start', 'end'])
+        opts, args = getopt.getopt(command_args, "hc:s:e:", ['help', 'config', 'start', 'end'])
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -114,10 +109,7 @@ def main():
             usage()
             sys.exit(2)
 
-    sys.modules['vmdb.utils'].config = config
-    truncate_table()
-    import_solarlongs(start_date, end_date)
-
-
-if __name__ == "__main__":
-    main()
+    db_conn = DBAdapter(config['database'])
+    import_solarlongs(db_conn, start_date, end_date)
+    db_conn.commit()
+    db_conn.close()

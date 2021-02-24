@@ -1,5 +1,6 @@
 import json
 import warnings
+from datetime import datetime
 
 
 class Record(object):
@@ -46,9 +47,22 @@ class Record(object):
         self.shower = record['shower']
         self.session_id = record['session_id']
         self.user_id = record['user_id']
-        self.start = record['start']
-        self.end = record['end']
+        if isinstance(record['start'], datetime):
+            self.start = record['start']
+        else:
+            self.start = datetime.strptime(record['start'], '%Y-%m-%d %H:%M:%S')
+
+        if isinstance(record['end'], datetime):
+            self.end = record['end']
+        else:
+            self.end = datetime.strptime(record['end'], '%Y-%m-%d %H:%M:%S')
+
         self.magn = json.loads(record['magn'])
+
+    @classmethod
+    def init_stmt(cls, db_conn):
+        cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
+        cls._insert_detail_stmt = db_conn.convert_stmt(cls._insert_detail_stmt)
 
     def __eq__(self, other):
         return not self != other
@@ -110,14 +124,15 @@ class Record(object):
 
 class Normalizer(object):
 
-    def __init__(self, conn, solarlongs):
-        self._conn = conn
+    def __init__(self, db_conn, solarlongs):
+        self._db_conn = db_conn
         self._solarlongs = solarlongs
+        Record.init_stmt(db_conn)
 
     def __call__(self, drop_tables, divisor, mod):
         solarlongs = self._solarlongs
-        cur = self._conn.cursor()
-        cur.execute('''
+        cur = self._db_conn.cursor()
+        cur.execute(self._db_conn.convert_stmt('''
             SELECT
                 m.id,
                 m.shower,
@@ -127,23 +142,24 @@ class Normalizer(object):
                 m."end",
                 m.magn
             FROM imported_magnitude as m
-            INNER JOIN imported_session as s ON s.id = m.session_id
+            INNER JOIN obs_session as s ON s.id = m.session_id
             WHERE
-                m.session_id %% %s = %s
+                m.session_id %% %(divisor)s = %(mod)s
             ORDER BY
                 m.session_id ASC,
                 m.shower ASC,
                 m."start" ASC,
                 m."end" DESC
-        ''', (divisor, mod))
+        '''), {'divisor': divisor, 'mod': mod})
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = self._conn.cursor()
+        write_cur = self._db_conn.cursor()
         prev_record = None
+        delete_stmt = self._db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
         for _record in cur:
             record = Record(dict(zip(column_names, _record)))
             if not drop_tables:
-                write_cur.execute('DELETE FROM magnitude WHERE id = %s', (record.id,))
+                write_cur.execute(delete_stmt, {'id': record.id})
 
             if prev_record is None:
                 prev_record = record

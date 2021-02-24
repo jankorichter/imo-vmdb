@@ -1,19 +1,20 @@
 import csv
 import getopt
-import importlib
 import json
 import sys
 import warnings
 from datetime import datetime, timedelta
-from vmdb.utils import check_period, custom_formatwarning
+from vmdb.utils import DBAdapter, check_period, custom_formatwarning
 
 
-def import_rate(files_list, cur):
+def import_rate(db_conn, files_list):
+    
+    cur = db_conn.cursor()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS imported_rate')
+        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_rate'))
 
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('''
         CREATE TABLE imported_rate
         (
             id integer NOT NULL,
@@ -29,8 +30,8 @@ def import_rate(files_list, cur):
             "number" integer NOT NULL,
             CONSTRAINT imported_rate_pkey PRIMARY KEY (id)
         )
-    ''')
-    insert_stmt = '''
+    '''))
+    insert_stmt = db_conn.convert_stmt('''
         INSERT INTO imported_rate (
             id,
             user_id,
@@ -56,7 +57,7 @@ def import_rate(files_list, cur):
             %(method)s,
             %(number)s
         )
-    '''
+    ''')
 
     for rate_path in files_list:
 
@@ -127,7 +128,7 @@ def import_rate(files_list, cur):
                 }
                 cur.execute(insert_stmt, record)
 
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('''
         CREATE INDEX imported_rate_order_key ON
             imported_rate(
                 session_id,
@@ -135,21 +136,22 @@ def import_rate(files_list, cur):
                 "start",
                 "end"
             )
-    ''')
+    '''))
+    cur.close()
 
 
 def usage():
-    print('''Imports VMDB rates.
-Syntax: import_rates.py <options> files ...
+    print('''Imports rate observations.
+Syntax: import_rates <options> files ...
         -c, --config ... path to config file
         -h, --help   ... prints this help''')
 
 
-def main():
+def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
+        opts, args = getopt.getopt(command_args, "hc:", ['help', 'config'])
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -177,15 +179,7 @@ def main():
 
     warnings.formatwarning = custom_formatwarning
     warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
-    db_config = config['database']
-    db = importlib.import_module(db_config['module'])
-    conn = db.connect(**db_config['connection'])
-    cur = conn.cursor()
-    import_rate(args, cur)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-if __name__ == "__main__":
-    main()
+    db_conn = DBAdapter(config['database'])
+    import_rate(db_conn, args)
+    db_conn.commit()
+    db_conn.close()

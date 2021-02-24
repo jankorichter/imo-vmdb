@@ -1,20 +1,18 @@
 import warnings
-from vmdb.utils import connection_decorator
 
 
-@connection_decorator
-def create_tables(drop_tables, conn):
-    cur = conn.cursor()
+def create_tables(db_conn, drop_tables):
+    cur = db_conn.cursor()
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         if drop_tables:
-            cur.execute('DROP TABLE IF EXISTS rate_magnitude CASCADE')
-            cur.execute('DROP TABLE IF EXISTS magnitude_detail CASCADE')
-            cur.execute('DROP TABLE IF EXISTS magnitude CASCADE')
-            cur.execute('DROP TABLE IF EXISTS rate CASCADE')
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate_magnitude CASCADE'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude_detail CASCADE'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude CASCADE'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate CASCADE'))
 
-        cur.execute('''
+        cur.execute(db_conn.convert_stmt('''
             CREATE TABLE IF NOT EXISTS rate (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -31,12 +29,16 @@ def create_tables(drop_tables, conn):
                 rad_alt double precision NULL,
                 rad_corr double precision NULL,
                 CONSTRAINT rate_pkey PRIMARY KEY (id)
-            )''')
+            )'''))
 
         if drop_tables:
-            cur.execute('CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)')
+            cur.execute(
+                db_conn.convert_stmt(
+                    'CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)'
+                )
+            )
 
-        cur.execute('''
+        cur.execute(db_conn.convert_stmt('''
             CREATE TABLE IF NOT EXISTS magnitude (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -50,12 +52,16 @@ def create_tables(drop_tables, conn):
                 mean double precision NOT NULL,
                 lim_mag real NULL,
                 CONSTRAINT magnitude_pkey PRIMARY KEY (id)
-            )''')
+            )'''))
 
         if drop_tables:
-            cur.execute('CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)')
+            cur.execute(
+                db_conn.convert_stmt(
+                    'CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)'
+                )
+            )
 
-        cur.execute('''
+        cur.execute(db_conn.convert_stmt('''
             CREATE TABLE IF NOT EXISTS magnitude_detail (
                 id integer NOT NULL,
                 magn integer NOT NULL,
@@ -65,12 +71,16 @@ def create_tables(drop_tables, conn):
                     REFERENCES magnitude(id) MATCH SIMPLE
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
-            )''')
+            )'''))
 
         if drop_tables:
-            cur.execute('CREATE INDEX fki_magnitude_detail_fk ON magnitude_detail(id)')
+            cur.execute(
+                db_conn.convert_stmt(
+                    'CREATE INDEX fki_magnitude_detail_fk ON magnitude_detail(id)'
+                )
+            )
 
-        cur.execute('''
+        cur.execute(db_conn.convert_stmt('''
             CREATE TABLE IF NOT EXISTS rate_magnitude (
                 rate_id integer NOT NULL,
                 magn_id integer NOT NULL,
@@ -85,22 +95,25 @@ def create_tables(drop_tables, conn):
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
 
-            )''')
+            )'''))
 
-        cur.execute('TRUNCATE rate_magnitude')
+        cur.execute(db_conn.convert_stmt('DELETE FROM rate_magnitude'))
 
         if drop_tables:
-            cur.execute('CREATE INDEX fki_rate_magnitude_magn_fk ON rate_magnitude(magn_id)')
+            cur.execute(
+                db_conn.convert_stmt(
+                    'CREATE INDEX fki_rate_magnitude_magn_fk ON rate_magnitude(magn_id)'
+                )
+            )
 
     cur.close()
 
 
-@connection_decorator
-def create_rate_magn(conn):
-    cur = conn.cursor()
+def create_rate_magn(db_conn):
+    cur = db_conn.cursor()
 
     # find magnitude-rate-pairs containing each other
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('''
         WITH selection AS (
             SELECT
                 r.id as rate_id,
@@ -171,9 +184,9 @@ def create_rate_magn(conn):
         )
 
         SELECT rate_id, magn_id, "equals" FROM unique_rate_ids
-    ''')
+    '''))
     column_names = [desc[0] for desc in cur.description]
-    insert_stmt = '''
+    insert_stmt = db_conn.convert_stmt('''
         INSERT INTO rate_magnitude (
             rate_id,
             magn_id,
@@ -183,8 +196,8 @@ def create_rate_magn(conn):
             %(magn_id)s,
             %(equals)s
         )
-    '''
-    write_cur = conn.cursor()
+    ''')
+    write_cur = db_conn.cursor()
     for record in cur:
         record = dict(zip(column_names, record))
         magn_rate = {
@@ -195,8 +208,8 @@ def create_rate_magn(conn):
         write_cur.execute(insert_stmt, magn_rate)
 
     # set limiting mggnitude
-    cur.execute('UPDATE magnitude SET lim_mag = NULL')
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('UPDATE magnitude SET lim_mag = NULL'))
+    cur.execute(db_conn.convert_stmt('''
         WITH limiting_magnitudes AS (
             SELECT rm.magn_id, sum(r.t_eff*r.lim_mag)/sum(r.t_eff) as lim_mag
             FROM rate r
@@ -205,66 +218,17 @@ def create_rate_magn(conn):
         )
         SELECT magn_id, round(lim_mag*100)/100.0 as lim_mag
         FROM limiting_magnitudes
-    ''')
+    '''))
     column_names = [desc[0] for desc in cur.description]
-    update_stmt = 'UPDATE magnitude SET lim_mag = %s WHERE id = %s'
+    update_stmt = db_conn.convert_stmt(
+        'UPDATE magnitude SET lim_mag = %(lim_mag)s WHERE id = %(magn_id)s'
+    )
     for record in cur:
         record = dict(zip(column_names, record))
-        write_cur.execute(update_stmt, (record['lim_mag'], record['magn_id'],))
+        write_cur.execute(update_stmt, {
+            'lim_mag': record['lim_mag'],
+            'magn_id': record['magn_id']
+        })
 
     write_cur.close()
-    cur.close()
-
-
-@connection_decorator
-def create_r_views(conn):
-    cur = conn.cursor()
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        cur.execute('''
-            CREATE OR REPLACE VIEW r_rate AS
-                SELECT
-                    r.id as "rate.id",
-                    r.shower as "shower.code",
-                    r.period_start as "period.start",
-                    r.period_end as "period.end",
-                    r.sl_start as "sl.start",
-                    r.sl_end as "sl.end",
-                    r.session_id as "session.id",
-                    r.observer_id as "observer.id",
-                    r.freq as "freq",
-                    r.lim_mag as "magn.limit",
-                    r.t_eff as "t.eff",
-                    r.f as "f",
-                    r.rad_alt as "radiant.alt",
-                    r.rad_corr as "radiant.corr",
-                    rm.magn_id as "magn.id"
-                FROM rate as r
-                LEFT JOIN rate_magnitude rm ON
-                    r.id = rm.rate_id
-        ''')
-        cur.execute('''
-            CREATE OR REPLACE VIEW r_magnitude AS
-                SELECT
-                    id as "magn.id",
-                    shower as "shower.code",
-                    period_start as "period.start",
-                    period_end as "period.end",
-                    sl_start as "sl.start",
-                    sl_end as "sl.end",
-                    session_id as "session.id",
-                    observer_id as "observer.id",
-                    freq as "freq",
-                    mean as "magn.mean",
-                    lim_mag as "magn.limit"
-                FROM magnitude
-        ''')
-        cur.execute('''
-            CREATE OR REPLACE VIEW r_magnitude_detail AS
-                SELECT
-                    id as "magn.id",
-                    magn as "magn.m",
-                    freq as "freq"
-                FROM magnitude_detail
-        ''')
     cur.close()

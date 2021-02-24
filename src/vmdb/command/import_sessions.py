@@ -1,19 +1,20 @@
 import csv
 import getopt
-import importlib
 import json
 import sys
 import warnings
-from vmdb.utils import custom_formatwarning
+from vmdb.utils import DBAdapter, custom_formatwarning
 
 
-def import_sessions(files_list, cur):
+def import_sessions(db_conn, files_list):
+
+    cur = db_conn.cursor()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS imported_session')
+        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS obs_session'))
 
-    cur.execute('''
-        CREATE TABLE imported_session
+    cur.execute(db_conn.convert_stmt('''
+        CREATE TABLE obs_session
         (
             id integer PRIMARY KEY,
             observer_id integer NULL,
@@ -21,9 +22,9 @@ def import_sessions(files_list, cur):
             latitude real NOT NULL,
             elevation real NOT NULL
         );
-    ''')
-    insert_stmt = '''
-        INSERT INTO imported_session (
+    '''))
+    insert_stmt = db_conn.convert_stmt('''
+        INSERT INTO obs_session (
             id,
             observer_id,
             latitude,
@@ -36,7 +37,7 @@ def import_sessions(files_list, cur):
             %(longitude)s,
             %(elevation)s
         )
-    '''
+    ''')
 
     for session_path in files_list:
 
@@ -87,21 +88,23 @@ def import_sessions(files_list, cur):
                     'elevation': elevation
                 }
                 cur.execute(insert_stmt, record)
+    cur.close()
 
 
 def usage():
-    print('''Imports VMDB sessions.
-Syntax: import_sessions.py <options> files ...
+    print('''Imports observation sessions.
+Syntax: import_sessions <options> files ...
     options
         -c, --config ... path to config file
         -h, --help   ... prints this help''')
 
 
-def main():
+def main(command_args):
+
     config = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
+        opts, args = getopt.getopt(command_args, "hc:", ['help', 'config'])
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -129,15 +132,7 @@ def main():
 
     warnings.formatwarning = custom_formatwarning
     warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')
-    db_config = config['database']
-    db = importlib.import_module(db_config['module'])
-    conn = db.connect(**db_config['connection'])
-    cur = conn.cursor()
-    import_sessions(args, cur)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-if __name__ == "__main__":
-    main()
+    db_conn = DBAdapter(config['database'])
+    import_sessions(db_conn, args)
+    db_conn.commit()
+    db_conn.close()

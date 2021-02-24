@@ -1,9 +1,9 @@
 import csv
 import getopt
-import importlib
 import json
 import sys
 import warnings
+from vmdb.utils import DBAdapter
 
 
 def create_date(date_str):
@@ -48,12 +48,14 @@ def create_date(date_str):
     return [month, day]
 
 
-def import_showers(shower_path, cur):
+def import_showers(db_conn, shower_path):
+        
+    cur = db_conn.cursor()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS shower')
+        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS shower'))
 
-    cur.execute('''
+    cur.execute(db_conn.convert_stmt('''
         CREATE TABLE shower (
             id integer NOT NULL,
             iau_code varchar(6) NOT NULL,
@@ -72,8 +74,8 @@ def import_showers(shower_path, cur):
             CONSTRAINT shower_pkey PRIMARY KEY (id),
             CONSTRAINT shower_iau_code_ukey UNIQUE (iau_code)
         )
-    ''')
-    insert_stmt = '''
+    '''))
+    insert_stmt = db_conn.convert_stmt('''
         INSERT INTO shower (
             id,
             iau_code,
@@ -92,7 +94,7 @@ def import_showers(shower_path, cur):
         ) VALUES (
             %(id)s,
             %(iau_code)s,
-            %("name")s,
+            %(name)s,
             %(start_month)s,
             %(start_day)s,
             %(end_month)s,
@@ -105,7 +107,7 @@ def import_showers(shower_path, cur):
             %(r)s,
             %(zhr)s
         )
-    '''
+    ''')
 
     with open(shower_path, mode='r', encoding='utf-8-sig') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=';')
@@ -136,7 +138,7 @@ def import_showers(shower_path, cur):
             record = {
                 'id': int(row['id'].strip()),
                 'iau_code': row['iau_code'].strip(),
-                '"name"': row['name'].strip(),
+                'name': row['name'].strip(),
                 'start_month': period_start[0],
                 'start_day': period_start[1],
                 'end_month': period_end[0],
@@ -152,105 +154,31 @@ def import_showers(shower_path, cur):
 
             cur.execute(insert_stmt, record)
 
-
-def import_radiants(radiants_path, cur):
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        cur.execute('DROP TABLE IF EXISTS imported_radiant')
-
-    cur.execute('''
-        CREATE TABLE imported_radiant
-        (
-            shower char(3) NOT NULL,
-            "month" integer NOT NULL,
-            "day" integer NOT NULL,
-            ra real NOT NULL,
-            "dec" real NOT NULL,
-            CONSTRAINT imported_radiant_pkey PRIMARY KEY (shower, "month", "day")
-        )
-    ''')
-    insert_stmt = '''
-        INSERT INTO imported_radiant (
-            shower,
-            ra,
-            "dec",
-            "month",
-            "day"
-        ) VALUES (
-            %(shower)s,
-            %(ra)s,
-            %(dec)s,
-            %(month)s,
-            %(day)s
-        )
-    '''
-
-    with open(radiants_path, mode='r', encoding='utf-8-sig') as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=';')
-        is_head = True
-
-        for row in csv_reader:
-            if is_head:
-                is_head = False
-                column_names = [r.lower() for r in row]
-                continue
-
-            row = dict(zip(column_names, row))
-            shower = row['shower'].strip()
-            ra = float(row['ra'])
-            dec = float(row['dec'])
-            day = int(row['day'])
-            month = int(row['month'])
-
-            if dec < -90 or dec > 90:
-                raise AttributeError("dec must between -90 and 90")
-
-            if ra < 0 or ra > 360:
-                raise AttributeError("ra must between 0 and 360")
-
-            if month < 1 or month > 12:
-                raise AttributeError("month must between 1 and 12")
-
-            if day < 1 or day > 31:
-                raise AttributeError("day must between 1 and 31")
-
-            if 31 == day and month in [4, 6, 9, 11]:
-                raise AttributeError("day must be less than 31")
-
-            if 2 == month and day in [29, 30]:
-                raise AttributeError("day must be less than 29")
-
-            record = {
-                'shower': shower,
-                'ra': ra,
-                'dec': dec,
-                'month': month,
-                'day': day,
-            }
-            cur.execute(insert_stmt, record)
+    cur.close()
 
 
 def usage():
-    print('''Imports showers and radiants.
-Syntax: import_showers.py <options> showers.csv radiants.csv
+    print('''Imports meteor showers.
+Syntax: import_showers <options> showers.csv
     options
         -c, --config ... path to config file
         -h, --help   ... prints this help''')
 
 
-def main():
-    if len(sys.argv) < 2:
+def main(command_args):
+
+    if len(command_args) < 1:
         usage()
         sys.exit(1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:", ['help', 'config'])
+        opts, args = getopt.getopt(command_args, "hc:", ['help', 'config'])
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
         sys.exit(2)
 
-    if len(args) != 2:
+    if len(args) != 1:
         usage()
         sys.exit(1)
 
@@ -266,16 +194,7 @@ def main():
             usage()
             sys.exit(2)
 
-    db_config = config['database']
-    db = importlib.import_module(db_config['module'])
-    conn = db.connect(**db_config['connection'])
-    cur = conn.cursor()
-    import_showers(args[0], cur)
-    import_radiants(args[1], cur)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-if __name__ == "__main__":
-    main()
+    db_conn = DBAdapter(config['database'])
+    import_showers(db_conn, args[0])
+    db_conn.commit()
+    db_conn.close()

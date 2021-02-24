@@ -8,14 +8,14 @@ from astropy.time import Time as AstropyTime
 
 class Solarlong(object):
 
-    def __init__(self, conn):
+    def __init__(self, db_conn):
         self.days = {}
         self.loc = EarthLocation(
             lat=0.0,
             lon=0.0,
             height=0
         )
-        self.load(conn)
+        self.load(db_conn)
 
     def calculate(self, time):
         time = AstropyTime(time)
@@ -49,21 +49,25 @@ class Solarlong(object):
 
         return sl
 
-    def load(self, conn):
-        cur = conn.cursor()
+    def load(self, db_conn):
+        cur = db_conn.cursor()
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS imported_solarlong (
+            cur.execute(db_conn.convert_stmt('''
+                CREATE TABLE IF NOT EXISTS solarlong_lookup (
                     date DATE NOT NULL,
                     sl double precision NOT NULL,
-                    CONSTRAINT imported_solarlong_pkey PRIMARY KEY (date)
-                )''')
+                    CONSTRAINT solarlong_lookup_pkey PRIMARY KEY (date)
+                )'''
+            ))
 
-        cur.execute('''SELECT date, sl FROM imported_solarlong''')
+        cur.execute(db_conn.convert_stmt('''SELECT date, sl FROM solarlong_lookup'''))
         column_names = [desc[0] for desc in cur.description]
         for record in cur:
             record = dict(zip(column_names, record))
-            self.days[record['date'].strftime("%Y-%m-%d")] = record['sl']
+            rdate = record['date']
+            if not isinstance(rdate, str):
+                rdate = rdate.strftime("%Y-%m-%d")
+            self.days[rdate] = record['sl']
 
         cur.close()
