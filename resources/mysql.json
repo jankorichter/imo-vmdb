@@ -7,7 +7,5 @@
             "sql_mode": "ANSI",
             "init_command": "SET innodb_lock_wait_timeout=3600"
         }
-    },
-    "warnings": "ignore",
-    "process_count": 10
+    }
 }

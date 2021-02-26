@@ -2,7 +2,7 @@ import getopt
 import json
 import sys
 import warnings
-from vmdb.utils import DBAdapter, custom_formatwarning
+from vmdb.model import DBAdapter
 
 
 def usage():
@@ -43,8 +43,6 @@ def main(command_args):
         usage()
         sys.exit(1)
 
-    warnings.formatwarning = custom_formatwarning
-    warnings.simplefilter(config['warnings'] if 'warnings' in config else 'ignore')    
     db_conn = DBAdapter(config['database'])
     cur = db_conn.cursor()
 

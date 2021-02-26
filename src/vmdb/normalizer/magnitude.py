@@ -1,6 +1,6 @@
 import json
-import warnings
 from datetime import datetime
+from vmdb.normalizer import BaseNormalizer
 
 
 class Record(object):
@@ -122,17 +122,17 @@ class Record(object):
             cur.execute(self._insert_detail_stmt, magn)
 
 
-class Normalizer(object):
+class MagnitudeNormalizer(BaseNormalizer):
 
-    def __init__(self, db_conn, solarlongs):
-        self._db_conn = db_conn
-        self._solarlongs = solarlongs
+    def __init__(self, db_conn, logger, drop_tables, solarlongs):
+        super().__init__(db_conn, logger, drop_tables)
+        self.solarlongs = solarlongs
         Record.init_stmt(db_conn)
 
-    def __call__(self, drop_tables, divisor, mod):
-        solarlongs = self._solarlongs
-        cur = self._db_conn.cursor()
-        cur.execute(self._db_conn.convert_stmt('''
+    def run(self):
+        solarlongs = self.solarlongs
+        cur = self.db_conn.cursor()
+        cur.execute(self.db_conn.convert_stmt('''
             SELECT
                 m.id,
                 m.shower,
@@ -143,22 +143,21 @@ class Normalizer(object):
                 m.magn
             FROM imported_magnitude as m
             INNER JOIN obs_session as s ON s.id = m.session_id
-            WHERE
-                m.session_id %% %(divisor)s = %(mod)s
             ORDER BY
                 m.session_id ASC,
                 m.shower ASC,
                 m."start" ASC,
                 m."end" DESC
-        '''), {'divisor': divisor, 'mod': mod})
+        '''))
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = self._db_conn.cursor()
+        write_cur = self.db_conn.cursor()
         prev_record = None
-        delete_stmt = self._db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
+        delete_stmt = self.db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
         for _record in cur:
+            self.counter_read += 1
             record = Record(dict(zip(column_names, _record)))
-            if not drop_tables:
+            if not self.drop_tables:
                 write_cur.execute(delete_stmt, {'id': record.id})
 
             if prev_record is None:
@@ -167,20 +166,22 @@ class Normalizer(object):
 
             if record in prev_record:
                 msg = "Magnitude observation %s contains observation %s. Observation %s discarded."
-                warnings.warn(msg % (prev_record.id, record.id, prev_record.id))
+                self._log_error(msg % (prev_record.id, record.id, prev_record.id))
                 prev_record = record
                 continue
 
             if prev_record == record:
                 msg = "Magnitude observation %s overlaps observation %s. Observation %s discarded."
-                warnings.warn(msg % (prev_record.id, record.id, record.id))
+                self._log_error(msg % (prev_record.id, record.id, record.id))
                 continue
 
             prev_record.write(write_cur, solarlongs)
+            self.counter_write += 1
             prev_record = record
 
         if prev_record is not None:
             prev_record.write(write_cur, solarlongs,)
+            self.counter_write += 1
 
         cur.close()
         write_cur.close()

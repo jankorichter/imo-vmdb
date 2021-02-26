@@ -2,8 +2,7 @@
     "database": {
         "module": "sqlite3",
         "connection": {
-            "database": "/Users/j.richter/git/richtej.de/Meteors/vmdb/import/test.db"
+            "database": "/Users/j.richter/tmp/test.db"
         }
-    },
-    "warnings": "ignore"
+    }
 }

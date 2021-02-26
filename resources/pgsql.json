@@ -5,7 +5,5 @@
             "database": "vmdb",
             "user": "vmdb"
         }
-    },
-    "warnings": "ignore",
-    "process_count": 10
+    }
 }
