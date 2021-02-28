@@ -1,8 +1,0 @@
-{
-    "database": {
-        "module": "sqlite3",
-        "connection": {
-            "database": "/Users/j.richter/tmp/test.db"
-        }
-    }
-}

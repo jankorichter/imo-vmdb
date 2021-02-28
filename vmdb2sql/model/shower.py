@@ -1,5 +1,5 @@
 import datetime
-from vmdb.model.radiant import Position
+from vmdb2sql.model.radiant import Position
 
 
 class Shower(object):

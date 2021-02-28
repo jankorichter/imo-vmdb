@@ -2,7 +2,7 @@ import getopt
 import json
 import sys
 import warnings
-from vmdb.model import DBAdapter
+from vmdb2sql.model import DBAdapter
 
 
 def usage():

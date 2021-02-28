@@ -2,14 +2,14 @@ import getopt
 import json
 import logging
 import sys
-from vmdb.model.radiant import Storage as RadiantStorage
-from vmdb.model.shower import Storage as ShowerStorage
-from vmdb.model.solarlong import Solarlong
-from vmdb.normalizer import create_tables, create_rate_magn
-from vmdb.normalizer.magnitude import MagnitudeNormalizer
-from vmdb.normalizer.rate import RateNormalizer
-from vmdb.normalizer.session import SessionNormalizer
-from vmdb.model import DBAdapter
+from vmdb2sql.model.radiant import Storage as RadiantStorage
+from vmdb2sql.model.shower import Storage as ShowerStorage
+from vmdb2sql.model.solarlong import Solarlong
+from vmdb2sql.normalizer import create_tables, create_rate_magn
+from vmdb2sql.normalizer.magnitude import MagnitudeNormalizer
+from vmdb2sql.normalizer.rate import RateNormalizer
+from vmdb2sql.normalizer.session import SessionNormalizer
+from vmdb2sql.model import DBAdapter
 
 
 def usage():

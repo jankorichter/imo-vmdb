@@ -3,8 +3,8 @@ import json
 import sys
 import warnings
 from datetime import datetime, timedelta
-from vmdb.model.solarlong import Solarlong
-from vmdb.model import DBAdapter
+from vmdb2sql.model.solarlong import Solarlong
+from vmdb2sql.model import DBAdapter
 
 
 def date_generator(start_date, end_date, diff):

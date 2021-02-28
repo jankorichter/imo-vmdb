@@ -4,8 +4,8 @@ import json
 import logging
 import sys
 import warnings
-from vmdb.model import DBAdapter
-from vmdb.command import CsvImport, ImportException
+from vmdb2sql.model import DBAdapter
+from vmdb2sql.command import CsvImport, ImportException
 
 
 class ShowerImport(CsvImport):

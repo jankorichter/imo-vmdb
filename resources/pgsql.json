@@ -1,9 +1,0 @@
-{
-    "database": {
-        "module": "psycopg2",
-        "connection": {
-            "database": "vmdb",
-            "user": "vmdb"
-        }
-    }
-}

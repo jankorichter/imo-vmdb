@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from vmdb.normalizer import BaseNormalizer
+from vmdb2sql.normalizer import BaseNormalizer
 
 
 class Record(object):

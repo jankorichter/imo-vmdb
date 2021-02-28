@@ -1,8 +1,9 @@
-/data
+*.swp
 /.idea
 /.project
 /.pydevproject
-/imo.vmdb.Rproj
-__pycache__
-.swp
+/data
+/dist/
+/build/
 /venv
+/imo_vmdb2sql.egg-info/
