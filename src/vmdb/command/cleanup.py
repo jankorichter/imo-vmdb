@@ -48,10 +48,9 @@ def main(command_args):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS solarlong_lookup'))
         cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_magnitude'))
-        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_radiant'))
         cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_rate'))
+        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_session'))
 
     if 'sqlite3' == db_conn.db_module:
         cur.execute('VACUUM')

@@ -8,6 +8,7 @@ from vmdb.model.solarlong import Solarlong
 from vmdb.normalizer import create_tables, create_rate_magn
 from vmdb.normalizer.magnitude import MagnitudeNormalizer
 from vmdb.normalizer.rate import RateNormalizer
+from vmdb.normalizer.session import SessionNormalizer
 from vmdb.model import DBAdapter
 
 
@@ -52,7 +53,7 @@ def main(command_args):
             log_file = a
             logging.basicConfig(
                 filename=log_file,
-                format='%(asctime)s [%(levelname)s] %(message)s',
+                format='%(asctime)s normalize[%(levelname)s] %(message)s',
                 level=logging.INFO
             )
             logger.disabled = False
@@ -66,30 +67,44 @@ def main(command_args):
         sys.exit(1)
 
     db_conn = DBAdapter(config['database'])
+    logger.info("Start the initialization of the database.")
     create_tables(db_conn, drop_tables)
     db_conn.commit()
+    logger.info("Database initialized.")
 
+    logger.info("Start normalizing the sessions.")
+    sn = SessionNormalizer(db_conn, logger, drop_tables)
+    sn.run()
+    logger.info(
+        "The normalisation of the sessions has been completed. %s of %s records have been written." %
+        (sn.counter_write, sn.counter_read)
+    )
+
+    logger.info("Start normalizing the rates.")
     solarlongs = Solarlong(db_conn)
     radiant_storage = RadiantStorage(db_conn)
     radiants = radiant_storage.load()
     shower_storage = ShowerStorage(db_conn)
     showers = shower_storage.load(radiants)
     rn = RateNormalizer(db_conn, logger, drop_tables, solarlongs, showers)
-    logger.info("Start normalizing the rates.")
     rn.run()
     logger.info(
         "The normalisation of the rates has been completed. %s of %s records have been written." %
         (rn.counter_write, rn.counter_read)
     )
-    mn = MagnitudeNormalizer(db_conn, logger, drop_tables, solarlongs)
+
     logger.info("Start normalizing the magnitudes.")
+    mn = MagnitudeNormalizer(db_conn, logger, drop_tables, solarlongs)
     mn.run()
     logger.info(
         "The normalisation of the magnitudes has been completed. %s of %s records have been written." %
         (rn.counter_write, rn.counter_read)
     )
 
+    logger.info("Start creating rate magnitude relationship.")
     create_rate_magn(db_conn)
+    logger.info("The relationship between rate and magnitude was created.")
+
     db_conn.commit()
     db_conn.close()
 

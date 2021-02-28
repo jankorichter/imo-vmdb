@@ -131,8 +131,9 @@ class MagnitudeNormalizer(BaseNormalizer):
 
     def run(self):
         solarlongs = self.solarlongs
-        cur = self.db_conn.cursor()
-        cur.execute(self.db_conn.convert_stmt('''
+        db_conn = self.db_conn
+        cur = db_conn.cursor()
+        cur.execute(db_conn.convert_stmt('''
             SELECT
                 m.id,
                 m.shower,
@@ -151,9 +152,10 @@ class MagnitudeNormalizer(BaseNormalizer):
         '''))
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = self.db_conn.cursor()
+        write_cur = db_conn.cursor()
+
         prev_record = None
-        delete_stmt = self.db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
+        delete_stmt = db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record)))

@@ -273,7 +273,7 @@ def main(command_args):
             log_file = a
             logging.basicConfig(
                 filename=log_file,
-                format='%(asctime)s [%(levelname)s] %(message)s',
+                format='%(asctime)s import_showers[%(levelname)s] %(message)s',
                 level=logging.INFO
             )
             logger.disabled = False

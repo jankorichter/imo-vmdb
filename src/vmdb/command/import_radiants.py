@@ -20,7 +20,7 @@ class RadiantImport(CsvImport):
             'month'
         }
         self.insert_stmt = db_conn.convert_stmt('''
-            INSERT INTO imported_radiant (
+            INSERT INTO radiant (
                 shower,
                 ra,
                 "dec",
@@ -41,17 +41,17 @@ class RadiantImport(CsvImport):
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_radiant'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS radiant'))
 
         cur.execute(db_conn.convert_stmt('''
-            CREATE TABLE imported_radiant
+            CREATE TABLE radiant
             (
                 shower char(3) NOT NULL,
                 "month" integer NOT NULL,
                 "day" integer NOT NULL,
                 ra real NOT NULL,
                 "dec" real NOT NULL,
-                CONSTRAINT imported_radiant_pkey PRIMARY KEY (shower, "month", "day")
+                CONSTRAINT radiant_pkey PRIMARY KEY (shower, "month", "day")
             )
         '''))
 
@@ -156,7 +156,7 @@ def main(command_args):
             log_file = a
             logging.basicConfig(
                 filename=log_file,
-                format='%(asctime)s [%(levelname)s] %(message)s',
+                format='%(asctime)s import_radiants[%(levelname)s] %(message)s',
                 level=logging.INFO
             )
             logger.disabled = False

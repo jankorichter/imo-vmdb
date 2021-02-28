@@ -20,7 +20,7 @@ class SessionImport(CsvImport):
             'elevation'
         }
         self.insert_stmt = db_conn.convert_stmt('''
-            INSERT INTO obs_session (
+            INSERT INTO imported_session (
                 id,
                 observer_id,
                 latitude,
@@ -41,10 +41,10 @@ class SessionImport(CsvImport):
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS obs_session'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_session'))
 
         cur.execute(db_conn.convert_stmt('''
-            CREATE TABLE obs_session
+            CREATE TABLE imported_session
             (
                 id integer PRIMARY KEY,
                 observer_id integer NULL,
@@ -192,7 +192,7 @@ def main(command_args):
             log_file = a
             logging.basicConfig(
                 filename=log_file,
-                format='%(asctime)s [%(levelname)s] %(message)s',
+                format='%(asctime)s import_sessions[%(levelname)s] %(message)s',
                 level=logging.INFO
             )
             logger.disabled = False

@@ -15,16 +15,29 @@ class BaseNormalizer(object):
         self.logger.error(msg)
         self.has_errors = True
 
+
 def create_tables(db_conn, drop_tables):
     cur = db_conn.cursor()
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         if drop_tables:
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate_magnitude CASCADE'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude_detail CASCADE'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude CASCADE'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate CASCADE'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate_magnitude'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude_detail'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate'))
+            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS obs_session'))
+
+        cur.execute(db_conn.convert_stmt('''
+            CREATE TABLE IF NOT EXISTS obs_session
+            (
+                id integer PRIMARY KEY,
+                observer_id integer NULL,
+                longitude real NOT NULL,
+                latitude real NOT NULL,
+                elevation real NOT NULL
+            );
+        '''))
 
         cur.execute(db_conn.convert_stmt('''
             CREATE TABLE IF NOT EXISTS rate (
@@ -42,7 +55,11 @@ def create_tables(db_conn, drop_tables):
                 f real NOT NULL,
                 rad_alt double precision NULL,
                 rad_corr double precision NULL,
-                CONSTRAINT rate_pkey PRIMARY KEY (id)
+                CONSTRAINT rate_pkey PRIMARY KEY (id),
+                CONSTRAINT rate_session_fk FOREIGN KEY (session_id)
+                    REFERENCES obs_session(id) MATCH SIMPLE
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
             )'''))
 
         if drop_tables:
@@ -65,7 +82,11 @@ def create_tables(db_conn, drop_tables):
                 freq integer NOT NULL,
                 mean double precision NOT NULL,
                 lim_mag real NULL,
-                CONSTRAINT magnitude_pkey PRIMARY KEY (id)
+                CONSTRAINT magnitude_pkey PRIMARY KEY (id),
+                CONSTRAINT magnitude_session_fk FOREIGN KEY (session_id)
+                    REFERENCES obs_session(id) MATCH SIMPLE
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
             )'''))
 
         if drop_tables:
@@ -108,7 +129,6 @@ def create_tables(db_conn, drop_tables):
                     REFERENCES magnitude(id) MATCH SIMPLE
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
-
             )'''))
 
         cur.execute(db_conn.convert_stmt('DELETE FROM rate_magnitude'))

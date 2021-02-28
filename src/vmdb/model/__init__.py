@@ -8,6 +8,8 @@ class DBAdapter(object):
         self.db_module = config['module']
         db = importlib.import_module(self.db_module)
         self.conn = db.connect(**config['connection'])
+        if 'sqlite3' == self.db_module:
+            self.conn.execute('PRAGMA foreign_keys = ON')
 
     def cursor(self):
         return self.conn.cursor()

@@ -99,7 +99,7 @@ class Storage(object):
         ydays = self._get_ydays()
         radiants = {}
         cur = self._conn.cursor()
-        cur.execute('SELECT * FROM imported_radiant ORDER BY shower, month, day')
+        cur.execute('SELECT * FROM radiant ORDER BY shower, month, day')
         column_names = [desc[0] for desc in cur.description]
         for r in cur:
             r = dict(zip(column_names, r))
