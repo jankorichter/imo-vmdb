@@ -12,8 +12,8 @@ from vmdb2sql.command import CsvImport, ImportException
 
 class MagnImport(CsvImport):
 
-    def __init__(self, db_conn, logger):
-        super().__init__(db_conn, logger)
+    def __init__(self, db_conn, logger, repair):
+        super().__init__(db_conn, logger, repair)
         self.required_columns = {
             'magnitude id',
             'user id',
@@ -36,7 +36,7 @@ class MagnImport(CsvImport):
             'mag 6',
             'mag 7'
         }
-        self.insert_stmt = db_conn.convert_stmt('''
+        self.insert_stmt = self.db_conn.convert_stmt('''
             INSERT INTO imported_magnitude (
                 id,
                 session_id,
@@ -165,8 +165,8 @@ class MagnImport(CsvImport):
             self.counter_write += 1
 
     @staticmethod
-    def _parse_magn_id(rec):
-        magn_id = rec.strip()
+    def _parse_magn_id(value):
+        magn_id = value.strip()
         if '' == magn_id:
             raise ImportException("Observation found without a magnitude id.")
 
@@ -220,6 +220,7 @@ def usage():
 Syntax: import_magnitudes <options> files ...
         -c, --config ... path to config file
         -l, --log    ... path to log file
+        -r, --repair ... an attempt is made to correct errors (default off)
         -h, --help   ... prints this help''')
 
 
@@ -227,7 +228,11 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hc:l:", ['help', 'config', 'log'])
+        opts, args = getopt.getopt(
+            command_args,
+            "hrc:l:", 
+            ['help', 'repair', 'config', 'log']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -237,6 +242,7 @@ def main(command_args):
         usage()
         sys.exit(1)
 
+    repair = False
     logger = logging.getLogger()
     logger.disabled = True
     log_file = None
@@ -245,6 +251,8 @@ def main(command_args):
         if o in ("-h", "--help"):
             usage()
             sys.exit()
+        if o in ("-r", "--repair"):
+            repair = True
         elif o in ("-c", "--config"):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
@@ -266,7 +274,7 @@ def main(command_args):
         sys.exit(1)
 
     db_conn = DBAdapter(config['database'])
-    imp = MagnImport(db_conn, logger)
+    imp = MagnImport(db_conn, logger, repair)
     imp.run(args)
     db_conn.close()
 

@@ -10,8 +10,8 @@ from vmdb2sql.command import CsvImport, ImportException
 
 class SessionImport(CsvImport):
 
-    def __init__(self, db_conn, logger):
-        super().__init__(db_conn, logger)
+    def __init__(self, db_conn, logger, repair):
+        super().__init__(db_conn, logger, repair)
         self.required_columns = {
             'session id',
             'observer id',
@@ -19,7 +19,7 @@ class SessionImport(CsvImport):
             'longitude',
             'elevation'
         }
-        self.insert_stmt = db_conn.convert_stmt('''
+        self.insert_stmt = self.db_conn.convert_stmt('''
             INSERT INTO imported_session (
                 id,
                 observer_id,
@@ -94,8 +94,8 @@ class SessionImport(CsvImport):
             self.counter_write += 1
 
     @staticmethod
-    def _parse_session_id(rec):
-        session_id = rec.strip()
+    def _parse_session_id(value):
+        session_id = value.strip()
         if '' == session_id:
             raise ImportException("Session found without a session id.")
 
@@ -109,8 +109,8 @@ class SessionImport(CsvImport):
         return session_id
 
     @staticmethod
-    def _parse_latitude(rec, session_id):
-        lat = rec.strip()
+    def _parse_latitude(value, session_id):
+        lat = value.strip()
         if '' == lat:
             raise ImportException("%s: latitude must not be empty." % session_id)
 
@@ -125,8 +125,8 @@ class SessionImport(CsvImport):
         return lat
 
     @staticmethod
-    def _parse_longitude(rec, session_id):
-        long = rec.strip()
+    def _parse_longitude(value, session_id):
+        long = value.strip()
         if '' == long:
             raise ImportException("%s: longitude must not be empty." % session_id)
 
@@ -141,8 +141,8 @@ class SessionImport(CsvImport):
         return long
 
     @staticmethod
-    def _parse_elevation(rec, session_id):
-        elevation = rec.strip()
+    def _parse_elevation(value, session_id):
+        elevation = value.strip()
         if '' == elevation:
             raise ImportException("%s: elevation must not be empty." % session_id)
 
@@ -160,6 +160,7 @@ Syntax: import_sessions <options> files ...
     options
         -c, --config ... path to config file
         -l, --log    ... path to log file
+        -r, --repair ... an attempt is made to correct errors (default off)
         -h, --help   ... prints this help''')
 
 
@@ -167,7 +168,11 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hc:l:", ['help', 'config', 'log'])
+        opts, args = getopt.getopt(
+            command_args,
+            "hrc:l:", 
+            ['help', 'repair', 'config', 'log']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -177,6 +182,7 @@ def main(command_args):
         usage()
         sys.exit(1)
 
+    repair = False
     logger = logging.getLogger()
     logger.disabled = True
     log_file = None
@@ -185,6 +191,8 @@ def main(command_args):
         if o in ("-h", "--help"):
             usage()
             sys.exit()
+        if o in ("-r", "--repair"):
+            repair = True
         elif o in ("-c", "--config"):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
@@ -206,7 +214,7 @@ def main(command_args):
         sys.exit(1)
 
     db_conn = DBAdapter(config['database'])
-    imp = SessionImport(db_conn, logger)
+    imp = SessionImport(db_conn, logger, repair)
     imp.run(args)
     db_conn.close()
 

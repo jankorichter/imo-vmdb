@@ -2,8 +2,10 @@ import csv
 import getopt
 import json
 import logging
+import os
 import sys
 import warnings
+from pathlib import Path
 from vmdb2sql.model import DBAdapter
 from vmdb2sql.command import CsvImport, ImportException
 
@@ -26,8 +28,8 @@ class ShowerImport(CsvImport):
         'Dec': 12,
     }
 
-    def __init__(self, db_conn, logger):
-        super().__init__(db_conn, logger)
+    def __init__(self, db_conn, logger, repair):
+        super().__init__(db_conn, logger, repair)
         self.required_columns = {
             'id',
             'iau_code',
@@ -41,7 +43,7 @@ class ShowerImport(CsvImport):
             'r',
             'zhr'
         }
-        self.insert_stmt = db_conn.convert_stmt('''
+        self.insert_stmt = self.db_conn.convert_stmt('''
             INSERT INTO shower (
                 id,
                 iau_code,
@@ -132,12 +134,7 @@ class ShowerImport(CsvImport):
                 peak = self._create_date(row['peak'], 'peak', iau_code)
                 period_start = self._create_date(row['start'], 'start', iau_code)
                 period_end = self._create_date(row['end'], 'end', iau_code)
-
-                if (ra is None) ^ (dec is None):
-                    raise ImportException(
-                        '%s: ra and dec must be set or both must be undefined.' % iau_code
-                    )
-
+                ra, dec = self._check_ra_dec(ra, dec, iau_code)
             except ImportException as err:
                 self._log_error(str(err))
                 continue
@@ -167,16 +164,16 @@ class ShowerImport(CsvImport):
             self.counter_write += 1
 
     @staticmethod
-    def _parse_iau_code(rec):
-        iau_code = rec.strip()
+    def _parse_iau_code(value):
+        iau_code = value.strip()
         if '' == iau_code:
             raise ImportException("Shower found without an iau_code.")
 
         return iau_code.upper()
 
     @staticmethod
-    def _parse_velocity(rec, iau_code):
-        v = rec.strip()
+    def _parse_velocity(value, iau_code):
+        v = value.strip()
         if '' == v:
             return None
 
@@ -191,8 +188,8 @@ class ShowerImport(CsvImport):
         return v
 
     @staticmethod
-    def _parse_r_value(rec, iau_code):
-        r = rec.strip()
+    def _parse_r_value(value, iau_code):
+        r = value.strip()
         if '' == r:
             return None
 
@@ -237,10 +234,11 @@ class ShowerImport(CsvImport):
 
 def usage():
     print('''Imports meteor showers.
-Syntax: import_showers <options> csv_file
+Syntax: import_showers <options> [showers.csv]
     options
         -c, --config ... path to config file
         -l, --log    ... path to log file
+        -r, --repair ... an attempt is made to correct errors (default off)
         -h, --help   ... prints this help''')
 
 
@@ -248,16 +246,27 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hc:l:", ['help', 'config', 'log'])
+        opts, args = getopt.getopt(
+            command_args,
+            "hrc:l:",
+            ['help', 'repair', 'config', 'log']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
         sys.exit(2)
 
-    if len(args) != 1:
+    len_args = len(args)
+    if 0 == len_args:
+        my_dir = Path(os.path.dirname(os.path.realpath(__file__)))
+        shower_file = str(my_dir.parent / 'data' / 'showers.csv')
+    elif 1 == len_args:
+        shower_file = args[0]
+    else:
         usage()
         sys.exit(1)
 
+    repair = False
     logger = logging.getLogger()
     logger.disabled = True
     log_file = None
@@ -266,6 +275,8 @@ def main(command_args):
         if o in ("-h", "--help"):
             usage()
             sys.exit()
+        if o in ("-r", "--repair"):
+            repair = True
         elif o in ("-c", "--config"):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
@@ -287,8 +298,8 @@ def main(command_args):
         sys.exit(1)
 
     db_conn = DBAdapter(config['database'])
-    imp = ShowerImport(db_conn, logger)
-    imp.run(args)
+    imp = ShowerImport(db_conn, logger, repair)
+    imp.run((shower_file,))
     db_conn.close()
 
     if imp.has_errors:

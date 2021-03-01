@@ -7,9 +7,10 @@ class ImportException(Exception):
 
 class CsvImport(object):
 
-    def __init__(self, db_conn, logger):
+    def __init__(self, db_conn, logger, repair=False):
         self.db_conn = db_conn
         self.logger = logger
+        self.repair = repair
         self.counter_read = 0
         self.counter_write = 0
         self.has_errors = False
@@ -69,8 +70,8 @@ class CsvImport(object):
         self.has_errors = True
 
     @staticmethod
-    def _parse_shower(rec):
-        shower = rec.strip()
+    def _parse_shower(value):
+        shower = value.strip()
         if '' == shower:
             return None
 
@@ -81,8 +82,8 @@ class CsvImport(object):
         return shower
 
     @staticmethod
-    def _parse_session_id(rec, obs_id):
-        session_id = rec.strip()
+    def _parse_session_id(value, obs_id):
+        session_id = value.strip()
         if '' == session_id:
             raise ImportException("%s: Observation found without a session id." % obs_id)
 
@@ -96,8 +97,8 @@ class CsvImport(object):
         return session_id
 
     @staticmethod
-    def _parse_observer_id(rec, ctx, rec_id):
-        observer_id = rec.strip()
+    def _parse_observer_id(value, ctx, rec_id):
+        observer_id = value.strip()
         if '' == observer_id:
             return None
 
@@ -110,8 +111,8 @@ class CsvImport(object):
 
         return observer_id
 
-    def _parse_dec(self, rec, rec_id):
-        dec = rec.strip()
+    def _parse_dec(self, value, rec_id):
+        dec = value.strip()
         if '' == dec:
             return None
 
@@ -121,19 +122,22 @@ class CsvImport(object):
             raise ImportException("%s: invalid declination value %s." % (rec_id, dec))
 
         if dec in (990.0, 999.0):
-            self.logger.warning(
-                "%s: invalid declination value %s. It is assumed that the value has not been set." %
-                (rec_id, dec)
-            )
-            return None
+            if self.repair:
+                self.logger.warning(
+                    "%s: invalid declination value %s. It is assumed that the value has not been set." %
+                    (rec_id, dec)
+                )
+                return None
+            else:
+                raise ImportException("%s: invalid declination value %s." % (rec_id, dec))
 
         if dec < -90 or dec > 90:
             raise ImportException("%s: declination must be between -90 and 90 instead of %s." % (rec_id, dec))
 
         return dec
 
-    def _parse_ra(self, rec, rec_id):
-        ra = rec.strip()
+    def _parse_ra(self, value, rec_id):
+        ra = value.strip()
         if '' == ra:
             return None
 
@@ -143,20 +147,38 @@ class CsvImport(object):
             raise ImportException("%s: invalid right ascension value %s." % (rec_id, ra))
 
         if 999.0 == ra:
-            self.logger.warning(
-                "%s: invalid right ascension value %s. It is assumed that the value has not been set." %
-                (rec_id, ra)
-            )
-            return None
+            if self.repair:
+                self.logger.warning(
+                    "%s: invalid right ascension value %s. It is assumed that the value has not been set." %
+                    (rec_id, ra)
+                )
+                return None
+            else:
+                raise ImportException("%s: invalid right ascension value %s." % (rec_id, ra))
 
         if ra < 0 or ra > 360:
             raise ImportException("%s: right ascension must be between 0 and 360 instead of %s." % (rec_id, ra))
 
         return ra
 
+    def _check_ra_dec(self, ra, dec, record_id):
+        if not ((ra is None) ^ (dec is None)):
+            return [ra, dec]
+
+        if self.repair:
+            self.logger.warning(
+                (
+                    '%s: ra and dec must be set or both must be undefined.' +
+                    ' It is assumed that both values has not been set.'
+                ) % record_id
+            )
+            return [None, None]
+
+        raise ImportException('%s: ra and dec must be set or both must be undefined.' % record_id)
+
     @staticmethod
-    def _parse_date_time(rec, ctx, obs_id):
-        dt = rec.strip()
+    def _parse_date_time(value, ctx, obs_id):
+        dt = value.strip()
         if '' == dt:
             raise ImportException("%s: %s must be set." % (obs_id, ctx))
 
@@ -184,12 +206,11 @@ class CsvImport(object):
 
         return [month, day]
 
-    def _check_period(self, period_start, period_end, max_period_duration,  obs_id):
+    def _check_period(self, period_start, period_end, max_period_duration, obs_id):
         logger = self.logger
         if period_start == period_end:
-            logger.warning(
-                "%s: The observation has an incorrect time period. The beginning is equal to the end." % obs_id
-            )
+            msg = "%s: The observation has an incorrect time period. The beginning is equal to the end." % obs_id
+            logger.warning(msg)
             return period_start, period_end
 
         diff = period_end - period_start
@@ -202,18 +223,23 @@ class CsvImport(object):
         if period_end > period_start:
             return period_start, period_end
 
+        msg = (
+            "%s: The observation has an incorrect time period (%s - %s)." %
+            (obs_id, str(period_start), str(period_end))
+        )
+
+        if not self.repair:
+            raise ImportException(msg)
+
         diff = abs(diff)
         max_diff = timedelta(1)
         if diff > max_diff:
-            raise ImportException(
-                "%s: The observation has an wrong time period (%s - %s)." %
-                (obs_id, str(period_start), str(period_end))
-            )
+            raise ImportException(msg)
 
         period_end += max_diff
         logger.warning(
-            "%s: The observation has an incorrect time period. An attempt is made to correct it with (%s - %s)." %
-            (obs_id, str(period_start), str(period_end))
+            "%s An attempt is made to correct it with (%s - %s)." %
+            (msg, str(period_start), str(period_end))
         )
 
         return self._check_period(period_start, period_end, max_period_duration, obs_id)

@@ -11,8 +11,8 @@ from vmdb2sql.command import CsvImport, ImportException
 
 class RateImport(CsvImport):
 
-    def __init__(self, db_conn, logger):
-        super().__init__(db_conn, logger)
+    def __init__(self, db_conn, logger, repair):
+        super().__init__(db_conn, logger, repair)
         self.required_columns = {
             'rate id',
             'user id',
@@ -28,7 +28,7 @@ class RateImport(CsvImport):
             'method',
             'number'
         }
-        self.insert_stmt = db_conn.convert_stmt('''
+        self.insert_stmt = self.db_conn.convert_stmt('''
             INSERT INTO imported_rate (
                 id,
                 user_id,
@@ -133,17 +133,7 @@ class RateImport(CsvImport):
                 lm = self._parse_lm(row['lm'], rate_id)
                 ra = self._parse_ra(row['ra'], rate_id)
                 dec = self._parse_dec(row['decl'], rate_id)
-
-                if (ra is None) ^ (dec is None):
-                    self.logger.warning(
-                        (
-                            '%s: ra and dec must be set or both must be undefined.' + 
-                            ' It is assumed that both values has not been set.'
-                        ) % rate_id
-                    )
-                    ra = None
-                    dec = None
-
+                ra, dec = self._check_ra_dec(ra, dec, rate_id)
             except ImportException as err:
                 self._log_error(str(err))
                 continue
@@ -167,8 +157,8 @@ class RateImport(CsvImport):
             self.counter_write += 1
 
     @staticmethod
-    def _parse_rate_id(rec):
-        rate_id = rec.strip()
+    def _parse_rate_id(value):
+        rate_id = value.strip()
         if '' == rate_id:
             raise ImportException("Observation found without a rate id.")
 
@@ -182,8 +172,8 @@ class RateImport(CsvImport):
         return rate_id
 
     @staticmethod
-    def _parse_t_eff(rec, obs_id):
-        t_eff = rec.strip()
+    def _parse_t_eff(value, obs_id):
+        t_eff = value.strip()
         if '' == t_eff:
             raise ImportException("%s: t_eff must be set." % obs_id)
 
@@ -194,15 +184,15 @@ class RateImport(CsvImport):
 
         if 0.0 == t_eff:
             raise ImportException("%s: t_eff is 0." % obs_id)
-
+        
         if t_eff < 0.0 or t_eff > 10:
             raise ImportException("%s: t_eff must be between 0 and 10 instead of %s." % (obs_id, t_eff))
 
         return t_eff
 
     @staticmethod
-    def _parse_f(rec, obs_id):
-        f = rec.strip()
+    def _parse_f(value, obs_id):
+        f = value.strip()
         if '' == f:
             raise ImportException("%s: f must be set." % obs_id)
 
@@ -217,8 +207,8 @@ class RateImport(CsvImport):
         return f
 
     @staticmethod
-    def _parse_freq(rec, rate_id):
-        value = rec.strip()
+    def _parse_freq(value, rate_id):
+        value = value.strip()
 
         try:
             value = int(value)
@@ -234,8 +224,8 @@ class RateImport(CsvImport):
         return value
 
     @staticmethod
-    def _parse_lm(rec, obs_id):
-        lm = rec.strip()
+    def _parse_lm(value, obs_id):
+        lm = value.strip()
         if '' == lm:
             raise ImportException("%s: limiting magnitude must be set." % obs_id)
 
@@ -255,6 +245,7 @@ def usage():
 Syntax: import_rates <options> files ...
         -c, --config ... path to config file
         -l, --log    ... path to log file
+        -r, --repair ... an attempt is made to correct errors (default off)
         -h, --help   ... prints this help''')
 
 
@@ -262,7 +253,11 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hc:l:", ['help', 'config', 'log'])
+        opts, args = getopt.getopt(
+            command_args,
+            "hrc:l:", 
+            ['help', 'repair', 'config', 'log']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -272,6 +267,7 @@ def main(command_args):
         usage()
         sys.exit(1)
 
+    repair = False
     logger = logging.getLogger()
     logger.disabled = True
     log_file = None
@@ -280,6 +276,8 @@ def main(command_args):
         if o in ("-h", "--help"):
             usage()
             sys.exit()
+        if o in ("-r", "--repair"):
+            repair = True
         elif o in ("-c", "--config"):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
@@ -301,7 +299,7 @@ def main(command_args):
         sys.exit(1)
 
     db_conn = DBAdapter(config['database'])
-    imp = RateImport(db_conn, logger)
+    imp = RateImport(db_conn, logger, repair)
     imp.run(args)
     db_conn.close()
 

@@ -2,16 +2,18 @@ import csv
 import getopt
 import json
 import logging
+import os
 import sys
 import warnings
+from pathlib import Path
 from vmdb2sql.model import DBAdapter
 from vmdb2sql.command import CsvImport, ImportException
 
 
 class RadiantImport(CsvImport):
 
-    def __init__(self, db_conn, logger):
-        super().__init__(db_conn, logger)
+    def __init__(self, db_conn, logger, repair):
+        super().__init__(db_conn, logger, repair)
         self.required_columns = {
             'shower',
             'ra',
@@ -19,7 +21,7 @@ class RadiantImport(CsvImport):
             'day',
             'month'
         }
-        self.insert_stmt = db_conn.convert_stmt('''
+        self.insert_stmt = self.db_conn.convert_stmt('''
             INSERT INTO radiant (
                 shower,
                 ra,
@@ -99,16 +101,16 @@ class RadiantImport(CsvImport):
             self.counter_write += 1
 
     @staticmethod
-    def _parse_shower(rec):
-        shower = rec.strip()
+    def _parse_shower(value):
+        shower = value.strip()
         if '' == shower:
             raise ImportException("Shower code must not be empty.")
 
         return shower.upper()
 
     @staticmethod
-    def _parse_int(rec, ctx, iau_code):
-        value = rec.strip()
+    def _parse_int(value, ctx, iau_code):
+        value = value.strip()
 
         try:
             value = int(value)
@@ -120,10 +122,11 @@ class RadiantImport(CsvImport):
 
 def usage():
     print('''Imports radiant positions.
-Syntax: import_radiants <options> radiants.csv
+Syntax: import_radiants <options> [radiants.csv]
     options
         -c, --config ... path to config file
         -l, --log    ... path to log file
+        -r, --repair ... an attempt is made to correct errors (default off)
         -h, --help   ... prints this help''')
 
 
@@ -131,16 +134,27 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hc:l:", ['help', 'config', 'log'])
+        opts, args = getopt.getopt(
+            command_args,
+            "hrc:l:",
+            ['help', 'repair', 'config', 'log']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
         sys.exit(2)
 
-    if len(args) != 1:
+    len_args = len(args)
+    if 0 == len_args:
+        my_dir = Path(os.path.dirname(os.path.realpath(__file__)))
+        radiants_file = str(my_dir.parent / 'data' / 'radiants.csv')
+    elif 1 == len_args:
+        radiants_file = args[0]
+    else:
         usage()
         sys.exit(1)
 
+    repair = False
     logger = logging.getLogger()
     logger.disabled = True
     log_file = None
@@ -149,6 +163,8 @@ def main(command_args):
         if o in ("-h", "--help"):
             usage()
             sys.exit()
+        if o in ("-r", "--repair"):
+            repair = True
         elif o in ("-c", "--config"):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
@@ -170,8 +186,8 @@ def main(command_args):
         sys.exit(1)
 
     db_conn = DBAdapter(config['database'])
-    imp = RadiantImport(db_conn, logger)
-    imp.run(args)
+    imp = RadiantImport(db_conn, logger, repair)
+    imp.run((radiants_file,))
     db_conn.close()
 
     if imp.has_errors:
