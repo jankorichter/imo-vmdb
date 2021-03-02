@@ -1,4 +1,5 @@
 import datetime
+from vmdb2sql.db import DBException
 from vmdb2sql.model.radiant import Position
 
 
@@ -42,12 +43,16 @@ class Shower(object):
 
 class Storage(object):
 
-    def __init__(self, conn):
-        self._conn = conn
+    def __init__(self, db_conn):
+        self._db_conn = db_conn
 
     def load(self, radiants):
-        cur = self._conn.cursor()
-        cur.execute('SELECT * FROM shower')
+        try:
+            cur = self._db_conn.cursor()
+            cur.execute('SELECT * FROM shower')
+        except Exception as e:
+            raise DBException(str(e))
+
         column_names = [desc[0] for desc in cur.description]
         showers = {}
         for record in cur:
@@ -55,6 +60,9 @@ class Storage(object):
             iau_code = record['iau_code']
             showers[iau_code] = Shower(record, radiants[iau_code] if iau_code in radiants else None)
 
-        cur.close()
+        try:
+            cur.close()
+        except Exception as e:
+            raise DBException(str(e))
 
         return showers

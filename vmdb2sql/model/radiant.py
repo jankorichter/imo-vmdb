@@ -1,6 +1,7 @@
 import math
 from astropy.time import Time as AstropyTime
 from astropy import units as u
+from vmdb2sql.db import DBException
 
 
 class Position(object):
@@ -80,8 +81,8 @@ class Drift(object):
 
 class Storage(object):
 
-    def __init__(self, conn):
-        self._conn = conn
+    def __init__(self, db_conn):
+        self._db_conn = db_conn
 
     @staticmethod
     def _get_ydays():
@@ -98,8 +99,13 @@ class Storage(object):
     def load(self):
         ydays = self._get_ydays()
         radiants = {}
-        cur = self._conn.cursor()
-        cur.execute('SELECT * FROM radiant ORDER BY shower, month, day')
+
+        try:
+            cur = self._db_conn.cursor()
+            cur.execute('SELECT * FROM radiant ORDER BY shower, month, day')
+        except Exception as e:
+            raise DBException(str(e))
+
         column_names = [desc[0] for desc in cur.description]
         for r in cur:
             r = dict(zip(column_names, r))
@@ -112,6 +118,9 @@ class Storage(object):
                 'pos': Position(r['ra'], r['dec'])
             })
 
-        cur.close()
+        try:
+            cur.close()
+        except Exception as e:
+            raise DBException(str(e))
 
         return dict((rad[0], Drift(rad[1])) for rad in radiants.items())

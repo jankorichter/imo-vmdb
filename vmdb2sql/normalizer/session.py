@@ -1,3 +1,4 @@
+from vmdb2sql.db import DBException
 from vmdb2sql.normalizer import BaseNormalizer
 
 
@@ -38,52 +39,50 @@ class Record(object):
             'longitude': self.longitude,
             'elevation': self.elevation
         }
-
-        cur.execute(self._insert_stmt, rate)
+        try:
+            cur.execute(self._insert_stmt, rate)
+        except Exception as e:
+            raise DBException(str(e))
 
 
 class SessionNormalizer(BaseNormalizer):
 
-    def __init__(self, db_conn, logger, drop_tables):
-        super().__init__(db_conn, logger, drop_tables)
+    def __init__(self, db_conn, logger):
+        super().__init__(db_conn, logger)
         Record.init_stmt(db_conn)
 
     def run(self):
-        db_conn = self.db_conn
-        cur = db_conn.cursor()
-
-        if self.drop_tables:
+        db_conn = self._db_conn
+        
+        try:
+            cur = db_conn.cursor()
             cur.execute(db_conn.convert_stmt('''
-                SELECT count(*) FROM imported_session
+                SELECT
+                    id,
+                    observer_id,
+                    latitude,
+                    longitude,
+                    elevation
+                FROM imported_session
             '''))
-            self.counter_read = cur.fetchone()[0]
-            cur.execute(db_conn.convert_stmt('''
-                INSERT INTO obs_session SELECT * FROM imported_session
-            '''))
-            cur.execute(db_conn.convert_stmt('''
-                SELECT count(*) FROM obs_session
-            '''))
-            self.counter_write = cur.fetchone()[0]
-            cur.close()
-            return
-
-        cur.execute(db_conn.convert_stmt('''
-            SELECT
-                id,
-                observer_id,
-                latitude,
-                longitude,
-                elevation
-            FROM imported_session
-        '''))
+        except Exception as e:
+            raise DBException(str(e))
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = db_conn.cursor()
+        
+        try:
+            write_cur = db_conn.cursor()
+        except Exception as e:
+            raise DBException(str(e))
+
         delete_stmt = db_conn.convert_stmt('DELETE FROM obs_session WHERE id = %(id)s')
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record)))
-            write_cur.execute(delete_stmt, {'id': record.id})
+            try:
+                write_cur.execute(delete_stmt, {'id': record.id})
+            except Exception as e:
+                raise DBException(str(e))
             record.write(write_cur)
             self.counter_write += 1
 

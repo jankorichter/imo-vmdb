@@ -2,21 +2,20 @@ import getopt
 import json
 import logging
 import sys
+from vmdb2sql.db import DBAdapter, DBException
 from vmdb2sql.model.radiant import Storage as RadiantStorage
 from vmdb2sql.model.shower import Storage as ShowerStorage
 from vmdb2sql.model.solarlong import Solarlong
-from vmdb2sql.normalizer import create_tables, create_rate_magn
+from vmdb2sql.normalizer import create_rate_magn
 from vmdb2sql.normalizer.magnitude import MagnitudeNormalizer
 from vmdb2sql.normalizer.rate import RateNormalizer
 from vmdb2sql.normalizer.session import SessionNormalizer
-from vmdb2sql.model import DBAdapter
 
 
 def usage():
     print('''Normalize and analyze meteor observations.
 Syntax: normalize <options>
     -c, --config ... path to config file
-    -d, --delete ... delete all data
     -l, --log    ... path to log file
     -h, --help   ... prints this help''')
 
@@ -25,7 +24,11 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hdc:l:", ['help', 'delete', 'config', 'log'])
+        opts, args = getopt.getopt(
+            command_args,
+            'hc:l:',
+            ['help', 'config', 'log']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -39,21 +42,18 @@ def main(command_args):
     logger.disabled = True
     log_file = None
 
-    drop_tables = False
     for o, a in opts:
-        if o in ("-h", "--help"):
+        if o in ('-h', '--help'):
             usage()
             sys.exit()
-        if o in ("-d", "--delete"):
-            drop_tables = True
-        elif o in ("-c", "--config"):
+        elif o in ('-c', '--config'):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
-        elif o in ("-l", "--log"):
+        elif o in ('-l', '--log'):
             log_file = a
             logging.basicConfig(
                 filename=log_file,
-                format='%(asctime)s normalize[%(levelname)s] %(message)s',
+                format='%(asctime)s %(levelname)s [normalizer] %(message)s',
                 level=logging.INFO
             )
             logger.disabled = False
@@ -66,47 +66,48 @@ def main(command_args):
         usage()
         sys.exit(1)
 
-    db_conn = DBAdapter(config['database'])
-    logger.info("Start the initialization of the database.")
-    create_tables(db_conn, drop_tables)
-    db_conn.commit()
-    logger.info("Database initialized.")
+    try:
+        db_conn = DBAdapter(config['database'])
+        logger.info('Starting normalization of the sessions.')
+        sn = SessionNormalizer(db_conn, logger)
+        sn.run()
+        logger.info(
+            'The normalisation of the sessions has been completed. %s of %s records have been written.' %
+            (sn.counter_write, sn.counter_read)
+        )
 
-    logger.info("Start normalizing the sessions.")
-    sn = SessionNormalizer(db_conn, logger, drop_tables)
-    sn.run()
-    logger.info(
-        "The normalisation of the sessions has been completed. %s of %s records have been written." %
-        (sn.counter_write, sn.counter_read)
-    )
+        logger.info('Start of normalization the rates.')
+        solarlongs = Solarlong()
+        solarlongs.load(db_conn)
+        radiant_storage = RadiantStorage(db_conn)
+        radiants = radiant_storage.load()
+        shower_storage = ShowerStorage(db_conn)
+        showers = shower_storage.load(radiants)
+        rn = RateNormalizer(db_conn, logger, solarlongs, showers)
+        rn.run()
+        logger.info(
+            'The normalisation of the rates has been completed. %s of %s records have been written.' %
+            (rn.counter_write, rn.counter_read)
+        )
 
-    logger.info("Start normalizing the rates.")
-    solarlongs = Solarlong(db_conn)
-    radiant_storage = RadiantStorage(db_conn)
-    radiants = radiant_storage.load()
-    shower_storage = ShowerStorage(db_conn)
-    showers = shower_storage.load(radiants)
-    rn = RateNormalizer(db_conn, logger, drop_tables, solarlongs, showers)
-    rn.run()
-    logger.info(
-        "The normalisation of the rates has been completed. %s of %s records have been written." %
-        (rn.counter_write, rn.counter_read)
-    )
+        logger.info('Start of normalization the magnitudes.')
+        mn = MagnitudeNormalizer(db_conn, logger, solarlongs)
+        mn.run()
+        logger.info(
+            'The normalisation of the magnitudes has been completed. %s of %s records have been written.' %
+            (rn.counter_write, rn.counter_read)
+        )
 
-    logger.info("Start normalizing the magnitudes.")
-    mn = MagnitudeNormalizer(db_conn, logger, drop_tables, solarlongs)
-    mn.run()
-    logger.info(
-        "The normalisation of the magnitudes has been completed. %s of %s records have been written." %
-        (rn.counter_write, rn.counter_read)
-    )
+        logger.info('Start creating rate magnitude relationship.')
+        create_rate_magn(db_conn)
+        logger.info('The relationship between rate and magnitude was created.')
 
-    logger.info("Start creating rate magnitude relationship.")
-    create_rate_magn(db_conn)
-    logger.info("The relationship between rate and magnitude was created.")
-
-    db_conn.commit()
-    db_conn.close()
+        db_conn.commit()
+        db_conn.close()
+    except DBException as e:
+        msg = 'A database error occured. %s' % str(e)
+        print(msg, file=sys.stderr)
+        sys.exit(3)
 
     if rn.has_errors or mn.has_errors:
         print('Errors occurred when normalizing.', file=sys.stderr)

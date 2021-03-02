@@ -1,8 +1,7 @@
 import getopt
 import json
 import sys
-import warnings
-from vmdb2sql.model import DBAdapter
+from vmdb2sql.db import DBAdapter, DBException
 
 
 def usage():
@@ -17,7 +16,11 @@ def main(command_args):
     config = None
 
     try:
-        opts, args = getopt.getopt(command_args, "hc:", ['help', 'config'])
+        opts, args = getopt.getopt(
+            command_args,
+            'hc:', 
+            ['help', 'config']
+        )
     except getopt.GetoptError as err:
         print(str(err), file=sys.stderr)
         usage()
@@ -28,10 +31,10 @@ def main(command_args):
         sys.exit(1)
 
     for o, a in opts:
-        if o in ("-h", "--help"):
+        if o in ('-h', '--help'):
             usage()
             sys.exit()
-        elif o in ("-c", "--config"):
+        elif o in ('-c', '--config'):
             with open(a) as json_file:
                 config = json.load(json_file, encoding='utf-8-sig')
         else:
@@ -43,17 +46,19 @@ def main(command_args):
         usage()
         sys.exit(1)
 
-    db_conn = DBAdapter(config['database'])
-    cur = db_conn.cursor()
+    try:
+        db_conn = DBAdapter(config['database'])
+        cur = db_conn.cursor()
+        cur.execute(db_conn.convert_stmt('DELETE FROM imported_magnitude'))
+        cur.execute(db_conn.convert_stmt('DELETE FROM imported_rate'))
+        cur.execute(db_conn.convert_stmt('DELETE FROM imported_session'))
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_magnitude'))
-        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_rate'))
-        cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_session'))
-
-    if 'sqlite3' == db_conn.db_module:
-        cur.execute('VACUUM')
+        if 'sqlite3' == db_conn.db_module:
+            cur.execute('VACUUM')
+    except DBException as e:
+        msg = 'A database error occured. %s' % str(e)
+        print(msg, file=sys.stderr)
+        sys.exit(3)
 
     cur.close()
     db_conn.commit()

@@ -4,14 +4,10 @@ import sys
 def usage():
     print('''Syntax: command <options>
 Valid commands are:
-    cleanup             ... Removes data that are no longer needed.
-    generate_solarlongs ... Generates a solarlong lookup table.
-    import_magnitudes   ... Imports magnitude observations.
-    import_radiants     ... Imports radiant positions.
-    import_rates        ... Imports rate observations.
-    import_sessions     ... Imports observation sessions.
-    import_showers      ... Imports meteor showers.
-    normalize           ... Normalize and analyze meteor observations.''')
+    initdb      ... Initializes the database.
+    cleanup     ... Removes data that are no longer needed.
+    import_csv  ... Imports CSV files.
+    normalize   ... Normalize and analyze meteor observations.''')
 
 
 def main():
@@ -22,12 +18,8 @@ def main():
     command = sys.argv[1]
     valid_commands = [
         'cleanup',
-        'generate_solarlongs',
-        'import_magnitudes',
-        'import_radiants',
-        'import_rates',
-        'import_sessions',
-        'import_showers',
+        'initdb',
+        'import_csv',
         'normalize',
     ]
 

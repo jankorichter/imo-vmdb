@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from vmdb2sql.db import DBException
 from vmdb2sql.normalizer import BaseNormalizer
 
 
@@ -111,7 +112,11 @@ class Record(object):
             'freq': freq,
             'mean': mean,
         }
-        cur.execute(self._insert_stmt, magn)
+
+        try:
+            cur.execute(self._insert_stmt, magn)
+        except Exception as e:
+            raise DBException(str(e))
 
         for m, n in magn_items:
             magn = {
@@ -119,48 +124,61 @@ class Record(object):
                 'magn': int(m),
                 'freq': float(n),
             }
-            cur.execute(self._insert_detail_stmt, magn)
+            try:
+                cur.execute(self._insert_detail_stmt, magn)
+            except Exception as e:
+                raise DBException(str(e))
 
 
 class MagnitudeNormalizer(BaseNormalizer):
 
-    def __init__(self, db_conn, logger, drop_tables, solarlongs):
-        super().__init__(db_conn, logger, drop_tables)
+    def __init__(self, db_conn, logger, solarlongs):
+        super().__init__(db_conn, logger)
         self.solarlongs = solarlongs
         Record.init_stmt(db_conn)
 
     def run(self):
         solarlongs = self.solarlongs
-        db_conn = self.db_conn
-        cur = db_conn.cursor()
-        cur.execute(db_conn.convert_stmt('''
-            SELECT
-                m.id,
-                m.shower,
-                m.session_id,
-                m.user_id,
-                m."start",
-                m."end",
-                m.magn
-            FROM imported_magnitude as m
-            INNER JOIN obs_session as s ON s.id = m.session_id
-            ORDER BY
-                m.session_id ASC,
-                m.shower ASC,
-                m."start" ASC,
-                m."end" DESC
-        '''))
+        db_conn = self._db_conn
+        try:
+            cur = db_conn.cursor()
+            cur.execute(db_conn.convert_stmt('''
+                SELECT
+                    m.id,
+                    m.shower,
+                    m.session_id,
+                    m.user_id,
+                    m."start",
+                    m."end",
+                    m.magn
+                FROM imported_magnitude as m
+                INNER JOIN obs_session as s ON s.id = m.session_id
+                ORDER BY
+                    m.session_id ASC,
+                    m.shower ASC,
+                    m."start" ASC,
+                    m."end" DESC
+            '''))
+        except Exception as e:
+            raise DBException(str(e))
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = db_conn.cursor()
+
+        try:
+            write_cur = db_conn.cursor()
+        except Exception as e:
+            raise DBException(str(e))
 
         prev_record = None
         delete_stmt = db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record)))
-            if not self.drop_tables:
+
+            try:
                 write_cur.execute(delete_stmt, {'id': record.id})
+            except Exception as e:
+                raise DBException(str(e))
 
             if prev_record is None:
                 prev_record = record
@@ -185,5 +203,8 @@ class MagnitudeNormalizer(BaseNormalizer):
             prev_record.write(write_cur, solarlongs,)
             self.counter_write += 1
 
-        cur.close()
-        write_cur.close()
+        try:
+            cur.close()
+            write_cur.close()
+        except Exception as e:
+            raise DBException(str(e))

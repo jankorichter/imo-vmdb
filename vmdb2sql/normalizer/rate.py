@@ -1,5 +1,6 @@
 import math
 from datetime import datetime
+from vmdb2sql.db import DBException
 from vmdb2sql.normalizer import BaseNormalizer
 
 
@@ -131,14 +132,16 @@ class Record(object):
             'rad_alt': rad_alt,
             'rad_corr': rad_corr
         }
-
-        cur.execute(self._insert_stmt, rate)
+        try:
+            cur.execute(self._insert_stmt, rate)
+        except Exception as e:
+            raise DBException(str(e))
 
 
 class RateNormalizer(BaseNormalizer):
 
-    def __init__(self, db_conn, logger, drop_tables, solarlongs, showers):
-        super().__init__(db_conn, logger, drop_tables)
+    def __init__(self, db_conn, logger, solarlongs, showers):
+        super().__init__(db_conn, logger)
         self.solarlongs = solarlongs
         self.showers = showers
         Record.init_stmt(db_conn)
@@ -146,43 +149,53 @@ class RateNormalizer(BaseNormalizer):
     def run(self):
         solarlongs = self.solarlongs
         showers = self.showers
-        db_conn = self.db_conn
-        cur = db_conn.cursor()
-        cur.execute(db_conn.convert_stmt('''
-            SELECT
-                r.id,
-                s.observer_id,
-                s.longitude,
-                s.latitude,
-                s.elevation,
-                r.shower,
-                r.session_id,
-                r.user_id,
-                r."start",
-                r."end",
-                r.t_eff,
-                r.f,
-                r.lm,
-                r."number" AS freq
-            FROM imported_rate as r
-            INNER JOIN obs_session as s ON s.id = r.session_id
-            ORDER BY
-                r.session_id ASC,
-                r.shower ASC,
-                r."start" ASC,
-                r."end" DESC
-        '''))
+        db_conn = self._db_conn
+        try:
+            cur = db_conn.cursor()
+            cur.execute(db_conn.convert_stmt('''
+                SELECT
+                    r.id,
+                    s.observer_id,
+                    s.longitude,
+                    s.latitude,
+                    s.elevation,
+                    r.shower,
+                    r.session_id,
+                    r.user_id,
+                    r."start",
+                    r."end",
+                    r.t_eff,
+                    r.f,
+                    r.lm,
+                    r."number" AS freq
+                FROM imported_rate as r
+                INNER JOIN obs_session as s ON s.id = r.session_id
+                ORDER BY
+                    r.session_id ASC,
+                    r.shower ASC,
+                    r."start" ASC,
+                    r."end" DESC
+            '''))
+        except Exception as e:
+            raise DBException(str(e))
 
         column_names = [desc[0] for desc in cur.description]
-        write_cur = db_conn.cursor()
+        
+        try:
+            write_cur = db_conn.cursor()
+        except Exception as e:
+            raise DBException(str(e))
 
         prev_record = None
         delete_stmt = db_conn.convert_stmt('DELETE FROM rate WHERE id = %(id)s')
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record)))
-            if not self.drop_tables:
+            
+            try:
                 write_cur.execute(delete_stmt, {'id': record.id})
+            except Exception as e:
+                raise DBException(str(e))
 
             if prev_record is None:
                 prev_record = record
@@ -207,5 +220,8 @@ class RateNormalizer(BaseNormalizer):
             prev_record.write(write_cur, solarlongs, showers)
             self.counter_write += 1
 
-        cur.close()
-        write_cur.close()
+        try:
+            cur.close()
+            write_cur.close()
+        except Exception as e:
+            raise DBException(str(e))
