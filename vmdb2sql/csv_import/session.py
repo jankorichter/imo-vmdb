@@ -6,10 +6,12 @@ class SessionParser(CsvParser):
 
     _required_columns = {
         'session id',
-        'observer id',
         'latitude',
         'longitude',
-        'elevation'
+        'elevation',
+        'actual observer name',
+        'city',
+        'country'
     }
 
     def __init__(self, *args, **kwars):
@@ -18,16 +20,20 @@ class SessionParser(CsvParser):
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO imported_session (
                 id,
-                observer_id,
                 latitude,
                 longitude,
-                elevation
+                elevation,
+                observer_name,
+                city,
+                country
             ) VALUES (
                 %(id)s,
-                %(observer_id)s,
                 %(latitude)s,
                 %(longitude)s,
-                %(elevation)s
+                %(elevation)s,
+                %(observer_name)s,
+                %(city)s,
+                %(country)s
             )
         ''')
 
@@ -43,20 +49,24 @@ class SessionParser(CsvParser):
 
         try:
             session_id = self._parse_session_id(row['session id'])
-            observer_id = self._parse_observer_id(row['observer id'], 'observer id', session_id)
             lat = self._parse_latitude(row['latitude'], session_id)
             long = self._parse_longitude(row['longitude'], session_id)
             elevation = self._parse_elevation(row['longitude'], session_id)
+            observer_name = self._parse_text(row['actual observer name'], 'observer name', session_id)
+            city = self._parse_text(row['city'], 'city', session_id)
+            country = self._parse_text(row['country'], 'country', session_id)
         except ImportException as err:
             self._log_error(str(err))
             return False
 
         record = {
             'id': session_id,
-            'observer_id': observer_id,
             'latitude': lat,
             'longitude': long,
-            'elevation': elevation
+            'elevation': elevation,
+            'observer_name': observer_name,
+            'city': city,
+            'country': country
         }
 
         try:
@@ -127,3 +137,16 @@ class SessionParser(CsvParser):
             raise ImportException("id %s: invalid elevation value. The value is %s." % (session_id, elevation))
 
         return elevation
+
+    @staticmethod
+    def _parse_text(value, session_id, ctx):
+        value = value.strip()
+        if '' == value:
+            raise ImportException('id %s: %s must be set.' % (session_id, ctx))
+
+        try:
+            value = str(value)
+        except ValueError:
+            raise ImportException("id %s: invalid %s. Value is %s." % (session_id, ctx, value))
+
+        return value

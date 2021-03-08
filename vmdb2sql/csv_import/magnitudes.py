@@ -9,7 +9,6 @@ class MagnitudesParser(CsvParser):
 
     _required_columns = {
         'magnitude id',
-        'user id',
         'obs session id',
         'shower',
         'start date',
@@ -40,7 +39,6 @@ class MagnitudesParser(CsvParser):
                 shower,
                 "start",
                 "end",
-                user_id,
                 magn
             ) VALUES (
                 %(id)s,
@@ -48,7 +46,6 @@ class MagnitudesParser(CsvParser):
                 %(shower)s,
                 %(start)s,
                 %(end)s,
-                %(user_id)s,
                 %(magn)s
             )
         ''')
@@ -67,7 +64,6 @@ class MagnitudesParser(CsvParser):
             magn_id = self._parse_magn_id(row['magnitude id'])
             session_id = self._parse_session_id(row['obs session id'], magn_id)
             shower = self._parse_shower(row['shower'])
-            user_id = self._parse_observer_id(row['user id'], 'user id', magn_id)
             period_start = self._parse_date_time(row['start date'], 'start date', magn_id)
             period_end = self._parse_date_time(row['end date'], 'end date', magn_id)
             period_start, period_end = self._check_period(
@@ -113,7 +109,6 @@ class MagnitudesParser(CsvParser):
             'shower': shower,
             'start': period_start,
             'end': period_end,
-            'user_id': user_id,
             'magn': magn
         }
 

@@ -55,10 +55,12 @@ def create_tables(db_conn):
             CREATE TABLE obs_session
             (
                 id integer PRIMARY KEY,
-                observer_id integer NULL,
                 longitude real NOT NULL,
                 latitude real NOT NULL,
-                elevation real NOT NULL
+                elevation real NOT NULL,
+                observer_name TEXT NOT NULL,
+                country TEXT NOT NULL,
+                city TEXT NOT NULL
             )'''))
 
         cur.execute(db_conn.convert_stmt('''
@@ -70,7 +72,6 @@ def create_tables(db_conn):
                 sl_start double precision NOT NULL,
                 sl_end double precision NOT NULL,
                 session_id integer NOT NULL,
-                observer_id integer NULL,
                 freq integer NOT NULL,
                 lim_mag real NOT NULL,
                 t_eff real NOT NULL,
@@ -98,7 +99,6 @@ def create_tables(db_conn):
                 sl_start double precision NOT NULL,
                 sl_end double precision NOT NULL,
                 session_id integer NOT NULL,
-                observer_id integer NULL,
                 freq integer NOT NULL,
                 mean double precision NOT NULL,
                 lim_mag real NULL,
@@ -194,10 +194,12 @@ def create_tables(db_conn):
             CREATE TABLE imported_session
             (
                 id integer PRIMARY KEY,
-                observer_id integer NULL,
                 longitude real NOT NULL,
                 latitude real NOT NULL,
-                elevation real NULL
+                elevation real NULL,
+                observer_name TEXT NOT NULL,
+                country TEXT NOT NULL,
+                city TEXT NOT NULL
             )'''))
 
         cur.execute(db_conn.convert_stmt('''
@@ -208,7 +210,6 @@ def create_tables(db_conn):
                 shower varchar(6) NULL,
                 "start" timestamp NOT NULL,
                 "end" timestamp NOT NULL,
-                user_id integer NULL,
                 t_eff real NOT NULL,
                 f real NOT NULL,
                 lm real NOT NULL,
@@ -236,7 +237,6 @@ def create_tables(db_conn):
                 shower varchar(6) NULL,
                 "start" timestamp NOT NULL,
                 "end" timestamp NOT NULL,
-                user_id integer NULL,
                 magn text NOT NULL,
                 CONSTRAINT imported_magnitude_pkey PRIMARY KEY (id)
             )'''))

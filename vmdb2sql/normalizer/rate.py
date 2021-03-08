@@ -21,7 +21,6 @@ class Record(object):
             sl_start,
             sl_end,
             session_id,
-            observer_id,
             freq,
             lim_mag,
             t_eff,
@@ -36,7 +35,6 @@ class Record(object):
             %(sl_start)s,
             %(sl_end)s,
             %(session_id)s,
-            %(observer_id)s,
             %(freq)s,
             %(lim_mag)s,
             %(t_eff)s,
@@ -50,7 +48,6 @@ class Record(object):
         self.id = record['id']
         self.shower = record['shower']
         self.session_id = record['session_id']
-        self.user_id = record['user_id']
 
         if isinstance(record['start'], datetime):
             self.start = record['start']
@@ -124,7 +121,6 @@ class Record(object):
             'sl_start': sl_start,
             'sl_end': sl_end,
             'session_id': self.session_id,
-            'observer_id': self.user_id,
             'freq': self.freq,
             'lim_mag': self.lm,
             't_eff': self.t_eff,
@@ -155,13 +151,11 @@ class RateNormalizer(BaseNormalizer):
             cur.execute(db_conn.convert_stmt('''
                 SELECT
                     r.id,
-                    s.observer_id,
                     s.longitude,
                     s.latitude,
                     s.elevation,
                     r.shower,
                     r.session_id,
-                    r.user_id,
                     r."start",
                     r."end",
                     r.t_eff,

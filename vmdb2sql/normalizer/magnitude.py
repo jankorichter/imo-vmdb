@@ -14,7 +14,6 @@ class Record(object):
             sl_start,
             sl_end,
             session_id,
-            observer_id,
             freq,
             mean
         ) VALUES (
@@ -25,7 +24,6 @@ class Record(object):
             %(sl_start)s,
             %(sl_end)s,
             %(session_id)s,
-            %(observer_id)s,
             %(freq)s,
             %(mean)s
         )
@@ -47,7 +45,6 @@ class Record(object):
         self.id = record['id']
         self.shower = record['shower']
         self.session_id = record['session_id']
-        self.user_id = record['user_id']
         if isinstance(record['start'], datetime):
             self.start = record['start']
         else:
@@ -108,7 +105,6 @@ class Record(object):
             'sl_start': sl_start,
             'sl_end': sl_end,
             'session_id': self.session_id,
-            'observer_id': self.user_id,
             'freq': freq,
             'mean': mean,
         }
@@ -147,7 +143,6 @@ class MagnitudeNormalizer(BaseNormalizer):
                     m.id,
                     m.shower,
                     m.session_id,
-                    m.user_id,
                     m."start",
                     m."end",
                     m.magn

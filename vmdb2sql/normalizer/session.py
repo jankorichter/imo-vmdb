@@ -6,25 +6,31 @@ class Record(object):
     _insert_stmt = '''
         INSERT INTO obs_session (
             id,
-            observer_id,
             latitude,
             longitude,
-            elevation
+            elevation,
+            observer_name,
+            country,
+            city
         ) VALUES (
             %(id)s,
-            %(observer_id)s,
             %(latitude)s,
             %(longitude)s,
-            %(elevation)s
+            %(elevation)s,
+            %(observer_name)s,
+            %(country)s,
+            %(city)s
         )
     '''
 
     def __init__(self, record):
         self.id = record['id']
-        self.observer_id = record['observer_id']
         self.latitude = record['latitude']
         self.longitude = record['longitude']
         self.elevation = record['elevation']
+        self.observer_name = record['observer_name']
+        self.country = record['country']
+        self.city = record['city']
 
     @classmethod
     def init_stmt(cls, db_conn):
@@ -34,10 +40,12 @@ class Record(object):
 
         rate = {
             'id': self.id,
-            'observer_id': self.observer_id,
             'latitude': self.latitude,
             'longitude': self.longitude,
-            'elevation': self.elevation
+            'elevation': self.elevation,
+            'observer_name': self.observer_name,
+            'country': self.country,
+            'city': self.city
         }
         try:
             cur.execute(self._insert_stmt, rate)
@@ -59,10 +67,12 @@ class SessionNormalizer(BaseNormalizer):
             cur.execute(db_conn.convert_stmt('''
                 SELECT
                     id,
-                    observer_id,
                     latitude,
                     longitude,
-                    elevation
+                    elevation,
+                    observer_name,
+                    country,
+                    city
                 FROM imported_session
             '''))
         except Exception as e:

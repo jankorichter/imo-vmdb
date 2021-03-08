@@ -73,21 +73,6 @@ class CsvParser(object):
 
         return session_id
 
-    @staticmethod
-    def _parse_observer_id(value, ctx, rec_id):
-        observer_id = value.strip()
-        if '' == observer_id:
-            return None
-
-        try:
-            observer_id = int(observer_id)
-        except ValueError:
-            raise ImportException("id %s: invalid %s. Value is (%s)." % (rec_id, ctx, observer_id))
-        if observer_id < 1:
-            raise ImportException("id %s: %s must be greater than 0 instead of %s." % (rec_id, ctx, observer_id))
-
-        return observer_id
-
     def _parse_dec(self, value, rec_id):
         dec = value.strip()
         if '' == dec:
@@ -162,7 +147,7 @@ class CsvParser(object):
         try:
             dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
         except ValueError:
-            raise ImportException("id %s: invalid %s value %s." % (obs_id, ctx, dt))
+            raise ImportException('id %s: invalid %s value %s.' % (obs_id, ctx, dt))
 
         return dt
 
