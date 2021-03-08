@@ -196,14 +196,14 @@ class RateNormalizer(BaseNormalizer):
                 continue
 
             if record in prev_record:
-                msg = "Rate observation %s contains observation %s. Observation %s discarded."
-                self._log_error(msg % (prev_record.id, record.id, prev_record.id))
+                msg = "session %s: rate observation %s contains observation %s. Observation %s discarded."
+                self._log_error(msg % (record.session_id, prev_record.id, record.id, prev_record.id))
                 prev_record = record
                 continue
 
             if prev_record == record:
-                msg = "Rate observation %s overlaps observation %s. Observation %s discarded."
-                self._log_error(msg % (prev_record.id, record.id, record.id))
+                msg = "session %s: rate observation %s overlaps observation %s. Observation %s discarded."
+                self._log_error(msg % (record.session_id, prev_record.id, record.id, record.id))
                 continue
 
             prev_record.write(write_cur, solarlongs, showers)

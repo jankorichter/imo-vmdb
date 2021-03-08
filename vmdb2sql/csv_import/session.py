@@ -139,7 +139,7 @@ class SessionParser(CsvParser):
         return elevation
 
     @staticmethod
-    def _parse_text(value, session_id, ctx):
+    def _parse_text(value, ctx, session_id):
         value = value.strip()
         if '' == value:
             raise ImportException('id %s: %s must be set.' % (session_id, ctx))

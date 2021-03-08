@@ -63,21 +63,22 @@ class RateParser(CsvParser):
             rate_id = self._parse_rate_id(row['rate id'])
             session_id = self._parse_session_id(row['obs session id'], rate_id)
             shower = self._parse_shower(row['shower'])
-            period_start = self._parse_date_time(row['start date'], 'start date', rate_id)
-            period_end = self._parse_date_time(row['end date'], 'end date', rate_id)
+            period_start = self._parse_date_time(row['start date'], 'start date', rate_id, session_id)
+            period_end = self._parse_date_time(row['end date'], 'end date', rate_id, session_id)
             period_start, period_end = self._check_period(
                 period_start,
                 period_end,
                 timedelta(days=0.49),
-                rate_id
+                rate_id,
+                session_id
             )
-            t_eff = self._parse_t_eff(row['teff'], rate_id)
-            f = self._parse_f(row['f'], rate_id)
-            freq = self._parse_freq(row['number'], rate_id)
-            lm = self._parse_lm(row['lm'], rate_id)
-            ra = self._parse_ra(row['ra'], rate_id)
-            dec = self._parse_dec(row['decl'], rate_id)
-            ra, dec = self._check_ra_dec(ra, dec, rate_id)
+            t_eff = self._parse_t_eff(row['teff'], rate_id, session_id)
+            f = self._parse_f(row['f'], rate_id, session_id)
+            freq = self._parse_freq(row['number'], rate_id, session_id)
+            lm = self._parse_lm(row['lm'], rate_id, session_id)
+            ra = self._parse_ra(row['ra'], rate_id, session_id)
+            dec = self._parse_dec(row['decl'], rate_id, session_id)
+            ra, dec = self._check_ra_dec(ra, dec, rate_id, session_id)
         except ImportException as err:
             self._log_error(str(err))
             return False
@@ -119,75 +120,114 @@ class RateParser(CsvParser):
 
         return rate_id
 
-    def _parse_t_eff(self, value, rate_id):
+    def _parse_t_eff(self, value, rate_id, session_id):
         t_eff = value.strip()
         if '' == t_eff:
-            raise ImportException('id %s: t_eff must be set.' % rate_id)
+            raise ImportException(
+                'id %s in session %s: t_eff must be set.' %
+                (rate_id, session_id)
+            )
 
         try:
             t_eff = float(t_eff)
         except ValueError:
-            raise ImportException('id %s: invalid t_eff. The value is %s.' % (rate_id, t_eff))
+            raise ImportException(
+                'id %s in session %s: invalid t_eff. The value is %s.' %
+                (rate_id, session_id, t_eff)
+            )
 
         if 0.0 == t_eff:
-            raise ImportException('id %s: t_eff is 0.' % rate_id)
+            raise ImportException(
+                'id %s in session %s: t_eff is 0.' %
+                (rate_id, session_id)
+            )
 
         if t_eff < 0.0:
-            raise ImportException('id %s: t_eff must be greater than 0 instead of %s.' % (rate_id, t_eff))
+            raise ImportException(
+                'id %s in session %s: t_eff must be greater than 0 instead of %s.' %
+                (rate_id, session_id, t_eff)
+            )
 
         if t_eff > 24.0:
-            raise ImportException('id %s: t_eff must be less than 24 instead of %s.' % (rate_id, t_eff))
+            raise ImportException(
+                'id %s in session %s: t_eff must be less than 24 instead of %s.' %
+                (rate_id, session_id, t_eff)
+            )
 
         if not self._is_permissive and t_eff > 7.0:
-            raise ImportException('id %s: t_eff must be less than 6 instead of %s.' % (rate_id, t_eff))
+            raise ImportException(
+                'id %s in session %s: t_eff must be less than 6 instead of %s.' %
+                (rate_id, session_id, t_eff)
+            )
 
         return t_eff
 
     @staticmethod
-    def _parse_f(value, rate_id):
+    def _parse_f(value, rate_id, session_id):
         f = value.strip()
         if '' == f:
-            raise ImportException('id %s: f must be set.' % rate_id)
+            raise ImportException(
+                'id %s in session %s: f must be set.' %
+                (rate_id, session_id)
+            )
 
         try:
             f = float(f)
         except ValueError:
-            raise ImportException('id %s: invalid f. The value is %s.' % (rate_id, f))
+            raise ImportException(
+                'id %s in session %s: invalid f. The value is %s.' %
+                (rate_id, session_id, f)
+            )
 
         if f < 1.0:
-            raise ImportException('id %s: f must be greater than 1 instead of %s.' % (rate_id, f))
+            raise ImportException(
+                'id %s in session %s: f must be greater than 1 instead of %s.' %
+                (rate_id, session_id, f)
+            )
 
         return f
 
     @staticmethod
-    def _parse_freq(value, rate_id):
+    def _parse_freq(value, rate_id, session_id):
         value = value.strip()
 
         try:
             value = int(value)
         except ValueError:
-            raise ImportException('id %s: %s is an invalid count of meteors.' % (rate_id, value))
+            raise ImportException(
+                'id %s in session %s: %s is an invalid count of meteors.' %
+                (rate_id, session_id, value)
+            )
 
         if value < 0:
             raise ImportException(
-                'id %s: count of meteors must be greater than 0 instead of %s.' %
-                (rate_id, value)
+                'id %s in session %s: count of meteors must be greater than 0 instead of %s.' %
+                (rate_id, session_id, value)
             )
 
         return value
 
     @staticmethod
-    def _parse_lm(value, rate_id):
+    def _parse_lm(value, rate_id, session_id):
         lm = value.strip()
         if '' == lm:
-            raise ImportException('id %s: limiting magnitude must be set.' % rate_id)
+            raise ImportException(
+                'id %s in session %s: limiting magnitude must be set.' %
+                (rate_id, session_id)
+            )
 
         try:
             lm = float(lm)
         except ValueError:
-            raise ImportException('id %s: invalid limiting magnitude. The value is %s.' % (rate_id, lm))
+            raise ImportException(
+                'id %s in session %s: invalid limiting magnitude. The value is %s.' %
+                (rate_id, session_id, lm)
+            )
 
         if lm < 0.0 or lm > 8:
-            raise ImportException('id %s: lm must be between 0 and 8 instead of %s.' % (rate_id, lm))
+            raise ImportException(
+                'id %s in session %s: lm must be between 0 and 8 instead of %s.' %
+                (rate_id, session_id, lm)
+            )
 
         return lm

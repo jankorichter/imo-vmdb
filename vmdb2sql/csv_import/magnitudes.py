@@ -64,13 +64,14 @@ class MagnitudesParser(CsvParser):
             magn_id = self._parse_magn_id(row['magnitude id'])
             session_id = self._parse_session_id(row['obs session id'], magn_id)
             shower = self._parse_shower(row['shower'])
-            period_start = self._parse_date_time(row['start date'], 'start date', magn_id)
-            period_end = self._parse_date_time(row['end date'], 'end date', magn_id)
+            period_start = self._parse_date_time(row['start date'], 'start date', magn_id, session_id)
+            period_end = self._parse_date_time(row['end date'], 'end date', magn_id, session_id)
             period_start, period_end = self._check_period(
                 period_start,
                 period_end,
                 timedelta(days=0.49),
-                magn_id
+                magn_id,
+                session_id
             )
         except ImportException as err:
             self._log_error(str(err))
@@ -86,13 +87,16 @@ class MagnitudesParser(CsvParser):
                 n = float(row['mag ' + str(column)])
                 magn[str(column)] = n
         except ValueError:
-            self._log_error('id %s: Invalid count value of magnitudes found.' % magn_id)
+            self._log_error(
+                'id %s in session %s: Invalid count value of magnitudes found.' %
+                (magn_id, session_id)
+            )
             return False
 
         try:
             for m, n in magn.items():
-                self._validate_count(n, m, magn_id)
-            self._validate_total_count(magn, magn_id)
+                self._validate_count(n, m, magn_id, session_id)
+            self._validate_total_count(magn, magn_id, session_id)
         except ImportException as err:
             self._log_error(str(err))
             return False
@@ -123,23 +127,23 @@ class MagnitudesParser(CsvParser):
     def _parse_magn_id(value):
         magn_id = value.strip()
         if '' == magn_id:
-            raise ImportException("Observation found without a magnitude id.")
+            raise ImportException('Observation found without a magnitude id.')
 
         try:
             magn_id = int(magn_id)
         except ValueError:
-            raise ImportException("id %s: invalid magnitude id." % magn_id)
+            raise ImportException('id %s: invalid magnitude id.' % magn_id)
         if magn_id < 1:
-            raise ImportException("id %s: magnitude id must be greater than 0." % magn_id)
+            raise ImportException('id %s: magnitude id must be greater than 0.' % magn_id)
 
         return magn_id
 
     @staticmethod
-    def _validate_count(n, m, magn_id):
+    def _validate_count(n, m, magn_id, session_id):
         if n < 0.0:
             raise ImportException(
-                "id %s: Invalid count %s found for a meteor magnitude of %s." %
-                (magn_id, n, m)
+                'id %s in session %s: Invalid count %s found for a meteor magnitude of %s.' %
+                (magn_id, session_id, n, m)
             )
 
         n_cmp = math.floor(n)
@@ -151,20 +155,23 @@ class MagnitudesParser(CsvParser):
             return
 
         raise ImportException(
-            "id %s: Invalid count %s found for a meteor magnitude of %s." %
-            (magn_id, n, m))
+            'id %s in session %s: Invalid count %s found for a meteor magnitude of %s.' %
+            (magn_id, session_id, n, m))
 
-    def _validate_total_count(self, magn, magn_id):
+    def _validate_total_count(self, magn, magn_id, session_id):
         is_permissive = self._is_permissive
         n_sum = 0
         for m in sorted(magn.keys(), key=int):
             n = magn[m]
             n_sum += n
             if not is_permissive and 0 == n and math.floor(n_sum) != n_sum:
-                raise ImportException("id %s: Inconsistent total count of meteors found." % magn_id)
+                raise ImportException(
+                    'id %s in session %s: Inconsistent total count of meteors found.' %
+                    (magn_id, session_id)
+                )
 
         if math.floor(n_sum) != n_sum:
             raise ImportException(
-                "id %s: The count of meteors out of a total of %s is invalid." %
-                (magn_id, n_sum)
+                'id %s in session %s: The count of meteors out of a total of %s is invalid.' %
+                (magn_id, session_id, n_sum)
             )

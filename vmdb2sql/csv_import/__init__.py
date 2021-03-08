@@ -62,92 +62,119 @@ class CsvParser(object):
     def _parse_session_id(value, obs_id):
         session_id = value.strip()
         if '' == session_id:
-            raise ImportException("id %s: Observation found without a session id." % obs_id)
+            raise ImportException('id %s: Observation found without a session id.' % obs_id)
 
         try:
             session_id = int(session_id)
         except ValueError:
-            raise ImportException("id %s: invalid session id. Value is (%s)." % (obs_id, session_id))
+            raise ImportException('id %s: invalid session id. Value is (%s).' % (obs_id, session_id))
         if session_id < 1:
-            raise ImportException("id %s: session id must be greater than 0 instead of %s." % (obs_id, session_id))
+            raise ImportException('id %s: session id must be greater than 0 instead of %s.' % (obs_id, session_id))
 
         return session_id
 
-    def _parse_dec(self, value, rec_id):
+    def _parse_dec(self, value, rec_id, session_id=None):
         dec = value.strip()
         if '' == dec:
             return None
 
+        session_msg = ''
+        if session_id is not None:
+            session_msg = ' in session %s' % session_id
+
         try:
             dec = float(dec)
         except ValueError:
-            raise ImportException("id %s: invalid declination value %s." % (rec_id, dec))
+            raise ImportException(
+                'id %s%s: invalid declination value %s.' %
+                (rec_id, session_msg, dec)
+            )
 
         if dec in (990.0, 999.0):
             if self._try_repair:
                 self._logger.warning(
-                    "id %s: invalid declination value %s. It is assumed that the value has not been set." %
-                    (rec_id, dec)
+                    'id %s%s: invalid declination value %s. It is assumed that the value has not been set.' %
+                    (rec_id, session_msg, dec)
                 )
                 return None
             else:
-                raise ImportException("id %s: invalid declination value %s." % (rec_id, dec))
+                raise ImportException(
+                    'id %s%s: invalid declination value %s.' %
+                    (rec_id, session_msg, dec)
+                )
 
         if dec < -90 or dec > 90:
-            raise ImportException("id %s: declination must be between -90 and 90 instead of %s." % (rec_id, dec))
+            raise ImportException(
+                'id %s%s: declination must be between -90 and 90 instead of %s.' %
+                (rec_id, session_msg, dec)
+            )
 
         return dec
 
-    def _parse_ra(self, value, rec_id):
+    def _parse_ra(self, value, rec_id, session_id=None):
         ra = value.strip()
         if '' == ra:
             return None
 
+        session_msg = ''
+        if session_id is not None:
+            session_msg = ' in session %s' % session_id
+
         try:
             ra = float(ra)
         except ValueError:
-            raise ImportException("id %s: invalid right ascension value %s." % (rec_id, ra))
+            raise ImportException('id %s%s: invalid right ascension value %s.' % (rec_id, session_msg, ra))
 
         if 999.0 == ra:
             if self._try_repair:
                 self._logger.warning(
-                    "id %s: invalid right ascension value %s. It is assumed that the value has not been set." %
-                    (rec_id, ra)
+                    'id %s%s: invalid right ascension value %s. It is assumed that the value has not been set.' %
+                    (rec_id, session_msg, ra)
                 )
                 return None
             else:
-                raise ImportException("id %s: invalid right ascension value %s." % (rec_id, ra))
+                raise ImportException(
+                    'id %s%s: invalid right ascension value %s.' %
+                    (rec_id, session_msg, ra)
+                )
 
         if ra < 0 or ra > 360:
-            raise ImportException("id %s: right ascension must be between 0 and 360 instead of %s." % (rec_id, ra))
+            raise ImportException(
+                'id %s%s: right ascension must be between 0 and 360 instead of %s.' %
+                (rec_id, session_msg, ra)
+            )
 
         return ra
 
-    def _check_ra_dec(self, ra, dec, record_id):
+    def _check_ra_dec(self, ra, dec, rec_id, session_id=None):
         if not ((ra is None) ^ (dec is None)):
             return [ra, dec]
+
+        session_msg = ''
+        if session_id is not None:
+            session_msg = ' in session %s' % session_id
 
         if self._try_repair:
             self._logger.warning(
                 (
-                    'id %s: ra and dec must be set or both must be undefined.' +
+                    'id %s%s: ra and dec must be set or both must be undefined.' +
                     ' It is assumed that both values has not been set.'
-                ) % record_id
+                ) % (rec_id, session_msg)
             )
             return [None, None]
 
-        raise ImportException('%s: ra and dec must be set or both must be undefined.' % record_id)
+        raise ImportException('%s%s: ra and dec must be set or both must be undefined.' % (rec_id, session_msg))
 
     @staticmethod
-    def _parse_date_time(value, ctx, obs_id):
+    def _parse_date_time(value, ctx, obs_id, session_id):
         dt = value.strip()
         if '' == dt:
-            raise ImportException("id %s: %s must be set." % (obs_id, ctx))
+            raise ImportException('id %s in session %s: %s must be set.' % (obs_id, session_id, ctx))
 
         try:
             dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
         except ValueError:
-            raise ImportException('id %s: invalid %s value %s.' % (obs_id, ctx, dt))
+            raise ImportException('id %s in session %s: invalid %s value %s.' % (obs_id, session_id, ctx, dt))
 
         return dt
 
@@ -158,20 +185,21 @@ class CsvParser(object):
             ctx = 'of %s ' % ctx
 
         if day < 1 or day > 31:
-            raise ImportException("id %s: the day %smust be between 1 and 31 instead of %s" % (iau_code, ctx, day))
+            raise ImportException('id %s: the day %smust be between 1 and 31 instead of %s' % (iau_code, ctx, day))
 
         if 31 == day and month in [4, 6, 9, 11]:
-            raise ImportException("id %s: the day %smust not be 31. The value is %s." % (iau_code, ctx, day))
+            raise ImportException('id %s: the day %smust not be 31. The value is %s.' % (iau_code, ctx, day))
 
         if 2 == month and day in [29, 30]:
-            raise ImportException("id %s: the day %smust not be 29 or 30. The value is %s." % (iau_code, ctx, day))
+            raise ImportException('id %s: the day %smust not be 29 or 30. The value is %s.' % (iau_code, ctx, day))
 
         return [month, day]
 
-    def _check_period(self, period_start, period_end, max_period_duration, obs_id):
+    def _check_period(self, period_start, period_end, max_period_duration, obs_id, session_id):
         logger = self._logger
         if period_start == period_end:
-            msg = "id %s: The observation has an incorrect time period. The beginning is equal to the end." % obs_id
+            msg = 'The observation has an incorrect time period. The beginning is equal to the end.'
+            msg = 'id %s in session %s: %s' % (obs_id, session_id, msg)
             if self._is_permissive:
                 logger.warning(msg)
                 return period_start, period_end
@@ -181,16 +209,16 @@ class CsvParser(object):
         diff = period_end - period_start
         if period_end > period_start and diff > max_period_duration:
             raise ImportException(
-                "id %s: The time period of observation is too long (%s - %s)." %
-                (obs_id, str(period_start), str(period_end))
+                'id %s in session %s: The time period of observation is too long (%s - %s).' %
+                (obs_id, session_id, str(period_start), str(period_end))
             )
 
         if period_end > period_start:
             return period_start, period_end
 
         msg = (
-            "id %s: The observation has an incorrect time period (%s - %s)." %
-            (obs_id, str(period_start), str(period_end))
+            'id %s in session %s: The observation has an incorrect time period (%s - %s).' %
+            (obs_id, session_id, str(period_start), str(period_end))
         )
 
         if not self._try_repair:
@@ -203,8 +231,8 @@ class CsvParser(object):
 
         period_end += max_diff
         logger.warning(
-            "%s An attempt is made to correct it with (%s - %s)." %
+            '%s An attempt is made to correct it with (%s - %s).' %
             (msg, str(period_start), str(period_end))
         )
 
-        return self._check_period(period_start, period_end, max_period_duration, obs_id)
+        return self._check_period(period_start, period_end, max_period_duration, obs_id, session_id)
