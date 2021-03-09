@@ -185,17 +185,23 @@ class CsvParser(object):
             ctx = 'of %s ' % ctx
 
         if day < 1 or day > 31:
-            raise ImportException('id %s: the day %smust be between 1 and 31 instead of %s' % (iau_code, ctx, day))
+            raise ImportException(
+                'id %s: the day %smust be between 1 and 31 instead of %s' %
+                (iau_code, ctx, day)
+            )
 
         if 31 == day and month in [4, 6, 9, 11]:
-            raise ImportException('id %s: the day %smust not be 31. The value is %s.' % (iau_code, ctx, day))
+            raise ImportException(
+                'id %s: the day %smust not be 31. The value is %s.' %
+                (iau_code, ctx, day)
+            )
 
         if 2 == month and day in [29, 30]:
             raise ImportException('id %s: the day %smust not be 29 or 30. The value is %s.' % (iau_code, ctx, day))
 
         return [month, day]
 
-    def _check_period(self, period_start, period_end, max_period_duration, obs_id, session_id):
+    def _check_period(self, period_start, period_end, max_period_duration, obs_id, session_id, try_repair = None):
         logger = self._logger
         if period_start == period_end:
             msg = 'The observation has an incorrect time period. The beginning is equal to the end.'
@@ -221,8 +227,25 @@ class CsvParser(object):
             (obs_id, session_id, str(period_start), str(period_end))
         )
 
-        if not self._try_repair:
+        try_repair = self._try_repair if try_repair is None else try_repair
+        if not try_repair:
             raise ImportException(msg)
+
+        logger.warning(
+            '%s An attempt is made to correct it with (%s - %s).' %
+            (msg, str(period_end), str(period_start))
+        )
+        try:
+            return self._check_period(
+                period_end,
+                period_start,
+                max_period_duration,
+                obs_id,
+                session_id,
+                try_repair=False
+            )
+        except ImportException:
+            pass
 
         diff = abs(diff)
         max_diff = timedelta(days=1)
@@ -235,4 +258,11 @@ class CsvParser(object):
             (msg, str(period_start), str(period_end))
         )
 
-        return self._check_period(period_start, period_end, max_period_duration, obs_id, session_id)
+        return self._check_period(
+            period_start,
+            period_end,
+            max_period_duration,
+            obs_id,
+            session_id,
+            try_repair=False
+        )
