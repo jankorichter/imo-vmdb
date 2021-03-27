@@ -46,7 +46,6 @@ def create_tables(db_conn):
             cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS obs_session'))
             cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS shower'))
             cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS radiant'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS solarlong_lookup'))
             cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_session'))
             cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_rate'))
             cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_magnitude'))
@@ -76,7 +75,15 @@ def create_tables(db_conn):
                 lim_mag real NOT NULL,
                 t_eff real NOT NULL,
                 f real NOT NULL,
+                sun_alt double precision NOT NULL,
+                sun_az double precision NOT NULL,
+                moon_alt double precision NOT NULL,
+                moon_az double precision NOT NULL,
+                moon_illum double precision NOT NULL,
+                field_alt double precision NULL,
+                field_az double precision NULL,
                 rad_alt double precision NULL,
+                rad_az double precision NULL,
                 rad_corr double precision NULL,
                 CONSTRAINT rate_pkey PRIMARY KEY (id),
                 CONSTRAINT rate_session_fk FOREIGN KEY (session_id)
@@ -181,13 +188,6 @@ def create_tables(db_conn):
                 ra real NOT NULL,
                 "dec" real NOT NULL,
                 CONSTRAINT radiant_pkey PRIMARY KEY (shower, "month", "day")
-            )'''))
-
-        cur.execute(db_conn.convert_stmt('''
-            CREATE TABLE solarlong_lookup (
-                date DATE NOT NULL,
-                sl double precision NOT NULL,
-                CONSTRAINT solarlong_lookup_pkey PRIMARY KEY (date)
             )'''))
 
         cur.execute(db_conn.convert_stmt('''

@@ -61,7 +61,7 @@ class SessionNormalizer(BaseNormalizer):
 
     def run(self):
         db_conn = self._db_conn
-        
+
         try:
             cur = db_conn.cursor()
             cur.execute(db_conn.convert_stmt('''
@@ -79,7 +79,7 @@ class SessionNormalizer(BaseNormalizer):
             raise DBException(str(e))
 
         column_names = [desc[0] for desc in cur.description]
-        
+
         try:
             write_cur = db_conn.cursor()
         except Exception as e:

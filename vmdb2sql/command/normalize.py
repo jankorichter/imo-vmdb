@@ -5,7 +5,7 @@ import sys
 from vmdb2sql.db import DBAdapter, DBException
 from vmdb2sql.model.radiant import Storage as RadiantStorage
 from vmdb2sql.model.shower import Storage as ShowerStorage
-from vmdb2sql.model.solarlong import Solarlong
+from vmdb2sql.model.sky import Sky
 from vmdb2sql.normalizer import create_rate_magn
 from vmdb2sql.normalizer.magnitude import MagnitudeNormalizer
 from vmdb2sql.normalizer.rate import RateNormalizer
@@ -77,13 +77,12 @@ def main(command_args):
         )
 
         logger.info('Start of normalization the rates.')
-        solarlongs = Solarlong()
-        solarlongs.load(db_conn)
         radiant_storage = RadiantStorage(db_conn)
         radiants = radiant_storage.load()
         shower_storage = ShowerStorage(db_conn)
         showers = shower_storage.load(radiants)
-        rn = RateNormalizer(db_conn, logger, solarlongs, showers)
+        sky = Sky()
+        rn = RateNormalizer(db_conn, logger, sky, showers)
         rn.run()
         logger.info(
             'The normalisation of the rates has been completed. %s of %s records have been written.' %
@@ -91,7 +90,7 @@ def main(command_args):
         )
 
         logger.info('Start of normalization the magnitudes.')
-        mn = MagnitudeNormalizer(db_conn, logger, solarlongs)
+        mn = MagnitudeNormalizer(db_conn, logger, sky)
         mn.run()
         logger.info(
             'The normalisation of the magnitudes has been completed. %s of %s records have been written.' %

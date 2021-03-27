@@ -1,10 +1,10 @@
 import json
-from datetime import datetime
+import math
 from vmdb2sql.db import DBException
-from vmdb2sql.normalizer import BaseNormalizer
+from vmdb2sql.normalizer import BaseRecord, BaseNormalizer
 
 
-class Record(object):
+class Record(BaseRecord):
     _insert_stmt = '''
         INSERT INTO magnitude (
             id,
@@ -42,19 +42,7 @@ class Record(object):
     '''
 
     def __init__(self, record):
-        self.id = record['id']
-        self.shower = record['shower']
-        self.session_id = record['session_id']
-        if isinstance(record['start'], datetime):
-            self.start = record['start']
-        else:
-            self.start = datetime.strptime(record['start'], '%Y-%m-%d %H:%M:%S')
-
-        if isinstance(record['end'], datetime):
-            self.end = record['end']
-        else:
-            self.end = datetime.strptime(record['end'], '%Y-%m-%d %H:%M:%S')
-
+        super().__init__(record)
         self.magn = json.loads(record['magn'])
 
     @classmethod
@@ -62,48 +50,21 @@ class Record(object):
         cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
         cls._insert_detail_stmt = db_conn.convert_stmt(cls._insert_detail_stmt)
 
-    def __eq__(self, other):
-        return not self != other
-
-    def __ne__(self, other):
-        if self.session_id != other.session_id:
-            return True
-
-        if self.shower != other.shower:
-            return True
-
-        if self.end <= other.start:
-            return True
-
-        if self.start >= other.end:
-            return True
-
-        return False
-
-    def __contains__(self, other):
-        if self != other:
-            return False
-
-        if self.start > other.start or self.end < other.end:
-            return False
-
-        return True
-
-    def write(self, cur, solarlongs):
+    def write(self, cur, sky):
         mid = self.id
         freq = int(sum(m for m in self.magn.values()))
         magn_items = self.magn.items()
         mean = sum(float(m) * float(n) for m, n in magn_items) / freq
-        sl_start = solarlongs.get(self.start)
-        sl_end = solarlongs.get(self.end)
+        sl_start = sky.solarlong(self.start)
+        sl_end = sky.solarlong(self.end)
         iau_code = self.shower
         magn = {
             'id': mid,
             'shower': iau_code,
             'period_start': self.start,
             'period_end': self.end,
-            'sl_start': sl_start,
-            'sl_end': sl_end,
+            'sl_start': math.degrees(sl_start),
+            'sl_end': math.degrees(sl_end),
             'session_id': self.session_id,
             'freq': freq,
             'mean': mean,
@@ -128,19 +89,21 @@ class Record(object):
 
 class MagnitudeNormalizer(BaseNormalizer):
 
-    def __init__(self, db_conn, logger, solarlongs):
+    def __init__(self, db_conn, logger, sky):
         super().__init__(db_conn, logger)
-        self.solarlongs = solarlongs
+        self._sky = sky
         Record.init_stmt(db_conn)
 
     def run(self):
-        solarlongs = self.solarlongs
         db_conn = self._db_conn
         try:
             cur = db_conn.cursor()
             cur.execute(db_conn.convert_stmt('''
                 SELECT
                     m.id,
+                    s.longitude,
+                    s.latitude,
+                    s.elevation,
                     m.shower,
                     m.session_id,
                     m."start",
@@ -190,12 +153,12 @@ class MagnitudeNormalizer(BaseNormalizer):
                 self._log_error(msg % (record.session_id, prev_record.id, record.id, record.id))
                 continue
 
-            prev_record.write(write_cur, solarlongs)
+            prev_record.write(write_cur, self._sky)
             self.counter_write += 1
             prev_record = record
 
         if prev_record is not None:
-            prev_record.write(write_cur, solarlongs,)
+            prev_record.write(write_cur, self._sky)
             self.counter_write += 1
 
         try:

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from vmdb2sql.command.import_csv import CSVImport
 from vmdb2sql.db import create_tables, DBAdapter, DBException
-from vmdb2sql.model.solarlong import Solarlong
 
 
 def usage():
@@ -80,10 +79,6 @@ def main(command_args):
         logger.info('Database initialized.')
         csv_import = CSVImport(db_conn, log_handler, do_delete=True)
         csv_import.run((shower_file, radiants_file))
-        logger.info('Starting the pre-generation of solar longitudes.')
-        solarlongs = Solarlong()
-        solarlongs.load(db_conn)
-        logger.info('Solar longitudes generated.')
         db_conn.commit()
         db_conn.close()
     except DBException as e:

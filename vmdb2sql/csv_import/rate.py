@@ -32,6 +32,8 @@ class RateParser(CsvParser):
                 t_eff,
                 f,
                 lm,
+                ra,
+                dec,
                 shower,
                 method,
                 "number"
@@ -43,6 +45,8 @@ class RateParser(CsvParser):
                 %(t_eff)s,
                 %(f)s,
                 %(lm)s,
+                %(ra)s,
+                %(dec)s,
                 %(shower)s,
                 %(method)s,
                 %(number)s

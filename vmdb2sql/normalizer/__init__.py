@@ -1,4 +1,58 @@
+from astropy import units as u
+from astropy.coordinates import EarthLocation
+from datetime import datetime
 from vmdb2sql.db import DBException
+
+
+class NormalizerException(Exception):
+    pass
+
+
+class BaseRecord(object):
+
+    def __init__(self, record):
+        self.id = record['id']
+        self.shower = record['shower']
+        self.session_id = record['session_id']
+        self.loc = EarthLocation(lat=record['latitude']*u.deg, lon=record['longitude']*u.deg)
+
+        if isinstance(record['start'], datetime):
+            self.start = record['start']
+        else:
+            self.start = datetime.strptime(record['start'], '%Y-%m-%d %H:%M:%S')
+
+        if isinstance(record['end'], datetime):
+            self.end = record['end']
+        else:
+            self.end = datetime.strptime(record['end'], '%Y-%m-%d %H:%M:%S')
+
+    def __eq__(self, other):
+        return not self != other
+
+    def __ne__(self, other):
+        if self.session_id != other.session_id:
+            return True
+
+        if self.shower != other.shower:
+            return True
+
+        if self.end <= other.start:
+            return True
+
+        if self.start >= other.end:
+            return True
+
+        return False
+
+    def __contains__(self, other):
+        if self != other:
+            return False
+
+        if self.start > other.start or self.end < other.end:
+            return False
+
+        return True
+
 
 class BaseNormalizer(object):
 
