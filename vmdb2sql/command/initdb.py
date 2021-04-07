@@ -1,63 +1,29 @@
-import getopt
 import json
 import logging
 import os
 import sys
+from optparse import OptionParser
 from pathlib import Path
-
 from vmdb2sql.command.import_csv import CSVImport
 from vmdb2sql.db import create_tables, DBAdapter, DBException
 
 
-def usage():
-    print('''Initializes the database.
-Syntax: initdb <options>
-    -c, --config ... path to config file
-    -l, --log    ... path to log file
-    -h, --help   ... prints this help''')
-
-
 def main(command_args):
+    parser = OptionParser(usage='initdb [options]')
+    parser.add_option('-c', action='store', dest='config_file', help='path to config file')
+    parser.add_option('-l', action='store', dest='log_file', help='path to log file')
+    options, args = parser.parse_args(command_args)
 
-    config = None
-
-    try:
-        opts, args = getopt.getopt(
-            command_args,
-            'hc:l:',
-            ['help', 'config', 'log']
-        )
-    except getopt.GetoptError as err:
-        print(str(err), file=sys.stderr)
-        usage()
-        sys.exit(2)
-
-    if len(args) != 0:
-        usage()
+    if options.config_file is None:
+        parser.print_help()
         sys.exit(1)
 
-    log_file = None
-    for o, a in opts:
-        if o in ('-h', '--help'):
-            usage()
-            sys.exit()
-        elif o in ('-c', '--config'):
-            with open(a) as json_file:
-                config = json.load(json_file, encoding='utf-8-sig')
-        elif o in ('-l', '--log'):
-            log_file = a
-        else:
-            print('invalid option ' + o, file=sys.stderr)
-            usage()
-            sys.exit(2)
-
-    if config is None:
-        usage()
-        sys.exit(1)
+    with open(options.config_file) as json_file:
+        config = json.load(json_file, encoding='utf-8-sig')
 
     log_handler = None
-    if log_file is not None:
-        log_handler = logging.FileHandler(log_file, 'a')
+    if options.log_file is not None:
+        log_handler = logging.FileHandler(options.log_file, 'a')
         fmt = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s', None, '%')
         log_handler.setFormatter(fmt)
 
@@ -88,6 +54,6 @@ def main(command_args):
 
     if csv_import.has_errors:
         print('Errors or warnings occurred when importing data.', file=sys.stderr)
-        if not logger.disabled:
-            print('See log file %s for more information.' % log_file, file=sys.stderr)
+        if options.log_file is not None:
+            print('See log file %s for more information.' % options.log_file, file=sys.stderr)
         sys.exit(3)

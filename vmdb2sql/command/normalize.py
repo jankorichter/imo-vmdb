@@ -1,7 +1,7 @@
-import getopt
 import json
 import logging
 import sys
+from optparse import OptionParser
 from vmdb2sql.db import DBAdapter, DBException
 from vmdb2sql.model.radiant import Storage as RadiantStorage
 from vmdb2sql.model.shower import Storage as ShowerStorage
@@ -21,50 +21,30 @@ Syntax: normalize <options>
 
 
 def main(command_args):
-    config = None
+    parser = OptionParser(usage='initdb [options]')
+    parser.add_option('-c', action='store', dest='config_file', help='path to config file')
+    parser.add_option('-l', action='store', dest='log_file', help='path to log file')
+    options, args = parser.parse_args(command_args)
 
-    try:
-        opts, args = getopt.getopt(
-            command_args,
-            'hc:l:',
-            ['help', 'config', 'log']
-        )
-    except getopt.GetoptError as err:
-        print(str(err), file=sys.stderr)
-        usage()
-        sys.exit(2)
-
-    if len(args) != 0:
-        usage()
+    if options.config_file is None:
+        parser.print_help()
         sys.exit(1)
 
-    logger = logging.getLogger()
+    with open(options.config_file) as json_file:
+        config = json.load(json_file, encoding='utf-8-sig')
+
+    log_handler = None
+    if options.log_file is not None:
+        log_handler = logging.FileHandler(options.log_file, 'a')
+        fmt = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s', None, '%')
+        log_handler.setFormatter(fmt)
+
+    logger = logging.getLogger('normalize')
     logger.disabled = True
-    log_file = None
-
-    for o, a in opts:
-        if o in ('-h', '--help'):
-            usage()
-            sys.exit()
-        elif o in ('-c', '--config'):
-            with open(a) as json_file:
-                config = json.load(json_file, encoding='utf-8-sig')
-        elif o in ('-l', '--log'):
-            log_file = a
-            logging.basicConfig(
-                filename=log_file,
-                format='%(asctime)s %(levelname)s [normalizer] %(message)s',
-                level=logging.INFO
-            )
-            logger.disabled = False
-        else:
-            print('invalid option ' + o, file=sys.stderr)
-            usage()
-            sys.exit(2)
-
-    if config is None:
-        usage()
-        sys.exit(1)
+    logger.setLevel(logging.INFO)
+    if log_handler is not None:
+        logger.addHandler(log_handler)
+        logger.disabled = False
 
     try:
         db_conn = DBAdapter(config['database'])
@@ -110,6 +90,6 @@ def main(command_args):
 
     if rn.has_errors or mn.has_errors:
         print('Errors occurred when normalizing.', file=sys.stderr)
-        if not logger.disabled:
-            print('See log file %s for more information.' % log_file, file=sys.stderr)
+        if options.log_file is not None:
+            print('See log file %s for more information.' % options.log_file, file=sys.stderr)
         sys.exit(3)

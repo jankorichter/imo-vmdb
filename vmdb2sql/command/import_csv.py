@@ -1,8 +1,8 @@
 import csv
-import getopt
 import logging
 import json
 import sys
+from optparse import OptionParser
 from vmdb2sql.csv_import.magnitudes import MagnitudesParser
 from vmdb2sql.csv_import.rate import RateParser
 from vmdb2sql.csv_import.radiant import RadiantParser
@@ -145,72 +145,43 @@ class CSVImport(object):
         return csv_parser
 
 
-def usage():
-    print('''Imports CSV files.
-Syntax: import_csv <options> files ...
-    options
-        -c, --config     ... path to config file
-        -l, --log        ... path to log file
-        -d, --delete     ... deletes previously imported data  (default off)
-        -p, --permissive ... does not apply stringent tests (default off)
-        -r, --repair     ... an attempt is made to correct errors (default off)
-        -h, --help       ... prints this help''')
-
-
 def main(command_args):
-    config = None
+    parser = OptionParser(usage='import_csv [options]')
+    parser.add_option('-c', action='store', dest='config_file', help='path to config file')
+    parser.add_option('-l', action='store', dest='log_file', help='path to log file')
+    parser.add_option('-d', action='store_true', dest='delete', default=False,
+                      help='deletes previously imported data')
+    parser.add_option('-p', action='store_true', dest='permissive', default=False,
+                      help='does not apply stringent tests')
+    parser.add_option('-r', action='store_true', dest='repair', default=False,
+                      help='an attempt is made to correct errors')
+    options, args = parser.parse_args(command_args)
 
-    try:
-        opts, args = getopt.getopt(
-            command_args,
-            'hdrpc:l:',
-            ['help', 'delete', 'repair', 'permissive', 'config', 'log']
-        )
-    except getopt.GetoptError as err:
-        print(str(err), file=sys.stderr)
-        usage()
-        sys.exit(2)
-
-    if len(args) < 1:
-        usage()
+    if options.config_file is None:
+        parser.print_help()
         sys.exit(1)
 
-    kwargs = {
-        'do_delete': False,
-        'is_permissive': False,
-        'try_repair': False
-    }
-    log_file = None
-
-    for o, a in opts:
-        if o in ('-h', '--help'):
-            usage()
-            sys.exit()
-        elif o in ('-d', '--delete'):
-            kwargs['do_delete'] = True
-        elif o in ('-p', '--permissive'):
-            kwargs['is_permissive'] = True
-        elif o in ('-r', '--repair'):
-            kwargs['try_repair'] = True
-        elif o in ('-c', '--config'):
-            with open(a) as json_file:
-                config = json.load(json_file, encoding='utf-8-sig')
-        elif o in ('-l', '--log'):
-            log_file = a
-        else:
-            print('invalid option ' + o, file=sys.stderr)
-            usage()
-            sys.exit(2)
-
-    if config is None:
-        usage()
-        sys.exit(1)
+    with open(options.config_file) as json_file:
+        config = json.load(json_file, encoding='utf-8-sig')
 
     log_handler = None
-    if log_file is not None:
-        log_handler = logging.FileHandler(log_file, 'a')
+    if options.log_file is not None:
+        log_handler = logging.FileHandler(options.log_file, 'a')
         fmt = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s', None, '%')
         log_handler.setFormatter(fmt)
+
+    logger = logging.getLogger('import_csv')
+    logger.disabled = True
+    logger.setLevel(logging.INFO)
+    if log_handler is not None:
+        logger.addHandler(log_handler)
+        logger.disabled = False
+
+    kwargs = {
+        'do_delete': options.delete,
+        'is_permissive': options.permissive,
+        'try_repair': options.repair
+    }
 
     try:
         db_conn = DBAdapter(config['database'])
@@ -224,6 +195,6 @@ def main(command_args):
 
     if csv_import.has_errors:
         print('Errors or warnings occurred when importing data.', file=sys.stderr)
-        if log_file is not None:
-            print('See log file %s for more information.' % log_file, file=sys.stderr)
+        if options.log_file is not None:
+            print('See log file %s for more information.' % options.log_file, file=sys.stderr)
         sys.exit(4)
