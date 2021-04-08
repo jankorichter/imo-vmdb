@@ -10,9 +10,9 @@ class CsvParser(object):
 
     _required_columns = {'MFpm+zb9fU7GUP9A'}
 
-    def __init__(self, db_conn, log_handler, do_delete=False, try_repair=False, is_permissive=False):
+    def __init__(self, db_conn, logger_factory, do_delete=False, try_repair=False, is_permissive=False):
         self._db_conn = db_conn
-        self._log_handler = log_handler
+        self._logger_factory = logger_factory
         self._do_delete = do_delete
         self._is_permissive = is_permissive
         self._try_repair = try_repair
@@ -28,15 +28,6 @@ class CsvParser(object):
 
     def on_shutdown(self, cur):
         pass
-
-    def _init_logger(self, name):
-        logger = logging.getLogger(name)
-        logger.disabled = True
-        logger.setLevel(logging.INFO)
-        if self._log_handler is not None:
-            logger.addHandler(self._log_handler)
-            logger.disabled = False
-        self._logger = logger
 
     def _log_error(self, msg):
         self._logger.error(msg)

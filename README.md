@@ -1,46 +1,36 @@
 # imo-vmdb2sql
 
-Configuration file for SQLite:
-```json
-{
-    "database": {
-        "module": "sqlite3",
-        "connection": {
-            "database": "test.db"
-        }
-    }
-}
-
+Configuration for SQLite:
+```ini
+[database]
+module = sqlite3
+database = test.db
 ```
 
-Configuration file for PostgreSQL:
-```json
-{
-    "database": {
-        "module": "psycopg2",
-        "connection": {
-            "database": "vmdb",
-            "user": "vmdb"
-        }
-    }
-}
+Configuration for PostgreSQL:
+```ini
+[database]
+module = psycopg2
+database = vmdb
+user = vmdb
 ```
 
-Configuration file for MySQL:
-```json
-{
-    "database": {
-        "module": "pymysql",
-        "connection": {
-            "database": "vmdb",
-            "user": "vmdb",
-            "sql_mode": "ANSI",
-            "init_command": "SET innodb_lock_wait_timeout=3600"
-        }
-    }
-}
+Configuration for MySQL:
+```ini
+[database]
+module = pymysql
+database = vmdb
+user = vmdb
+sql_mode = ANSI
+init_command = SET innodb_lock_wait_timeout=3600
 ```
 
+Configuration for logging:
+```ini
+[logging]
+level = INFO
+file = test.log
+```
 
 # A sample Python project
 

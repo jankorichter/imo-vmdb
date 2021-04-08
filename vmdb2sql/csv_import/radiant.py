@@ -14,7 +14,7 @@ class RadiantParser(CsvParser):
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
-        self._init_logger('radiant import')
+        self._logger = self._logger_factory.get_logger('radiant import')
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO radiant (
                 shower,

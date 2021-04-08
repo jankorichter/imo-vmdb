@@ -11,8 +11,9 @@ class DBAdapter(object):
 
     def __init__(self, config):
         self.db_module = config['module']
+        config.pop('module')
         db = importlib.import_module(self.db_module)
-        self.conn = db.connect(**config['connection'])
+        self.conn = db.connect(**config)
         if 'sqlite3' == self.db_module:
             self.conn.execute('PRAGMA foreign_keys = ON')
 

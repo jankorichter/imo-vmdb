@@ -1,4 +1,4 @@
-import json
+import configparser
 import sys
 from optparse import OptionParser
 from vmdb2sql.db import DBAdapter, DBException
@@ -13,8 +13,8 @@ def main(command_args):
         parser.print_help()
         sys.exit(1)
 
-    with open(options.config_file) as json_file:
-        config = json.load(json_file, encoding='utf-8-sig')
+    config = configparser.ConfigParser()
+    config.read(options.config_file)
 
     try:
         db_conn = DBAdapter(config['database'])

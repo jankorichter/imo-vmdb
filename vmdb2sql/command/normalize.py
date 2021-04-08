@@ -1,7 +1,7 @@
-import json
-import logging
+import configparser
 import sys
 from optparse import OptionParser
+from vmdb2sql.command import LoggerFactory
 from vmdb2sql.db import DBAdapter, DBException
 from vmdb2sql.model.radiant import Storage as RadiantStorage
 from vmdb2sql.model.shower import Storage as ShowerStorage
@@ -23,28 +23,16 @@ Syntax: normalize <options>
 def main(command_args):
     parser = OptionParser(usage='initdb [options]')
     parser.add_option('-c', action='store', dest='config_file', help='path to config file')
-    parser.add_option('-l', action='store', dest='log_file', help='path to log file')
     options, args = parser.parse_args(command_args)
 
     if options.config_file is None:
         parser.print_help()
         sys.exit(1)
 
-    with open(options.config_file) as json_file:
-        config = json.load(json_file, encoding='utf-8-sig')
-
-    log_handler = None
-    if options.log_file is not None:
-        log_handler = logging.FileHandler(options.log_file, 'a')
-        fmt = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s', None, '%')
-        log_handler.setFormatter(fmt)
-
-    logger = logging.getLogger('normalize')
-    logger.disabled = True
-    logger.setLevel(logging.INFO)
-    if log_handler is not None:
-        logger.addHandler(log_handler)
-        logger.disabled = False
+    config = configparser.ConfigParser()
+    config.read(options.config_file)
+    logger_factory = LoggerFactory(config)
+    logger = logger_factory.get_logger('normalize')
 
     try:
         db_conn = DBAdapter(config['database'])
@@ -90,6 +78,6 @@ def main(command_args):
 
     if rn.has_errors or mn.has_errors:
         print('Errors occurred when normalizing.', file=sys.stderr)
-        if options.log_file is not None:
-            print('See log file %s for more information.' % options.log_file, file=sys.stderr)
+        if logger_factory.log_file is not None:
+            print('See log file %s for more information.' % logger_factory.log_file, file=sys.stderr)
         sys.exit(3)

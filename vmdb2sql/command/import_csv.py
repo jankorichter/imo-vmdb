@@ -1,8 +1,8 @@
+import configparser
 import csv
-import logging
-import json
 import sys
 from optparse import OptionParser
+from vmdb2sql.command import LoggerFactory
 from vmdb2sql.csv_import.magnitudes import MagnitudesParser
 from vmdb2sql.csv_import.rate import RateParser
 from vmdb2sql.csv_import.radiant import RadiantParser
@@ -28,9 +28,10 @@ class CSVImport(object):
         RadiantParser
     }
 
-    def __init__(self, db_conn, _log_handler, do_delete=False, try_repair=False, is_permissive=False):
+    def __init__(self, db_conn, log_factory, do_delete=False, try_repair=False, is_permissive=False):
         self._db_conn = db_conn
-        self._log_handler = _log_handler
+        self._log_factory = log_factory
+        self._logger = log_factory.get_logger('import_csv')
         self._do_delete = do_delete
         self._is_permissive = is_permissive
         self._try_repair = try_repair
@@ -38,14 +39,6 @@ class CSVImport(object):
         self.counter_read = 0
         self.counter_write = 0
         self.has_errors = False
-
-        logger = logging.getLogger('import csv')
-        logger.disabled = True
-        logger.setLevel(logging.INFO)
-        if self._log_handler is not None:
-            logger.addHandler(self._log_handler)
-            logger.disabled = False
-        self._logger = logger
 
     def run(self, files_list):
         db_conn = self._db_conn
@@ -119,7 +112,7 @@ class CSVImport(object):
                 self.counter_write += 1
 
     def _create_csv_parser(self, row):
-        args = (self._db_conn, self._log_handler)
+        args = (self._db_conn, self._log_factory)
         kwargs = {
             'do_delete': self._do_delete,
             'is_permissive': self._is_permissive,
@@ -161,21 +154,9 @@ def main(command_args):
         parser.print_help()
         sys.exit(1)
 
-    with open(options.config_file) as json_file:
-        config = json.load(json_file, encoding='utf-8-sig')
-
-    log_handler = None
-    if options.log_file is not None:
-        log_handler = logging.FileHandler(options.log_file, 'a')
-        fmt = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s', None, '%')
-        log_handler.setFormatter(fmt)
-
-    logger = logging.getLogger('import_csv')
-    logger.disabled = True
-    logger.setLevel(logging.INFO)
-    if log_handler is not None:
-        logger.addHandler(log_handler)
-        logger.disabled = False
+    config = configparser.ConfigParser()
+    config.read(options.config_file)
+    logger_factory = LoggerFactory(config)
 
     kwargs = {
         'do_delete': options.delete,
@@ -185,7 +166,7 @@ def main(command_args):
 
     try:
         db_conn = DBAdapter(config['database'])
-        csv_import = CSVImport(db_conn, log_handler, **kwargs)
+        csv_import = CSVImport(db_conn, logger_factory, **kwargs)
         csv_import.run(args)
         db_conn.close()
     except DBException as e:
@@ -195,6 +176,6 @@ def main(command_args):
 
     if csv_import.has_errors:
         print('Errors or warnings occurred when importing data.', file=sys.stderr)
-        if options.log_file is not None:
-            print('See log file %s for more information.' % options.log_file, file=sys.stderr)
+        if logger_factory.log_file is not None:
+            print('See log file %s for more information.' % logger_factory.log_file, file=sys.stderr)
         sys.exit(4)
