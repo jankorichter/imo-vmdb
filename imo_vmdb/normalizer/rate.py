@@ -1,7 +1,7 @@
 import math
-from vmdb.db import DBException
-from vmdb.model.sky import Location, Sphere
-from vmdb.normalizer import BaseRecord, BaseNormalizer, NormalizerException
+from imo_vmdb.db import DBException
+from imo_vmdb.model.sky import Location, Sphere
+from imo_vmdb.normalizer import BaseRecord, BaseNormalizer, NormalizerException
 
 
 class Record(BaseRecord):

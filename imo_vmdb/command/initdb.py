@@ -3,9 +3,9 @@ import os
 import sys
 from optparse import OptionParser
 from pathlib import Path
-from vmdb.command import LoggerFactory
-from vmdb.command.import_csv import CSVImport
-from vmdb.db import create_tables, DBAdapter, DBException
+from imo_vmdb.command import LoggerFactory
+from imo_vmdb.command.import_csv import CSVImport
+from imo_vmdb.db import create_tables, DBAdapter, DBException
 
 
 def main(command_args):

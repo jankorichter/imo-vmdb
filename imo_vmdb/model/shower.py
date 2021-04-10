@@ -1,6 +1,6 @@
 import datetime
-from vmdb.db import DBException
-from vmdb.model.radiant import Position
+from imo_vmdb.db import DBException
+from imo_vmdb.model.radiant import Position
 
 
 class Shower(object):

@@ -1,7 +1,7 @@
 from astropy import units as u
 from astropy.coordinates import EarthLocation
 from datetime import datetime
-from vmdb.db import DBException
+from imo_vmdb.db import DBException
 
 
 class NormalizerException(Exception):

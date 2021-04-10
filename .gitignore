@@ -8,3 +8,5 @@ __pycache__
 /build/
 /venv
 /imo_vmdb.egg-info/
+/docs/build/
+/.DS_Store

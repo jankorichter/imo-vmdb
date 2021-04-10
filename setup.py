@@ -1,11 +1,18 @@
-import setuptools
+from setuptools import setup, find_packages
+from sphinx.setup_command import BuildDoc
+from imo_vmdb import __version__
+
+
+cmdclass = {
+    'build_sphinx': BuildDoc
+}
 
 with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name='imo-vmdb',
-    version='1.0.0',
+    version=__version__,
     author='Janko Richter',
     author_email='janko@richtej.de',
     description='Imports VMDB CSV files from IMO into a SQL database.',
@@ -24,7 +31,7 @@ setuptools.setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    packages=setuptools.find_packages(where='./'),
+    packages=find_packages(where='./'),
     python_requires='>=3.7',
     install_requires=[
         'astropy',
@@ -32,8 +39,14 @@ setuptools.setup(
     ],
     include_package_data=True,
     package_data={
-        'vmdb': [
+        'imo_vmdb': [
             'data/*.csv'
         ],
-    }
+    },
+    cmdclass=cmdclass,
+    command_options={
+        'build_sphinx': {
+            'source_dir': ('setup.py', 'docs')
+        }
+    },
 )

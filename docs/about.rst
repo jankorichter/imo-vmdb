@@ -1,11 +1,12 @@
-# imo-vmdb
+About imo-vmdb
+==============
 
 This project provides a command line tool to maintain a SQL interface to the
-[Visual Meteor Database (VMDB)](https://www.imo.net/members/imo_vmdb/)
+`Visual Meteor Database (VMDB) <https://www.imo.net/members/imo_vmdb/>`_
 of the
-[International Meteor Organization (IMO)](https://www.imo.net/).
+`International Meteor Organization (IMO) <https://www.imo.net/>`_.
 
-The IMO provides the data in the form of pure text files [(CSV files)](https://en.wikipedia.org/wiki/Comma-separated_values).
+The IMO provides the data in the form of pure text files `(CSV files) <https://en.wikipedia.org/wiki/Comma-separated_values>`_.
 This format is not suitable for the evaluation of this data.
 With *imo-vmdb* this data is imported into a relational SQL database.
 A large number of programming languages have interfaces to these databases.

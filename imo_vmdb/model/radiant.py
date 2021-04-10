@@ -1,4 +1,4 @@
-from vmdb.db import DBException
+from imo_vmdb.db import DBException
 
 
 class Position(object):

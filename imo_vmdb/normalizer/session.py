@@ -1,5 +1,5 @@
-from vmdb.db import DBException
-from vmdb.normalizer import BaseNormalizer
+from imo_vmdb.db import DBException
+from imo_vmdb.normalizer import BaseNormalizer
 
 
 class Record(object):

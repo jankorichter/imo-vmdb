@@ -2,13 +2,13 @@ import configparser
 import csv
 import sys
 from optparse import OptionParser
-from vmdb.command import LoggerFactory
-from vmdb.csv_import.magnitudes import MagnitudesParser
-from vmdb.csv_import.rate import RateParser
-from vmdb.csv_import.radiant import RadiantParser
-from vmdb.csv_import.shower import ShowerParser
-from vmdb.csv_import.session import SessionParser
-from vmdb.db import DBAdapter, DBException
+from imo_vmdb.command import LoggerFactory
+from imo_vmdb.csv_import.magnitudes import MagnitudesParser
+from imo_vmdb.csv_import.rate import RateParser
+from imo_vmdb.csv_import.radiant import RadiantParser
+from imo_vmdb.csv_import.shower import ShowerParser
+from imo_vmdb.csv_import.session import SessionParser
+from imo_vmdb.db import DBAdapter, DBException
 
 
 class CSVFileException(Exception):

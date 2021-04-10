@@ -1,6 +1,6 @@
 from datetime import timedelta
-from vmdb.csv_import import CsvParser, ImportException
-from vmdb.db import DBException
+from imo_vmdb.csv_import import CsvParser, ImportException
+from imo_vmdb.db import DBException
 
 
 class RateParser(CsvParser):
