@@ -1,7 +1,7 @@
 import json
 import math
-from vmdb2sql.db import DBException
-from vmdb2sql.normalizer import BaseRecord, BaseNormalizer
+from vmdb.db import DBException
+from vmdb.normalizer import BaseRecord, BaseNormalizer
 
 
 class Record(BaseRecord):

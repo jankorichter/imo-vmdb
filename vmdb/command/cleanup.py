@@ -1,7 +1,7 @@
 import configparser
 import sys
 from optparse import OptionParser
-from vmdb2sql.db import DBAdapter, DBException
+from vmdb.db import DBAdapter, DBException
 
 
 def main(command_args):

@@ -1,5 +1,5 @@
-from vmdb2sql.csv_import import CsvParser, ImportException
-from vmdb2sql.db import DBException
+from vmdb.csv_import import CsvParser, ImportException
+from vmdb.db import DBException
 
 
 class SessionParser(CsvParser):
@@ -77,7 +77,7 @@ class SessionParser(CsvParser):
         return True
 
     @staticmethod
-    def _parse_session_id(value):
+    def _parse_session_id(value, obs_id=None):
         session_id = value.strip()
         if '' == session_id:
             raise ImportException("Session found without a session id.")

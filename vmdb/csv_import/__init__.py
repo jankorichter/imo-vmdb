@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timedelta
 
 
@@ -13,6 +12,7 @@ class CsvParser(object):
     def __init__(self, db_conn, logger_factory, do_delete=False, try_repair=False, is_permissive=False):
         self._db_conn = db_conn
         self._logger_factory = logger_factory
+        self._logger = None
         self._do_delete = do_delete
         self._is_permissive = is_permissive
         self._try_repair = try_repair
@@ -192,7 +192,7 @@ class CsvParser(object):
 
         return [month, day]
 
-    def _check_period(self, period_start, period_end, max_period_duration, obs_id, session_id, try_repair = None):
+    def _check_period(self, period_start, period_end, max_period_duration, obs_id, session_id, try_repair=None):
         logger = self._logger
         if period_start == period_end:
             msg = 'The observation has an incorrect time period. The beginning is equal to the end.'

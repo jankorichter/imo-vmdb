@@ -1,8 +1,8 @@
 import json
 import math
 from datetime import timedelta
-from vmdb2sql.csv_import import CsvParser, ImportException
-from vmdb2sql.db import DBException
+from vmdb.csv_import import CsvParser, ImportException
+from vmdb.db import DBException
 
 
 class MagnitudesParser(CsvParser):

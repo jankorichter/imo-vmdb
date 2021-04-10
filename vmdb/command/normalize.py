@@ -1,15 +1,15 @@
 import configparser
 import sys
 from optparse import OptionParser
-from vmdb2sql.command import LoggerFactory
-from vmdb2sql.db import DBAdapter, DBException
-from vmdb2sql.model.radiant import Storage as RadiantStorage
-from vmdb2sql.model.shower import Storage as ShowerStorage
-from vmdb2sql.model.sky import Sky
-from vmdb2sql.normalizer import create_rate_magn
-from vmdb2sql.normalizer.magnitude import MagnitudeNormalizer
-from vmdb2sql.normalizer.rate import RateNormalizer
-from vmdb2sql.normalizer.session import SessionNormalizer
+from vmdb.command import LoggerFactory
+from vmdb.db import DBAdapter, DBException
+from vmdb.model.radiant import Storage as RadiantStorage
+from vmdb.model.shower import Storage as ShowerStorage
+from vmdb.model.sky import Sky
+from vmdb.normalizer import create_rate_magn
+from vmdb.normalizer.magnitude import MagnitudeNormalizer
+from vmdb.normalizer.rate import RateNormalizer
+from vmdb.normalizer.session import SessionNormalizer
 
 
 def usage():

@@ -1,4 +1,4 @@
-# imo-vmdb2sql
+# imo-vmdb
 
 Configuration for SQLite:
 ```ini

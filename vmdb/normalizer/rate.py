@@ -1,7 +1,7 @@
 import math
-from vmdb2sql.db import DBException
-from vmdb2sql.model.sky import Location, Sphere
-from vmdb2sql.normalizer import BaseRecord, BaseNormalizer, NormalizerException
+from vmdb.db import DBException
+from vmdb.model.sky import Location, Sphere
+from vmdb.normalizer import BaseRecord, BaseNormalizer, NormalizerException
 
 
 class Record(BaseRecord):

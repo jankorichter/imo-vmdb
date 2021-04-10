@@ -2,13 +2,13 @@ import configparser
 import csv
 import sys
 from optparse import OptionParser
-from vmdb2sql.command import LoggerFactory
-from vmdb2sql.csv_import.magnitudes import MagnitudesParser
-from vmdb2sql.csv_import.rate import RateParser
-from vmdb2sql.csv_import.radiant import RadiantParser
-from vmdb2sql.csv_import.shower import ShowerParser
-from vmdb2sql.csv_import.session import SessionParser
-from vmdb2sql.db import DBAdapter, DBException
+from vmdb.command import LoggerFactory
+from vmdb.csv_import.magnitudes import MagnitudesParser
+from vmdb.csv_import.rate import RateParser
+from vmdb.csv_import.radiant import RadiantParser
+from vmdb.csv_import.shower import ShowerParser
+from vmdb.csv_import.session import SessionParser
+from vmdb.db import DBAdapter, DBException
 
 
 class CSVFileException(Exception):
