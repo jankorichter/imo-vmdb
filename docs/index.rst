@@ -15,11 +15,3 @@ of the
    import
    normalizing
    db
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

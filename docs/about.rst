@@ -14,6 +14,6 @@ This makes it possible to load data from the VMDB according to different criteri
 
 No evaluations can be performed with *imo-vmdb* itself.
 However, during the import of the data, various error and plausibility checks are performed.
-This ensures that the data is suitable for analysis.
+This ensures that the data are suitable for analysis.
 In addition, the observations are supplemented with properties in order to be able to filter according to these properties.
 Examples are the positions of the radiants, the sun and the moon.

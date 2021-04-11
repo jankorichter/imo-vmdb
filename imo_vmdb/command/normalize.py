@@ -12,14 +12,6 @@ from imo_vmdb.normalizer.rate import RateNormalizer
 from imo_vmdb.normalizer.session import SessionNormalizer
 
 
-def usage():
-    print('''Normalize and analyze meteor observations.
-Syntax: normalize <options>
-    -c, --config ... path to config file
-    -l, --log    ... path to log file
-    -h, --help   ... prints this help''')
-
-
 def main(command_args):
     parser = OptionParser(usage='initdb [options]')
     parser.add_option('-c', action='store', dest='config_file', help='path to config file')

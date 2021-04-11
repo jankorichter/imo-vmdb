@@ -141,7 +141,6 @@ class CSVImport(object):
 def main(command_args):
     parser = OptionParser(usage='import_csv [options]')
     parser.add_option('-c', action='store', dest='config_file', help='path to config file')
-    parser.add_option('-l', action='store', dest='log_file', help='path to log file')
     parser.add_option('-d', action='store_true', dest='delete', default=False,
                       help='deletes previously imported data')
     parser.add_option('-p', action='store_true', dest='permissive', default=False,

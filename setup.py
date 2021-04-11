@@ -21,10 +21,10 @@ setup(
     license_files=['LICENSE.txt'],
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/jankorichter/imo-vmdb2sql/',
+    url='https://github.com/jankorichter/imo-vmdb',
     project_urls={
-        'Bug Tracker': 'https://github.com/jankorichter/imo-vmdb2sql/issues',
-        'Source': 'https://github.com/jankorichter/imo-vmdb2sql/',
+        'Bug Tracker': 'https://github.com/jankorichter/imo-vmdb/issues',
+        'Source': 'https://github.com/jankorichter/imo-vmdb',
     },
     classifiers=[
         'Programming Language :: Python :: 3',
