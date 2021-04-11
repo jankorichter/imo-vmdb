@@ -16,3 +16,6 @@ However, during the import of the data, various error and plausibility checks ar
 This ensures that the data are suitable for analysis.
 In addition, the observations are supplemented with properties in order to be able to filter according to these properties.
 Examples are the positions of the radiants, the sun and the moon.
+
+For more information see https://imo-vmdb.readthedocs.io/en/latest/
+.
