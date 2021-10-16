@@ -8,7 +8,7 @@ class LoggerFactory(object):
         self._log_level = config.get('logging', 'level', fallback=logging.INFO)
         log_file = config.get('logging', 'file', fallback=None)
 
-        if log_file is None:
+        if log_file is None or log_file == "":
             self.log_file = None
             handler = logging.StreamHandler(sys.stdout)
         else:

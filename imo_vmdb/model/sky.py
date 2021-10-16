@@ -132,9 +132,13 @@ class Sky(object):
         )
 
     @staticmethod
-    def alt_az(s, t, loc):
+    def sidereal_time(t, loc):
         at = AstropyTime(t, format='datetime', scale='utc')
-        st = at.sidereal_time('mean', longitude=loc.lng * u.rad).rad
+        return at.sidereal_time('mean', longitude=loc.lng * u.rad).rad
+
+    @classmethod
+    def alt_az(cls, s, t, loc):
+        st = cls.sidereal_time(t, loc)
         st_diff = st - s.lng
         x = math.sin(loc.lat) * math.cos(s.lat) * math.cos(st_diff) - math.cos(loc.lat) * math.sin(s.lat)
         y = math.cos(s.lat) * math.sin(st_diff)

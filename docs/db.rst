@@ -34,6 +34,7 @@ A meteor shower (``shower``) is not provided if it is an observation of sporadic
 * ``lim_mag`` limiting magnitude
 * ``t_eff`` net observed time in hours
 * ``f`` correction factor of cloud cover
+* ``sidereal_time`` Sidereal time in degrees
 * ``sun_alt`` altitude of the sun in degrees
 * ``sun_az`` azimuth of the sun in degrees
 * ``moon_alt`` altitude of the moon in degrees

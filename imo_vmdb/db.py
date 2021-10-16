@@ -77,6 +77,7 @@ def create_tables(db_conn):
                 lim_mag real NOT NULL,
                 t_eff real NOT NULL,
                 f real NOT NULL,
+                sidereal_time double precision NOT NULL,
                 sun_alt double precision NOT NULL,
                 sun_az double precision NOT NULL,
                 moon_alt double precision NOT NULL,

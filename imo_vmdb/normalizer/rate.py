@@ -18,6 +18,7 @@ class Record(BaseRecord):
             lim_mag,
             t_eff,
             f,
+            sidereal_time,
             sun_alt,
             sun_az,
             moon_alt,
@@ -40,6 +41,7 @@ class Record(BaseRecord):
             %(lim_mag)s,
             %(t_eff)s,
             %(f)s,
+            %(sidereal_time)s,
             %(sun_alt)s,
             %(sun_az)s,
             %(moon_alt)s,
@@ -91,12 +93,13 @@ class Record(BaseRecord):
             field_az = math.degrees(field.lng)
 
         if field_alt is not None and field_alt < 0.0:
-            msg = "session %s: field is below horizon." % self.session_id
+            msg = "session %s: field is below horizon (%s degrees)." % (self.session_id, round(field_alt))
             raise NormalizerException(msg)
 
         sun = sky.sun(t_mean, self.loc)
         if sun.lat > 0.0:
-            msg = "session %s: sun is above horizon." % self.session_id
+            msg = "session %s: sun is above horizon (%s degrees)."
+            msg = msg % (self.session_id, round(math.degrees(sun.lat)))
             raise NormalizerException(msg)
 
         moon = sky.moon(t_mean, self.loc)
@@ -115,7 +118,8 @@ class Record(BaseRecord):
             rad_az = math.degrees(rad_coord.lng)
 
         if rad_alt is not None and rad_alt < -5.0:
-            msg = "session %s: radiant is too far below the horizon." % self.session_id
+            msg = "session %s: radiant of %s is too far below the horizon (%s degrees)."
+            msg = msg % (self.session_id, iau_code, round(rad_alt))
             raise NormalizerException(msg)
 
         rate = {
@@ -130,6 +134,7 @@ class Record(BaseRecord):
             'lim_mag': self.lm,
             't_eff': self.t_eff,
             'f': self.f,
+            'sidereal_time': math.degrees(sky.sidereal_time(t_mean, self.loc)),
             'sun_alt': math.degrees(sun.lat),
             'sun_az': math.degrees(sun.lng),
             'moon_alt': math.degrees(moon.lat),
