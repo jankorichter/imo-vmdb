@@ -63,6 +63,7 @@ def main(command_args):
 
         db_conn.commit()
         db_conn.close()
+        logger.info('Normalisation completed.')
     except DBException as e:
         msg = 'A database error occured. %s' % str(e)
         print(msg, file=sys.stderr)

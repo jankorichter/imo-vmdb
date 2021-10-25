@@ -177,7 +177,7 @@ def create_rate_magn(db_conn):
         except Exception as e:
             raise DBException(str(e))
 
-    # set limiting mggnitude
+    # set limiting magnitude
     try:
         cur.execute(db_conn.convert_stmt('UPDATE magnitude SET lim_mag = NULL'))
         cur.execute(db_conn.convert_stmt('''

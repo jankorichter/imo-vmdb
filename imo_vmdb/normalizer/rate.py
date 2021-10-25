@@ -27,8 +27,7 @@ class Record(BaseRecord):
             field_alt,
             field_az,
             rad_alt,
-            rad_az,
-            rad_corr
+            rad_az
         ) VALUES (
             %(id)s,
             %(shower)s,
@@ -50,8 +49,7 @@ class Record(BaseRecord):
             %(field_alt)s,
             %(field_az)s,
             %(rad_alt)s,
-            %(rad_az)s,
-            %(rad_corr)s
+            %(rad_az)s
         )
     '''
 
@@ -71,6 +69,14 @@ class Record(BaseRecord):
     @classmethod
     def init_stmt(cls, db_conn):
         cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
+
+    @staticmethod
+    def _zenith_coor(alt, v):
+        # Peter S. Gural, WGN 29:4 (2000), p134-138
+        z = math.pi/2.0 - alt
+        w = math.sqrt(pow(v, 2) + 123.06)
+        zo = z / 2.0 + math.asin(v * math.sin(z / 2.0) / w)
+        return math.pi/2.0 - zo
 
     def write(self, cur, sky, showers):
         iau_code = self.shower
@@ -107,15 +113,11 @@ class Record(BaseRecord):
 
         rad_alt = None
         rad_az = None
-        rad_corr = None
         if radiant is not None:
             rad_radec = Sphere(math.radians(radiant.ra), math.radians(radiant.dec))
             rad_coord = sky.alt_az(rad_radec, t_mean, self.loc)
-            rad_alt = rad_coord.lat
-            z = math.sqrt(125 + shower.v * shower.v)
-            rad_corr = z / (z + shower.v * (math.sin(rad_alt) - 1))
-            rad_alt = math.degrees(rad_coord.lat)
             rad_az = math.degrees(rad_coord.lng)
+            rad_alt = math.degrees(self._zenith_coor(rad_coord.lat, shower.v))
 
         if rad_alt is not None and rad_alt < -5.0:
             msg = "session %s: radiant of %s is too far below the horizon (%s degrees)."
@@ -143,8 +145,7 @@ class Record(BaseRecord):
             'field_alt': field_alt,
             'field_az': field_az,
             'rad_alt': rad_alt,
-            'rad_az': rad_az,
-            'rad_corr': rad_corr
+            'rad_az': rad_az
         }
 
         try:

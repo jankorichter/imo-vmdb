@@ -87,7 +87,6 @@ def create_tables(db_conn):
                 field_az double precision NULL,
                 rad_alt double precision NULL,
                 rad_az double precision NULL,
-                rad_corr double precision NULL,
                 CONSTRAINT rate_pkey PRIMARY KEY (id),
                 CONSTRAINT rate_session_fk FOREIGN KEY (session_id)
                     REFERENCES obs_session(id) MATCH SIMPLE

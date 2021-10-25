@@ -43,8 +43,8 @@ A meteor shower (``shower``) is not provided if it is an observation of sporadic
 * ``field_alt`` altitude of the field of view in degrees (*optional*)
 * ``field_az`` azimuth of the field of view in degrees (*optional*)
 * ``rad_alt`` altitude of the radiant in degrees (*optional*)
+  The zenith attraction is already applied.
 * ``rad_az`` azimuth of the radiant in degrees (*optional*)
-* ``rad_corr`` Correction of the altitude of the radiant (*optional*)
 
 
 Magnitudes
