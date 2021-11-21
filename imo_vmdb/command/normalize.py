@@ -1,7 +1,6 @@
-import configparser
 import sys
 from optparse import OptionParser
-from imo_vmdb.command import LoggerFactory
+from imo_vmdb.command import config_factory, LoggerFactory
 from imo_vmdb.db import DBAdapter, DBException
 from imo_vmdb.model.radiant import Storage as RadiantStorage
 from imo_vmdb.model.shower import Storage as ShowerStorage
@@ -16,13 +15,7 @@ def main(command_args):
     parser = OptionParser(usage='initdb [options]')
     parser.add_option('-c', action='store', dest='config_file', help='path to config file')
     options, args = parser.parse_args(command_args)
-
-    if options.config_file is None:
-        parser.print_help()
-        sys.exit(1)
-
-    config = configparser.ConfigParser()
-    config.read(options.config_file)
+    config = config_factory(options, parser)
     logger_factory = LoggerFactory(config)
     logger = logger_factory.get_logger('normalize')
 

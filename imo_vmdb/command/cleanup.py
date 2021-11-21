@@ -1,6 +1,6 @@
-import configparser
 import sys
 from optparse import OptionParser
+from imo_vmdb.command import config_factory
 from imo_vmdb.db import DBAdapter, DBException
 
 
@@ -8,13 +8,7 @@ def main(command_args):
     parser = OptionParser(usage='cleanup [options]')
     parser.add_option('-c', action='store', dest='config_file', help='path to config file')
     options, args = parser.parse_args(command_args)
-
-    if options.config_file is None:
-        parser.print_help()
-        sys.exit(1)
-
-    config = configparser.ConfigParser()
-    config.read(options.config_file)
+    config = config_factory(options, parser)
 
     try:
         db_conn = DBAdapter(config['database'])

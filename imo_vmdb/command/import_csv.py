@@ -1,8 +1,7 @@
-import configparser
 import csv
 import sys
 from optparse import OptionParser
-from imo_vmdb.command import LoggerFactory
+from imo_vmdb.command import config_factory, LoggerFactory
 from imo_vmdb.csv_import.magnitudes import MagnitudesParser
 from imo_vmdb.csv_import.rate import RateParser
 from imo_vmdb.csv_import.radiant import RadiantParser
@@ -148,13 +147,7 @@ def main(command_args):
     parser.add_option('-r', action='store_true', dest='repair', default=False,
                       help='an attempt is made to correct errors')
     options, args = parser.parse_args(command_args)
-
-    if options.config_file is None:
-        parser.print_help()
-        sys.exit(1)
-
-    config = configparser.ConfigParser()
-    config.read(options.config_file)
+    config = config_factory(options, parser)
     logger_factory = LoggerFactory(config)
 
     kwargs = {

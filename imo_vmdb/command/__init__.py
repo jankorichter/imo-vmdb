@@ -1,5 +1,22 @@
+import configparser
 import logging
+import os
 import sys
+
+
+def config_factory(options, parser):
+    config = configparser.ConfigParser()
+    config_file = os.environ['IMO_VMDB_CONFIG'] if 'IMO_VMDB_CONFIG' in os.environ else None
+
+    if options.config_file is not None:
+        config_file = str(options.config_file)
+
+    if config_file is None:
+        parser.print_help()
+        sys.exit(1)
+
+    config.read(config_file)
+    return config
 
 
 class LoggerFactory(object):
