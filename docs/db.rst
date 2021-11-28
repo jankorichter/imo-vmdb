@@ -11,7 +11,8 @@ The ``obs_session`` table contains all observation sessions.
 * ``longitude`` location's longitude in degrees
 * ``latitude`` location's latitude in degrees
 * ``elevation`` height above mean sea level in km
-* ``observer_name`` observer name
+* ``observer_id`` observer id (*optional*)
+* ``observer_name`` observer name (*optional*)
 * ``country`` country name
 * ``city`` location name
 

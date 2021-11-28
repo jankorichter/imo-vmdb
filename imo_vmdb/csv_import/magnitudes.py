@@ -9,6 +9,7 @@ class MagnitudesParser(CsvParser):
 
     _required_columns = {
         'magnitude id',
+        'user id',
         'obs session id',
         'shower',
         'start date',
@@ -35,6 +36,7 @@ class MagnitudesParser(CsvParser):
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO imported_magnitude (
                 id,
+                observer_id,
                 session_id,
                 shower,
                 "start",
@@ -42,6 +44,7 @@ class MagnitudesParser(CsvParser):
                 magn
             ) VALUES (
                 %(id)s,
+                %(observer_id)s,
                 %(session_id)s,
                 %(shower)s,
                 %(start)s,
@@ -63,6 +66,7 @@ class MagnitudesParser(CsvParser):
         try:
             magn_id = self._parse_magn_id(row['magnitude id'])
             session_id = self._parse_session_id(row['obs session id'], magn_id)
+            observer_id = self._parse_observer_id(row['user id'], row['user id'], session_id)
             shower = self._parse_shower(row['shower'])
             period_start = self._parse_date_time(row['start date'], 'start date', magn_id, session_id)
             period_end = self._parse_date_time(row['end date'], 'end date', magn_id, session_id)
@@ -88,7 +92,7 @@ class MagnitudesParser(CsvParser):
                 magn[str(column)] = n
         except ValueError:
             self._log_error(
-                'id %s in session %s: Invalid count value of magnitudes found.' %
+                'ID %s in session %s: Invalid count value of magnitudes found.' %
                 (magn_id, session_id)
             )
             return False
@@ -103,12 +107,13 @@ class MagnitudesParser(CsvParser):
 
         freq = int(sum(n for n in magn.values()))
         if 0 == freq:
-            return False
+            return True
 
         magn = json.dumps({m: n for m, n in magn.items() if n > 0})
 
         record = {
             'id': magn_id,
+            'observer_id': observer_id,
             'session_id': session_id,
             'shower': shower,
             'start': period_start,
@@ -132,9 +137,9 @@ class MagnitudesParser(CsvParser):
         try:
             magn_id = int(magn_id)
         except ValueError:
-            raise ImportException('id %s: invalid magnitude id.' % magn_id)
+            raise ImportException('ID %s: invalid magnitude id.' % magn_id)
         if magn_id < 1:
-            raise ImportException('id %s: magnitude id must be greater than 0.' % magn_id)
+            raise ImportException('ID %s: magnitude ID must be greater than 0.' % magn_id)
 
         return magn_id
 
@@ -142,7 +147,7 @@ class MagnitudesParser(CsvParser):
     def _validate_count(n, m, magn_id, session_id):
         if n < 0.0:
             raise ImportException(
-                'id %s in session %s: Invalid count %s found for a meteor magnitude of %s.' %
+                'ID %s in session %s: Invalid count %s found for a meteor magnitude of %s.' %
                 (magn_id, session_id, n, m)
             )
 
@@ -155,7 +160,7 @@ class MagnitudesParser(CsvParser):
             return
 
         raise ImportException(
-            'id %s in session %s: Invalid count %s found for a meteor magnitude of %s.' %
+            'ID %s in session %s: Invalid count %s found for a meteor magnitude of %s.' %
             (magn_id, session_id, n, m))
 
     def _validate_total_count(self, magn, magn_id, session_id):
@@ -166,12 +171,12 @@ class MagnitudesParser(CsvParser):
             n_sum += n
             if not is_permissive and 0 == n and math.floor(n_sum) != n_sum:
                 raise ImportException(
-                    'id %s in session %s: Inconsistent total count of meteors found.' %
+                    'ID %s in session %s: Inconsistent total count of meteors found.' %
                     (magn_id, session_id)
                 )
 
         if math.floor(n_sum) != n_sum:
             raise ImportException(
-                'id %s in session %s: The count of meteors out of a total of %s is invalid.' %
+                'ID %s in session %s: The count of meteors out of a total of %s is invalid.' %
                 (magn_id, session_id, n_sum)
             )

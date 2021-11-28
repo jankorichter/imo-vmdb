@@ -4,10 +4,11 @@ Installation and Setup
 Installation
 ************
 
-*imo-vmdb* requires the `Python interpreter <https://www.python.org/>`_ (version ``>= 3.7``) for execution.
-Once installed, simply execute::
+*imo-vmdb* requires the `Python interpreter <https://www.python.org/>`_
+(version ``>= 3.7``) for execution.
+Once installed, for example, simply run::
 
- pip install imo-vmdb
+    pip install --user imo-vmdb
 
 to install *imo-vmdb*. The command
 
@@ -27,8 +28,8 @@ The configuration for this is simple.
 Only the path to the database file (e.g. ``config.ini``) must be provided.
 The configuration file then looks like this, for example::
 
-   [database]
-   database = /path/to/database/file.db
+    [database]
+    database = /path/to/database/file.db
 
 For first time use, the database must first be initialized::
 

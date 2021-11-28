@@ -6,10 +6,11 @@ class SessionParser(CsvParser):
 
     _required_columns = {
         'session id',
+        'observer id',
+        'actual observer name',
         'latitude',
         'longitude',
         'elevation',
-        'actual observer name',
         'city',
         'country'
     }
@@ -20,18 +21,20 @@ class SessionParser(CsvParser):
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO imported_session (
                 id,
+                observer_id,
+                observer_name,
                 latitude,
                 longitude,
                 elevation,
-                observer_name,
                 city,
                 country
             ) VALUES (
                 %(id)s,
+                %(observer_id)s,
+                %(observer_name)s,
                 %(latitude)s,
                 %(longitude)s,
                 %(elevation)s,
-                %(observer_name)s,
                 %(city)s,
                 %(country)s
             )
@@ -51,8 +54,9 @@ class SessionParser(CsvParser):
             session_id = self._parse_session_id(row['session id'])
             lat = self._parse_latitude(row['latitude'], session_id)
             long = self._parse_longitude(row['longitude'], session_id)
-            elevation = self._parse_elevation(row['longitude'], session_id)
-            observer_name = self._parse_text(row['actual observer name'], 'observer name', session_id)
+            elevation = self._parse_elevation(row['elevation'], session_id)
+            observer_id = self._parse_observer_id(row['observer id'], session_id)
+            observer_name = self._parse_observer_name(row['actual observer name'], session_id)
             city = self._parse_text(row['city'], 'city', session_id)
             country = self._parse_text(row['country'], 'country', session_id)
         except ImportException as err:
@@ -61,10 +65,11 @@ class SessionParser(CsvParser):
 
         record = {
             'id': session_id,
+            'observer_id': observer_id,
+            'observer_name': observer_name,
             'latitude': lat,
             'longitude': long,
             'elevation': elevation,
-            'observer_name': observer_name,
             'city': city,
             'country': country
         }
@@ -85,9 +90,9 @@ class SessionParser(CsvParser):
         try:
             session_id = int(session_id)
         except ValueError:
-            raise ImportException("id %s: invalid session id." % session_id)
+            raise ImportException("ID %s: invalid session id." % session_id)
         if session_id < 1:
-            raise ImportException("id %s: session id must be greater than 0." % session_id)
+            raise ImportException("ID %s: session ID must be greater than 0." % session_id)
 
         return session_id
 
@@ -95,15 +100,15 @@ class SessionParser(CsvParser):
     def _parse_latitude(value, session_id):
         lat = value.strip()
         if '' == lat:
-            raise ImportException("id %s: latitude must not be empty." % session_id)
+            raise ImportException("ID %s: latitude must not be empty." % session_id)
 
         try:
             lat = float(lat)
         except ValueError:
-            raise ImportException("id %s: invalid latitude value. The value is %s." % (session_id, lat))
+            raise ImportException("ID %s: invalid latitude value. The value is %s." % (session_id, lat))
 
         if lat < -90 or lat > 90:
-            raise ImportException("id %s: latitude must be between -90 and 90 instead of %s." % (session_id, lat))
+            raise ImportException("ID %s: latitude must be between -90 and 90 instead of %s." % (session_id, lat))
 
         return lat
 
@@ -111,15 +116,15 @@ class SessionParser(CsvParser):
     def _parse_longitude(value, session_id):
         long = value.strip()
         if '' == long:
-            raise ImportException("id %s: longitude must not be empty." % session_id)
+            raise ImportException("ID %s: longitude must not be empty." % session_id)
 
         try:
             long = float(long)
         except ValueError:
-            raise ImportException("id %s: invalid longitude value. The value is %s." % (session_id, long))
+            raise ImportException("ID %s: invalid longitude value. The value is %s." % (session_id, long))
 
         if long < -180 or long > 180:
-            raise ImportException("id %s: longitude must be between -180 and 180 instead of %s." % (session_id, long))
+            raise ImportException("ID %s: longitude must be between -180 and 180 instead of %s." % (session_id, long))
 
         return long
 
@@ -129,12 +134,12 @@ class SessionParser(CsvParser):
             if self._is_permissive:
                 return None
             else:
-                raise ImportException("id %s: elevation must not be empty." % session_id)
+                raise ImportException("ID %s: elevation must not be empty." % session_id)
 
         try:
             elevation = float(elevation)
         except ValueError:
-            raise ImportException("id %s: invalid elevation value. The value is %s." % (session_id, elevation))
+            raise ImportException("ID %s: invalid elevation value. The value is %s." % (session_id, elevation))
 
         return elevation
 
@@ -142,11 +147,19 @@ class SessionParser(CsvParser):
     def _parse_text(value, ctx, session_id):
         value = value.strip()
         if '' == value:
-            raise ImportException('id %s: %s must be set.' % (session_id, ctx))
+            raise ImportException('ID %s: %s must be set.' % (session_id, ctx))
 
         try:
             value = str(value)
         except ValueError:
-            raise ImportException("id %s: invalid %s. Value is %s." % (session_id, ctx, value))
+            raise ImportException("ID %s: invalid %s. Value is %s." % (session_id, ctx, value))
 
         return value
+
+    def _parse_observer_name(self, value, session_id):
+        value = value.strip()
+        if '' == value:
+            self._logger.warning("ID %s: observer name is empty." % session_id)
+            return None
+
+        return self._parse_text(value, 'observer name', session_id)

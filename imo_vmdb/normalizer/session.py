@@ -9,6 +9,7 @@ class Record(object):
             latitude,
             longitude,
             elevation,
+            observer_id,
             observer_name,
             country,
             city
@@ -17,6 +18,7 @@ class Record(object):
             %(latitude)s,
             %(longitude)s,
             %(elevation)s,
+            %(observer_id)s,
             %(observer_name)s,
             %(country)s,
             %(city)s
@@ -28,6 +30,7 @@ class Record(object):
         self.latitude = record['latitude']
         self.longitude = record['longitude']
         self.elevation = record['elevation']
+        self.observer_id = record['observer_id']
         self.observer_name = record['observer_name']
         self.country = record['country']
         self.city = record['city']
@@ -43,6 +46,7 @@ class Record(object):
             'latitude': self.latitude,
             'longitude': self.longitude,
             'elevation': self.elevation,
+            'observer_id': self.observer_id,
             'observer_name': self.observer_name,
             'country': self.country,
             'city': self.city
@@ -70,6 +74,7 @@ class SessionNormalizer(BaseNormalizer):
                     latitude,
                     longitude,
                     elevation,
+                    observer_id,
                     observer_name,
                     country,
                     city

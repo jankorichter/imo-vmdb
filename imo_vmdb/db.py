@@ -59,7 +59,8 @@ def create_tables(db_conn):
                 longitude real NOT NULL,
                 latitude real NOT NULL,
                 elevation real NOT NULL,
-                observer_name TEXT NOT NULL,
+                observer_id integer NULL,
+                observer_name TEXT NULL,
                 country TEXT NOT NULL,
                 city TEXT NOT NULL
             )'''))
@@ -196,10 +197,11 @@ def create_tables(db_conn):
             CREATE TABLE imported_session
             (
                 id integer PRIMARY KEY,
+                observer_id integer NULL,
+                observer_name TEXT NULL,
                 longitude real NOT NULL,
                 latitude real NOT NULL,
                 elevation real NULL,
-                observer_name TEXT NOT NULL,
                 country TEXT NOT NULL,
                 city TEXT NOT NULL
             )'''))
@@ -208,6 +210,7 @@ def create_tables(db_conn):
             CREATE TABLE imported_rate
             (
                 id integer NOT NULL,
+                observer_id integer NULL,
                 session_id integer NOT NULL,
                 shower varchar(6) NULL,
                 "start" timestamp NOT NULL,
@@ -235,6 +238,7 @@ def create_tables(db_conn):
             CREATE TABLE imported_magnitude
             (
                 id integer NOT NULL,
+                observer_id integer NULL,
                 session_id integer NOT NULL,
                 shower varchar(6) NULL,
                 "start" timestamp NOT NULL,

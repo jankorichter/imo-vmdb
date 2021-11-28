@@ -104,8 +104,10 @@ class MagnitudeNormalizer(BaseNormalizer):
                     s.longitude,
                     s.latitude,
                     s.elevation,
+                    s.observer_id AS "session_observer_id",
                     m.shower,
                     m.session_id,
+                    m.observer_id,
                     m."start",
                     m."end",
                     m.magn
@@ -131,7 +133,14 @@ class MagnitudeNormalizer(BaseNormalizer):
         delete_stmt = db_conn.convert_stmt('DELETE FROM magnitude WHERE id = %(id)s')
         for _record in cur:
             self.counter_read += 1
+
             record = Record(dict(zip(column_names, _record)))
+            if record.observer_id != record.session_observer_id:
+                msg = "session %s: observer ID of the magnitude observation is different"
+                msg += " from the observer ID of the session. Observation %s discarded."
+                self._log_error(msg % (record.session_id, record.id))
+                prev_record = record
+                continue
 
             try:
                 write_cur.execute(delete_stmt, {'id': record.id})

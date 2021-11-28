@@ -7,6 +7,7 @@ class RateParser(CsvParser):
 
     _required_columns = {
         'rate id',
+        'user id',
         'obs session id',
         'start date',
         'end date',
@@ -26,6 +27,7 @@ class RateParser(CsvParser):
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO imported_rate (
                 id,
+                observer_id,
                 session_id,
                 "start",
                 "end",
@@ -39,6 +41,7 @@ class RateParser(CsvParser):
                 "number"
             ) VALUES (
                 %(id)s,
+                %(observer_id)s,
                 %(session_id)s,
                 %(start)s,
                 %(end)s,
@@ -66,6 +69,7 @@ class RateParser(CsvParser):
         try:
             rate_id = self._parse_rate_id(row['rate id'])
             session_id = self._parse_session_id(row['obs session id'], rate_id)
+            observer_id = self._parse_observer_id(row['user id'], row['user id'], session_id)
             shower = self._parse_shower(row['shower'])
             period_start = self._parse_date_time(row['start date'], 'start date', rate_id, session_id)
             period_end = self._parse_date_time(row['end date'], 'end date', rate_id, session_id)
@@ -89,6 +93,7 @@ class RateParser(CsvParser):
 
         record = {
             'id': rate_id,
+            'observer_id': observer_id,
             'session_id': session_id,
             'start': period_start,
             'end': period_end,
@@ -118,9 +123,9 @@ class RateParser(CsvParser):
         try:
             rate_id = int(rate_id)
         except ValueError:
-            raise ImportException('id %s: invalid rate id.' % rate_id)
+            raise ImportException('ID %s: invalid rate id.' % rate_id)
         if rate_id < 1:
-            raise ImportException('id %s: rate id must be greater than 0.' % rate_id)
+            raise ImportException('ID %s: rate ID must be greater than 0.' % rate_id)
 
         return rate_id
 
@@ -128,7 +133,7 @@ class RateParser(CsvParser):
         t_eff = value.strip()
         if '' == t_eff:
             raise ImportException(
-                'id %s in session %s: t_eff must be set.' %
+                'ID %s in session %s: t_eff must be set.' %
                 (rate_id, session_id)
             )
 
@@ -136,31 +141,31 @@ class RateParser(CsvParser):
             t_eff = float(t_eff)
         except ValueError:
             raise ImportException(
-                'id %s in session %s: invalid t_eff. The value is %s.' %
+                'ID %s in session %s: invalid t_eff. The value is %s.' %
                 (rate_id, session_id, t_eff)
             )
 
         if 0.0 == t_eff:
             raise ImportException(
-                'id %s in session %s: t_eff is 0.' %
+                'ID %s in session %s: t_eff is 0.' %
                 (rate_id, session_id)
             )
 
         if t_eff < 0.0:
             raise ImportException(
-                'id %s in session %s: t_eff must be greater than 0 instead of %s.' %
+                'ID %s in session %s: t_eff must be greater than 0 instead of %s.' %
                 (rate_id, session_id, t_eff)
             )
 
         if t_eff > 24.0:
             raise ImportException(
-                'id %s in session %s: t_eff must be less than 24 instead of %s.' %
+                'ID %s in session %s: t_eff must be less than 24 instead of %s.' %
                 (rate_id, session_id, t_eff)
             )
 
         if not self._is_permissive and t_eff > 7.0:
             raise ImportException(
-                'id %s in session %s: t_eff must be less than 6 instead of %s.' %
+                'ID %s in session %s: t_eff must be less than 6 instead of %s.' %
                 (rate_id, session_id, t_eff)
             )
 
@@ -171,7 +176,7 @@ class RateParser(CsvParser):
         f = value.strip()
         if '' == f:
             raise ImportException(
-                'id %s in session %s: f must be set.' %
+                'ID %s in session %s: f must be set.' %
                 (rate_id, session_id)
             )
 
@@ -179,13 +184,13 @@ class RateParser(CsvParser):
             f = float(f)
         except ValueError:
             raise ImportException(
-                'id %s in session %s: invalid f. The value is %s.' %
+                'ID %s in session %s: invalid f. The value is %s.' %
                 (rate_id, session_id, f)
             )
 
         if f < 1.0:
             raise ImportException(
-                'id %s in session %s: f must be greater than 1 instead of %s.' %
+                'ID %s in session %s: f must be greater than 1 instead of %s.' %
                 (rate_id, session_id, f)
             )
 
@@ -199,13 +204,13 @@ class RateParser(CsvParser):
             value = int(value)
         except ValueError:
             raise ImportException(
-                'id %s in session %s: %s is an invalid count of meteors.' %
+                'ID %s in session %s: %s is an invalid count of meteors.' %
                 (rate_id, session_id, value)
             )
 
         if value < 0:
             raise ImportException(
-                'id %s in session %s: count of meteors must be greater than 0 instead of %s.' %
+                'ID %s in session %s: count of meteors must be greater than 0 instead of %s.' %
                 (rate_id, session_id, value)
             )
 
@@ -216,7 +221,7 @@ class RateParser(CsvParser):
         lm = value.strip()
         if '' == lm:
             raise ImportException(
-                'id %s in session %s: limiting magnitude must be set.' %
+                'ID %s in session %s: limiting magnitude must be set.' %
                 (rate_id, session_id)
             )
 
@@ -224,13 +229,13 @@ class RateParser(CsvParser):
             lm = float(lm)
         except ValueError:
             raise ImportException(
-                'id %s in session %s: invalid limiting magnitude. The value is %s.' %
+                'ID %s in session %s: invalid limiting magnitude. The value is %s.' %
                 (rate_id, session_id, lm)
             )
 
         if lm < 0.0 or lm > 8:
             raise ImportException(
-                'id %s in session %s: lm must be between 0 and 8 instead of %s.' %
+                'ID %s in session %s: lm must be between 0 and 8 instead of %s.' %
                 (rate_id, session_id, lm)
             )
 

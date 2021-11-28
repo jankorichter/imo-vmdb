@@ -172,8 +172,10 @@ class RateNormalizer(BaseNormalizer):
                     s.longitude,
                     s.latitude,
                     s.elevation,
+                    s.observer_id AS "session_observer_id",
                     r.shower,
                     r.session_id,
+                    r.observer_id,
                     r."start",
                     r."end",
                     r.t_eff,
@@ -205,6 +207,13 @@ class RateNormalizer(BaseNormalizer):
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record)))
+
+            if record.observer_id != record.session_observer_id:
+                msg = "session %s: observer ID of the rate observation is different"
+                msg += " from the observer ID of the session. Observation %s discarded."
+                self._log_error(msg % (record.session_id, record.id))
+                prev_record = record
+                continue
 
             try:
                 write_cur.execute(delete_stmt, {'id': record.id})

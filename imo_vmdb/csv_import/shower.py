@@ -141,10 +141,10 @@ class ShowerParser(CsvParser):
         try:
             v = float(v)
         except ValueError:
-            raise ImportException("id %s: invalid velocity value. The value is %s." % (iau_code, v))
+            raise ImportException("ID %s: invalid velocity value. The value is %s." % (iau_code, v))
 
         if v < 11 or v > 75:
-            raise ImportException("id %s: velocity must be between 11 and 75 instead of %s." % (iau_code, v))
+            raise ImportException("ID %s: velocity must be between 11 and 75 instead of %s." % (iau_code, v))
 
         return v
 
@@ -157,10 +157,10 @@ class ShowerParser(CsvParser):
         try:
             r = float(r)
         except ValueError:
-            raise ImportException("id %s: invalid r-value. The value is %s." % (iau_code, r))
+            raise ImportException("ID %s: invalid r-value. The value is %s." % (iau_code, r))
 
         if r < 1 or r > 5:
-            raise ImportException("id %s: r-value must be between 1 and 5 instead of %s." % (iau_code, r))
+            raise ImportException("ID %s: r-value must be between 1 and 5 instead of %s." % (iau_code, r))
 
         return r
 
@@ -176,18 +176,18 @@ class ShowerParser(CsvParser):
 
         if len(value) != 2:
             raise ImportException(
-                "id %s: %s must have the the format MM/DD. The value is %s." %
+                "ID %s: %s must have the the format MM/DD. The value is %s." %
                 (iau_code, ctx, value)
             )
 
         if value[0] not in month_names:
-            raise ImportException("id %s: %s is an invalid month name. The value is %s." % (iau_code, value[0], ctx))
+            raise ImportException("ID %s: %s is an invalid month name. The value is %s." % (iau_code, value[0], ctx))
 
         month = month_names[value[0]]
 
         try:
             day = int(value[1])
         except ValueError:
-            raise ImportException("id %s: %s is an invalid day. The value is %s." % (iau_code, value[1], ctx))
+            raise ImportException("ID %s: %s is an invalid day. The value is %s." % (iau_code, value[1], ctx))
 
         return cls._validate_date(month, day, iau_code, ctx)

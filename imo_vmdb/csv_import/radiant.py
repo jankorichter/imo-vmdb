@@ -49,7 +49,7 @@ class RadiantParser(CsvParser):
             day = self._parse_int(row['day'], 'day', shower)
             self._validate_date(month, day, shower)
             if ra is None or dec is None:
-                raise ImportException('id %s: ra and dec must be set.' % shower)
+                raise ImportException('ID %s: ra and dec must be set.' % shower)
 
         except ImportException as err:
             self._log_error(str(err))
@@ -85,6 +85,6 @@ class RadiantParser(CsvParser):
         try:
             value = int(value)
         except ValueError:
-            raise ImportException("id %s: %s is an invalid %s." % (iau_code, value, ctx))
+            raise ImportException("ID %s: %s is an invalid %s." % (iau_code, value, ctx))
 
         return value

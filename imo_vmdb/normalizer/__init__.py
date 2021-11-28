@@ -14,6 +14,8 @@ class BaseRecord(object):
         self.id = record['id']
         self.shower = record['shower']
         self.session_id = record['session_id']
+        self.observer_id = record['observer_id']
+        self.session_observer_id = record['session_observer_id']
         self.loc = EarthLocation(lat=record['latitude']*u.deg, lon=record['longitude']*u.deg)
 
         if isinstance(record['start'], datetime):
@@ -139,9 +141,9 @@ def create_rate_magn(db_conn):
                 FROM aggregates
                 WHERE
                     magn_id_count = 1 AND
-                    rate_n = magn_n
+                    rate_n >= magn_n
             )
-    
+
             SELECT rate_id, magn_id, "equals" FROM unique_rate_ids
         '''))
     except Exception as e:
