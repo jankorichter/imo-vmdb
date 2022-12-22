@@ -80,7 +80,7 @@ class CsvParser(object):
             raise ImportException('ID %s%s: invalid observer id. Value is (%s).' % (rec_id, session_msg, observer_id))
         if observer_id < 1:
             raise ImportException(
-                'ID %s%: observer ID must be greater than 0 instead of %s.' %
+                'ID %s%s: observer ID must be greater than 0 instead of %s.' %
                 (rec_id, session_msg, observer_id)
             )
 

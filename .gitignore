@@ -3,6 +3,7 @@ __pycache__
 /.idea
 /.project
 /.pydevproject
+/.settings
 /data
 /dist/
 /build/

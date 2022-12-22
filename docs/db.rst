@@ -27,9 +27,9 @@ A meteor shower (``shower``) is not provided if it is an observation of sporadic
 * ``id`` unique identifier of the rate observation
 * ``shower`` IAU code of the shower (*optional*)
 * ``period_start`` start of observation
-* ``period_end`` start of observation
+* ``period_end`` end of observation
 * ``sl_start`` solarlong at start of observation in degrees
-* ``sl_end`` solarlong at start of observation in degrees
+* ``sl_end`` solarlong at end of observation in degrees
 * ``session_id`` reference to the session
 * ``freq`` count of observed meteors
 * ``lim_mag`` limiting magnitude
@@ -59,9 +59,9 @@ There are no observations in this table where no meteors were observed.
 * ``id`` unique identifier of the magnitude observation,
 * ``shower`` IAU code of the shower (*optional*)
 * ``period_start`` start of observation
-* ``period_end`` start of observation
+* ``period_end`` end of observation
 * ``sl_start`` solarlong at start of observation
-* ``sl_end`` solarlong at start of observation
+* ``sl_end`` solarlong at end of observation
 * ``session_id`` reference to session
 * ``freq`` total count of observed meteors
 * ``mean`` mean magnitude of observed meteors

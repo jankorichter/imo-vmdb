@@ -12,7 +12,7 @@ from imo_vmdb.normalizer.session import SessionNormalizer
 
 
 def main(command_args):
-    parser = OptionParser(usage='initdb [options]')
+    parser = OptionParser(usage='normalize [options]')
     parser.add_option('-c', action='store', dest='config_file', help='path to config file')
     options, args = parser.parse_args(command_args)
     config = config_factory(options, parser)
