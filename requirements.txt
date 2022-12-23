@@ -1,7 +1,0 @@
-astropy
-numpy
-setuptools
-psycopg2
-PyMySQL
-Sphinx
-sphinx-rtd-theme
