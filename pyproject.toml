@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "imo-vmdb"
-version = "1.3.1"
+version = "1.4.0"
 authors = [ "Janko Richter <janko@richtej.de>" ]
 description = "Imports VMDB CSV files from IMO into a SQL database."
 license = "MIT"

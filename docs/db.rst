@@ -51,9 +51,10 @@ A meteor shower (``shower``) is not provided if it is an observation of sporadic
 Magnitudes
 **********
 
-The ``magnitude`` table contains all rate observations.
+The ``magnitude`` table contains all magnitude observations.
 All of these observations are associated with the ``obs_session`` table.
-A meteor shower (``shower``) is not provided if it is an observation of sporadic meteors or no meteor shower has been associated.
+A meteor shower (``shower``) is not provided if it is an observation of
+sporadic meteors or no meteor shower has been associated.
 There are no observations in this table where no meteors were observed.
 
 * ``id`` unique identifier of the magnitude observation,

@@ -23,7 +23,6 @@ class RateParser(CsvParser):
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
-        self._logger = self._logger_factory.get_logger('rate import')
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO imported_rate (
                 id,

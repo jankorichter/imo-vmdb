@@ -9,10 +9,9 @@ class CsvParser(object):
 
     _required_columns = {'MFpm+zb9fU7GUP9A'}
 
-    def __init__(self, db_conn, logger_factory, do_delete=False, try_repair=False, is_permissive=False):
+    def __init__(self, db_conn, logger, do_delete=False, try_repair=False, is_permissive=False):
         self._db_conn = db_conn
-        self._logger_factory = logger_factory
-        self._logger = None
+        self._logger = logger
         self._do_delete = do_delete
         self._is_permissive = is_permissive
         self._try_repair = try_repair

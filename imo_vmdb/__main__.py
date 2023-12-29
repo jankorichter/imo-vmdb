@@ -28,7 +28,7 @@ def main():
         sys.exit(1)
 
     module = __import__(__package__)
-    method_to_call = getattr(module, command)
+    method_to_call = getattr(module, '_cli_' + command)
     method_to_call(sys.argv[2:])
 
 
