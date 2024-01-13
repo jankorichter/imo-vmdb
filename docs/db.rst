@@ -1,6 +1,5 @@
-
-The Database
-============
+Database
+========
 
 Sessions
 ********
@@ -66,7 +65,7 @@ There are no observations in this table where no meteors were observed.
 * ``session_id`` reference to session
 * ``freq`` total count of observed meteors
 * ``mean`` mean magnitude of observed meteors
-* ``lim_mag`` real NULL,
+* ``lim_mag`` limiting magnitude (*optional*),
 
 The table ``magnitude_detail`` contains the observed count of meteors.
 There are only entries in this table where meteors were observed.
