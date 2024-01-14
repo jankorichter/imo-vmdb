@@ -34,6 +34,24 @@ class CSVParserException(Exception):
 
 
 class CSVImporter(object):
+    """
+    A class for importing CSV files of various types into a database.
+
+    The `CSVImporter` class allows to import CSV files into a database.
+    You can specify whether to delete existing data, attempt data repair,
+    or be permissive about non-critical data errors during the import.
+
+    :param db_conn: An existing database connection implementing DB-API 2.0.
+    :param logger: A logger object used to log errors, warnings, and additional information.
+    :type logger: logging.Logger
+    :param do_delete: If True, delete existing data before importing. Default is False.
+    :type do_delete: bool
+    :param try_repair: If True, attempt data repair during import. Default is False.
+    :type try_repair: bool
+    :param is_permissive: If True, be permissive about non-critical data errors. Default is False.
+    :type is_permissive: bool
+    """
+
     csv_parser = {
         MagnitudesParser,
         RateParser,
@@ -53,12 +71,23 @@ class CSVImporter(object):
         self.counter_write = 0
         self.has_errors = False
 
-    def run(self, files_list):
+    def run(self, file_list):
+        """
+        Import CSV files specified in the files_list into the database.
+
+        This method imports CSV files into the database, with options to delete existing data,
+        attempt data repair, and be permissive about non-critical data errors.
+        After running this method, you can check the `has_errors`, `counter_read`, and `counter_write`
+        properties of this object to determine the import result.
+
+        :param file_list: A list of file paths to CSV files for import.
+        :type file_list: list of str
+        """
         db_conn = self._db_conn
         logger = self._logger
         cur = db_conn.cursor()
 
-        for file_path in files_list:
+        for file_path in file_list:
 
             logger.info('Start parsing the data from file %s.' % file_path)
 
@@ -151,6 +180,18 @@ class CSVImporter(object):
 
 
 def cleanup(db_conn, logger):
+    """
+    Remove all previously imported data, if any, while preserving normalized data in the database.
+
+    This function takes an existing database connection and a logger object as parameters. It removes all
+    previously imported data from the database, leaving normalized data intact.
+
+    :param db_conn: An open database connection implementing DB-API 2.0.
+    :param logger: A logger object used to log errors, warnings, and additional information.
+    :type logger: logging.Logger
+    :return: An integer indicating the result of the operation. 0 for success, other values for errors.
+    :rtype: int
+    """
     logger.info('Starting cleaning up the database.')
     cur = db_conn.cursor()
     cur.execute(db_conn.convert_stmt('DELETE FROM imported_magnitude'))
@@ -163,6 +204,18 @@ def cleanup(db_conn, logger):
 
 
 def initdb(db_conn, logger):
+    """
+    Initialize an empty database, removing all data if the database already exists.
+
+    This function takes an existing database connection and a logger object as parameters.
+    It initializes an empty database, removing all data if the database already exists.
+
+    :param db_conn: An open database connection implementing DB-API 2.0.
+    :param logger: A logger object used to log errors, warnings, and additional information.
+    :type logger: logging.Logger
+    :return: An integer indicating the result of the operation. 0 for success, 1 for errors.
+    :rtype: int
+    """
     my_dir = Path(os.path.dirname(os.path.realpath(__file__)))
     shower_file = str(my_dir / 'data' / 'showers.csv')
     radiants_file = str(my_dir / 'data' / 'radiants.csv')
@@ -176,6 +229,18 @@ def initdb(db_conn, logger):
 
 
 def normalize(db_conn, logger):
+    """
+    Establish relationships between imported records and enrich observations with additional information.
+
+    This function takes an existing database connection and a logger object as parameters. It establishes
+    relationships between the imported records in the database, enriching observations with additional information.
+
+    :param db_conn: An open database connection implementing DB-API 2.0.
+    :param logger: A logger object used to log errors, warnings, and additional information.
+    :type logger: logging.Logger
+    :return: An integer indicating the result of the operation. 0 for success, 1 for errors.
+    :rtype: int
+    """
     logger.info('Starting normalization of the sessions.')
     sn = SessionNormalizer(db_conn, logger)
     sn.run()
@@ -214,6 +279,6 @@ def normalize(db_conn, logger):
         return 1
 
     if mn.has_errors:
-        return 2
+        return 1
 
     return 0
