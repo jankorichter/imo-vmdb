@@ -1,0 +1,3 @@
+session id;observer id;actual observer name;latitude;longitude;elevation;city;country
+1001;42;Test Observer;48.1351;11.5820;520;Munich;Germany
+1002;43;Second Observer;52.5200;13.4050;34;Berlin;Germany

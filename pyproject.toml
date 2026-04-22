@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "imo-vmdb"
-version = "1.4.0"
+version = "1.5.0"
 authors = [ "Janko Richter <janko@richtej.de>" ]
 description = "Imports VMDB CSV files from IMO into a SQL database."
 license = "MIT"
@@ -24,17 +24,27 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-astropy = "^5.2"
+python = "^3.10"
+astropy = ">=6.0"
+flask = "^3.0"
 psycopg2 = { version = "^2.9", optional = true }
 pymysql = { version = "^1.0", optional = true }
-Sphinx = { version = "^4.2", optional = true }
-sphinx-rtd-theme = { version = "^1.0", optional = true }
+Sphinx = { version = "^8.0", optional = true }
+sphinx-rtd-theme = { version = "^3.0", optional = true }
 
 [tool.poetry.extras]
 mysql = ["pymysql"]
 pgsql = ["psycopg2"]
 docs = ["Sphinx", "sphinx-rtd-theme"]
+
+[tool.poetry.scripts]
+imo-vmdb-webui = "imo_vmdb.webui.server:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/jankorichter/imo-vmdb/issues"

@@ -1,3 +1,5 @@
+.. _csv-import:
+
 CSV files
 =========
 

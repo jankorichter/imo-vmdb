@@ -1,21 +1,69 @@
 # imo-vmdb
 
-This project provides a command line tool to maintain a SQL interface to the
+*imo-vmdb* imports data from the
 [Visual Meteor Database (VMDB)](https://www.imo.net/members/imo_vmdb/)
-of the
-[International Meteor Organization (IMO)](https://www.imo.net/).
+of the [International Meteor Organization (IMO)](https://www.imo.net/)
+into a relational SQL database.
 
-The IMO provides the data in the form of pure text files [(CSV files)](https://en.wikipedia.org/wiki/Comma-separated_values).
-This format is not suitable for the evaluation of this data.
-With *imo-vmdb* this data is imported into a relational SQL database.
-A large number of programming languages have interfaces to these databases.
-This makes it possible to load data from the VMDB according to different criteria in different applications.
+The data is enriched with computed properties (radiant positions, sun/moon position and
+illumination) and validated for plausibility.
+No analysis is performed by the tool itself — the database is the output.
 
-No evaluations can be performed with *imo-vmdb* itself.
-However, during the import of the data, various error and plausibility checks are performed.
-This ensures that the data are suitable for analysis.
-In addition, the observations are supplemented with properties in order to be able to filter according to these properties.
-Examples are the positions of the radiants, the sun and the moon.
+For full documentation see <https://imo-vmdb.readthedocs.io/en/latest/>.
 
-For more information see https://imo-vmdb.readthedocs.io/en/latest/
-.
+---
+
+## Quick Start (Docker)
+
+No Python required. Pull and run the web UI:
+
+```bash
+docker run --rm \
+    -p 8000:8000 \
+    -v ./data:/data \
+    -e IMO_VMDB_DATABASE_DATABASE=/data/vmdb.db \
+    ghcr.io/jankorichter/imo-vmdb
+```
+
+Open <http://localhost:8000>.
+
+---
+
+## Developer Setup
+
+**Prerequisites:** Python 3.10+, [Poetry](https://python-poetry.org/docs/#installation)
+
+```bash
+git clone https://github.com/jankorichter/imo-vmdb.git
+cd imo-vmdb
+poetry install
+poetry run python -m imo_vmdb
+```
+
+**With documentation extras** (required to build Sphinx docs):
+
+```bash
+poetry install --extras docs
+```
+
+**Run the web UI locally:**
+
+```bash
+poetry run python -m imo_vmdb web_server -c config.ini
+```
+
+**Run the test suite:**
+
+```bash
+poetry run pytest
+```
+
+No server needs to be started beforehand. The tests use Flask's built-in test
+client, which calls the application directly in-process — no network, no port.
+A temporary SQLite database is created automatically for each test run.
+
+**Build Docker image locally:**
+
+```bash
+docker compose up --build
+```

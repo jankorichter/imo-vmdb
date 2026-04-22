@@ -1,4 +1,14 @@
+import importlib
 import sys
+
+_COMMANDS = {
+    'cleanup':    ('imo_vmdb.command.cleanup',    'main'),
+    'export':     ('imo_vmdb.command.export',     'main'),
+    'initdb':     ('imo_vmdb.command.initdb',     'main'),
+    'import_csv': ('imo_vmdb.command.import_csv', 'main'),
+    'normalize':  ('imo_vmdb.command.normalize',  'main'),
+    'web_server': ('imo_vmdb.webui.server',       'main'),
+}
 
 
 def usage():
@@ -7,7 +17,9 @@ Valid commands are:
     initdb      ... Initializes the database.
     cleanup     ... Removes data that are no longer needed.
     import_csv  ... Imports CSV files.
-    normalize   ... Normalize and analyze meteor observations.''')
+    normalize   ... Normalize and analyze meteor observations.
+    export      ... Export data as CSV.
+    web_server  ... Start the web server (Web UI and REST API).''')
 
 
 def main():
@@ -16,20 +28,13 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
-    valid_commands = [
-        'cleanup',
-        'initdb',
-        'import_csv',
-        'normalize',
-    ]
-
-    if command not in valid_commands:
+    if command not in _COMMANDS:
         usage()
         sys.exit(1)
 
-    module = __import__(__package__)
-    method_to_call = getattr(module, '_cli_' + command)
-    method_to_call(sys.argv[2:])
+    module_path, func_name = _COMMANDS[command]
+    module = importlib.import_module(module_path)
+    getattr(module, func_name)(sys.argv[2:])
 
 
 if __name__ == "__main__":

@@ -1,22 +1,50 @@
 About imo-vmdb
 ==============
 
-This project provides a command line tool to maintain a SQL interface to the
+*imo-vmdb* processes visual meteor observation data from the
 `Visual Meteor Database (VMDB) <https://www.imo.net/members/imo_vmdb/>`_
-of the
-`International Meteor Organization (IMO) <https://www.imo.net/>`_.
+of the `International Meteor Organization (IMO) <https://www.imo.net/>`_.
 
-The IMO provides the data in the form of pure text files
-`(CSV files) <https://en.wikipedia.org/wiki/Comma-separated_values>`_.
-This format is not suitable for the evaluation of this data.
-With *imo-vmdb* this data is imported into a relational SQL database.
-A large number of programming languages have interfaces to these databases.
-This makes it possible to load data from the VMDB according to different
-criteria in different applications.
+What it does
+------------
 
-No evaluations can be performed with *imo-vmdb* itself.
-However, during the import of the data, various error and plausibility checks are performed.
-This ensures that the data are suitable for analysis.
-In addition, the observations are supplemented with properties in order to be able to filter
-according to these properties.
-Examples are the positions of the radiants, the sun and the moon.
+The IMO distributes observation data as CSV files.  These raw files contain
+counts and times, but lack the derived quantities needed for most analyses —
+such as solar longitude, radiant altitude, sun and moon positions.
+
+*imo-vmdb* imports the raw CSV data, validates it, and then *normalizes* it:
+each observation is enriched with computed astronomical properties using
+`astropy <https://www.astropy.org/>`_:
+
+* **Solar longitude** at the start and end of the observation
+* **Radiant position** (altitude and azimuth) in horizontal coordinates,
+  with zenith attraction applied
+* **Sun position** (altitude and azimuth)
+* **Moon position** (altitude, azimuth) and illumination
+* **Field-of-view position** (altitude and azimuth)
+* **Radiant correction factor** for the ZHR calculation
+
+This enrichment is the core value of *imo-vmdb*: filtering and grouping
+observations by these derived quantities — e.g. "all Perseid observations
+with the radiant above 30°" — becomes straightforward.
+
+Accessing the data
+------------------
+
+Normalised data can be accessed in three ways:
+
+* **REST API** — query observations as JSON, filtered by shower, date range,
+  solar longitude, and more; see :ref:`rest-api`.
+* **CSV export** — download tables directly from the web UI or CLI;
+  see :ref:`csv-export`.
+* **Direct database access** — SQLite, PostgreSQL, or MySQL;
+  field reference at :ref:`fields`.
+
+Getting started
+---------------
+
+The fastest way to get started is the Docker image — no local Python
+installation required:
+
+* **Docker / Web UI**: see :ref:`setup`.
+* **Python / CLI**: see :ref:`setup`.

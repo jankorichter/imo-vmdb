@@ -1,9 +1,5 @@
 import csv
 import os
-import imo_vmdb.command.cleanup
-import imo_vmdb.command.import_csv
-import imo_vmdb.command.initdb
-import imo_vmdb.command.normalize
 from imo_vmdb.csv_import.magnitudes import MagnitudesParser
 from imo_vmdb.csv_import.rate import RateParser
 from imo_vmdb.csv_import.radiant import RadiantParser
@@ -18,11 +14,6 @@ from imo_vmdb.normalizer.rate import RateNormalizer
 from imo_vmdb.normalizer.session import SessionNormalizer
 from pathlib import Path
 from imo_vmdb.db import create_tables
-
-_cli_cleanup = imo_vmdb.command.cleanup.main
-_cli_import_csv = imo_vmdb.command.import_csv.main
-_cli_initdb = imo_vmdb.command.initdb.main
-_cli_normalize = imo_vmdb.command.normalize.main
 
 
 class CSVFileException(Exception):

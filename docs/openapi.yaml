@@ -1,0 +1,485 @@
+openapi: 3.1.0
+
+info:
+  title: imo-vmdb REST API
+  version: "1"
+  description: >
+    Query rate and magnitude observations from the
+    [Visual Meteor Database (VMDB)](https://www.imo.net/members/imo_vmdb/)
+    stored in an *imo-vmdb* database.
+
+    Full documentation: https://imo-vmdb.readthedocs.io/
+
+servers:
+  - url: /api/v1
+    description: imo-vmdb web server (default port 8000)
+
+paths:
+
+  /rates:
+    get:
+      summary: Rate observations
+      description: >
+        Returns normalised rate observations.
+        All filter parameters are optional and combined with AND.
+        Multiple values for `shower`, `session_id`, and `rate_id` are
+        combined with OR.
+      parameters:
+        - $ref: '#/components/parameters/shower'
+        - $ref: '#/components/parameters/period_start'
+        - $ref: '#/components/parameters/period_end'
+        - $ref: '#/components/parameters/sl_min'
+        - $ref: '#/components/parameters/sl_max'
+        - $ref: '#/components/parameters/lim_magn_min'
+        - $ref: '#/components/parameters/lim_magn_max'
+        - name: sun_alt_max
+          in: query
+          description: Maximum solar altitude in degrees.
+          schema:
+            type: number
+        - name: moon_alt_max
+          in: query
+          description: Maximum lunar altitude in degrees.
+          schema:
+            type: number
+        - $ref: '#/components/parameters/session_id'
+        - name: rate_id
+          in: query
+          description: Filter by rate observation IDs (repeatable).
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/include'
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatesResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /magnitudes:
+    get:
+      summary: Magnitude observations
+      description: >
+        Returns normalised magnitude observations.
+        All filter parameters are optional and combined with AND.
+        Multiple values for `shower`, `session_id`, and `magn_id` are
+        combined with OR.
+      parameters:
+        - $ref: '#/components/parameters/shower'
+        - $ref: '#/components/parameters/period_start'
+        - $ref: '#/components/parameters/period_end'
+        - $ref: '#/components/parameters/sl_min'
+        - $ref: '#/components/parameters/sl_max'
+        - $ref: '#/components/parameters/lim_magn_min'
+        - $ref: '#/components/parameters/lim_magn_max'
+        - $ref: '#/components/parameters/session_id'
+        - name: magn_id
+          in: query
+          description: Filter by magnitude observation IDs (repeatable).
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/include'
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MagnitudesResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /showers:
+    get:
+      summary: Shower reference data
+      description: Returns all meteor showers from the reference data.
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shower'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /openapi.yaml:
+    get:
+      summary: OpenAPI specification
+      description: Returns this OpenAPI 3.1 specification as YAML.
+      responses:
+        "200":
+          description: OpenAPI YAML document.
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+components:
+
+  parameters:
+
+    shower:
+      name: shower
+      in: query
+      description: >
+        IAU shower code(s) (repeatable).
+        Use `SPO` to include sporadic meteors (returned as `null` in the
+        `shower` field).
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+      examples:
+        single:
+          value: [PER]
+        multiple:
+          value: [PER, GEM]
+        with_sporadic:
+          value: [PER, SPO]
+
+    period_start:
+      name: period_start
+      in: query
+      description: >
+        Lower bound for `period_start` (ISO 8601, e.g. `2015-08-01` or
+        `2015-08-12T20:00:00`).
+      schema:
+        type: string
+        format: date-time
+
+    period_end:
+      name: period_end
+      in: query
+      description: >
+        Upper bound for `period_end` (ISO 8601).
+      schema:
+        type: string
+        format: date-time
+
+    sl_min:
+      name: sl_min
+      in: query
+      description: Minimum solar longitude (degrees, `sl_start >=`).
+      schema:
+        type: number
+        minimum: 0
+        maximum: 360
+
+    sl_max:
+      name: sl_max
+      in: query
+      description: Maximum solar longitude (degrees, `sl_end <=`).
+      schema:
+        type: number
+        minimum: 0
+        maximum: 360
+
+    lim_magn_min:
+      name: lim_magn_min
+      in: query
+      description: Minimum limiting magnitude.
+      schema:
+        type: number
+
+    lim_magn_max:
+      name: lim_magn_max
+      in: query
+      description: Maximum limiting magnitude.
+      schema:
+        type: number
+
+    session_id:
+      name: session_id
+      in: query
+      description: Filter by session IDs (repeatable).
+      schema:
+        type: array
+        items:
+          type: integer
+      style: form
+      explode: true
+
+    include:
+      name: include
+      in: query
+      description: >
+        Comma-separated list of related data to include in the response.
+        Supported values: `sessions`, `magnitudes`.
+      schema:
+        type: string
+        example: sessions,magnitudes
+
+  schemas:
+
+    RateObservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the rate observation.
+        shower:
+          type: ["string", "null"]
+          description: IAU shower code, or null for sporadic meteors.
+        period_start:
+          type: string
+          description: Start of the observation period.
+        period_end:
+          type: string
+          description: End of the observation period.
+        sl_start:
+          type: number
+          description: Solar longitude at period start (degrees).
+        sl_end:
+          type: number
+          description: Solar longitude at period end (degrees).
+        session_id:
+          type: integer
+          description: Reference to the observation session.
+        freq:
+          type: integer
+          description: Number of observed meteors.
+        lim_mag:
+          type: number
+          description: Limiting magnitude.
+        t_eff:
+          type: number
+          description: Net observation time in hours.
+        f:
+          type: number
+          description: Cloud cover correction factor.
+        sidereal_time:
+          type: number
+          description: Sidereal time at midpoint.
+        sun_alt:
+          type: number
+          description: Solar altitude in degrees.
+        sun_az:
+          type: number
+          description: Solar azimuth in degrees.
+        moon_alt:
+          type: number
+          description: Lunar altitude in degrees.
+        moon_az:
+          type: number
+          description: Lunar azimuth in degrees.
+        moon_illum:
+          type: number
+          description: Lunar illumination (0.0–1.0).
+        field_alt:
+          type: ["number", "null"]
+          description: Field of view altitude in degrees.
+        field_az:
+          type: ["number", "null"]
+          description: Field of view azimuth in degrees.
+        rad_alt:
+          type: ["number", "null"]
+          description: Radiant altitude in degrees (zenith attraction applied).
+        rad_az:
+          type: ["number", "null"]
+          description: Radiant azimuth in degrees.
+        magn_id:
+          type: ["integer", "null"]
+          description: Reference to the associated magnitude observation.
+
+    MagnitudeObservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the magnitude observation.
+        shower:
+          type: ["string", "null"]
+          description: IAU shower code, or null for sporadic meteors.
+        period_start:
+          type: string
+          description: Start of the observation period.
+        period_end:
+          type: string
+          description: End of the observation period.
+        sl_start:
+          type: number
+          description: Solar longitude at period start (degrees).
+        sl_end:
+          type: number
+          description: Solar longitude at period end (degrees).
+        session_id:
+          type: integer
+          description: Reference to the observation session.
+        freq:
+          type: integer
+          description: Total number of observed meteors.
+        mean:
+          type: number
+          description: Mean magnitude.
+        lim_mag:
+          type: ["number", "null"]
+          description: Limiting magnitude.
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the session.
+        longitude:
+          type: number
+          description: Observer longitude in degrees.
+        latitude:
+          type: number
+          description: Observer latitude in degrees.
+        elevation:
+          type: number
+          description: Height above mean sea level in km.
+        country:
+          type: string
+        city:
+          type: string
+          description: Name of the observation site.
+        observer_id:
+          type: ["integer", "null"]
+        observer_name:
+          type: ["string", "null"]
+
+    MagnitudeDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Reference to the magnitude observation.
+        magn:
+          type: integer
+          description: Magnitude class.
+        freq:
+          type: number
+          description: Frequency of meteors in this magnitude class.
+
+    Shower:
+      type: object
+      properties:
+        iau_code:
+          type: string
+          description: IAU shower code.
+        name:
+          type: string
+          description: Shower name.
+        start_month:
+          type: integer
+        start_day:
+          type: integer
+        end_month:
+          type: integer
+        end_day:
+          type: integer
+        peak_month:
+          type: ["integer", "null"]
+        peak_day:
+          type: ["integer", "null"]
+        ra:
+          type: ["number", "null"]
+          description: Right ascension of the radiant (degrees).
+        dec:
+          type: ["number", "null"]
+          description: Declination of the radiant (degrees).
+        v:
+          type: ["number", "null"]
+          description: Entry velocity (km/s).
+        r:
+          type: ["number", "null"]
+          description: Population index r.
+        zhr:
+          type: ["number", "null"]
+          description: Zenithal hourly rate at peak.
+
+    RatesResponse:
+      type: object
+      required: [observations]
+      properties:
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RateObservation'
+        sessions:
+          type: array
+          description: Present when `include=sessions` was requested.
+          items:
+            $ref: '#/components/schemas/Session'
+        magnitudes:
+          type: array
+          description: Present when `include=magnitudes` was requested.
+          items:
+            $ref: '#/components/schemas/MagnitudeDetail'
+
+    MagnitudesResponse:
+      type: object
+      required: [observations]
+      properties:
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MagnitudeObservation'
+        sessions:
+          type: array
+          description: Present when `include=sessions` was requested.
+          items:
+            $ref: '#/components/schemas/Session'
+        magnitudes:
+          type: array
+          description: Present when `include=magnitudes` was requested.
+          items:
+            $ref: '#/components/schemas/MagnitudeDetail'
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+  responses:
+
+    BadRequest:
+      description: Invalid query parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ServerError:
+      description: Database or server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NoDB:
+      description: No database configured.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

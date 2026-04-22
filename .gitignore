@@ -1,6 +1,7 @@
 *.swp
 __pycache__
 /.idea
+/.claude
 /.project
 /.pydevproject
 /.settings
@@ -9,5 +10,5 @@ __pycache__
 /build/
 /venv
 /imo_vmdb.egg-info/
-/docs/build/
+/docs/_build/
 /.DS_Store

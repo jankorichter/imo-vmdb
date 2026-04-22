@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>imo-vmdb Control Panel</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f0f2f5; color: #222; padding: 24px; }
+  h1 { font-size: 1.4rem; color: #1a1a2e; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+  header a { font-size: .85rem; color: #4f6ef7; text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+  .card button { margin-top: auto; align-self: flex-start; }
+  .card h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: #666; margin-bottom: 12px; }
+  .card p { font-size: .82rem; color: #555; margin-bottom: 14px; line-height: 1.4; }
+  button { cursor: pointer; border: none; border-radius: 6px; padding: 9px 18px; font-size: .9rem; font-weight: 600; transition: opacity .15s; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary { background: #4f6ef7; color: #fff; }
+  .btn-danger  { background: #e53e3e; color: #fff; }
+  .btn-green   { background: #38a169; color: #fff; }
+  .btn-gray    { background: #718096; color: #fff; }
+  label.check  { display: flex; align-items: center; gap: 8px; font-size: .85rem; margin-bottom: 8px; cursor: pointer; }
+  input[type=file] { font-size: .85rem; margin-bottom: 12px; width: 100%; }
+  .log-area { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .log-header h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: #666; }
+  #status-badge { font-size: .8rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: #e2e8f0; color: #555; }
+  #status-badge.running { background: #bee3f8; color: #2b6cb0; }
+  #status-badge.ok      { background: #c6f6d5; color: #276749; }
+  #status-badge.error   { background: #fed7d7; color: #9b2c2c; }
+  pre#log { font-family: 'Cascadia Code', 'Fira Mono', monospace; font-size: .78rem; line-height: 1.5;
+            background: #1a202c; color: #e2e8f0; border-radius: 6px; padding: 16px;
+            height: 380px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .clear-btn { font-size: .78rem; background: none; border: 1px solid #cbd5e0; color: #718096; padding: 3px 10px; border-radius: 6px; }
+  .downloads { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 24px; }
+  .downloads h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: #666; margin-bottom: 14px; }
+  .download-links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .download-links a { display: inline-block; background: #edf2f7; color: #2d3748; border-radius: 6px; padding: 7px 14px; font-size: .83rem; font-weight: 600; text-decoration: none; border: 1px solid #cbd5e0; transition: background .15s; }
+  .download-links a:hover { background: #e2e8f0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>imo-vmdb Control Panel</h1>
+  <a href="/docs/webui.html" target="_blank">Documentation</a>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2>Database Setup</h2>
+    <p>Initialize (or re-initialize) the database. <strong>All existing data will be deleted.</strong></p>
+    <button class="btn-danger" id="btn-initdb" onclick="runInitdb()">Init Database</button>
+  </div>
+
+  <div class="card">
+    <h2>Import CSV</h2>
+    <input type="file" id="csv-files" accept=".csv" multiple>
+    <label class="check" title="Removes all previously imported raw data before importing. Useful to re-import a file without running Cleanup first."><input type="checkbox" id="opt-delete"> Delete existing imported data</label>
+    <label class="check" title="Accepts records with minor data problems, issuing a warning instead of an error."><input type="checkbox" id="opt-permissive"> Permissive mode</label>
+    <label class="check" title="Tries to automatically fix common problems such as swapped start/end times or invalid optional fields."><input type="checkbox" id="opt-repair"> Attempt repair on errors</label>
+    <button class="btn-primary" id="btn-import" onclick="runImport()">Import</button>
+  </div>
+
+  <div class="card">
+    <h2>Processing</h2>
+    <p>Normalize and enrich observations with astronomical data.</p>
+    <button class="btn-green" id="btn-normalize" onclick="runCommand('/run/normalize')">Normalize</button>
+  </div>
+
+  <div class="card">
+    <h2>Maintenance</h2>
+    <p>Remove raw imported data while preserving normalized results.</p>
+    <button class="btn-gray" id="btn-cleanup" onclick="runCommand('/run/cleanup')">Cleanup</button>
+  </div>
+</div>
+
+<div class="downloads">
+  <h2>Downloads</h2>
+  <label class="check" style="margin-bottom:12px" title="Exports Showers and Radiants in the original import format, which can be edited and re-imported.">
+    <input type="checkbox" id="opt-reimport" onchange="updateReimportLinks()"> Export for re-import (Showers &amp; Radiants only)
+  </label>
+  <div class="download-links">
+    <a href="/export/shower" id="dl-shower">Showers</a>
+    <a href="/export/radiant" id="dl-radiant">Radiants</a>
+    <a href="/export/session">Sessions</a>
+    <a href="/export/rate">Rates</a>
+    <a href="/export/rate_magnitude">Rate Magnitudes</a>
+    <a href="/export/magnitude">Magnitudes</a>
+    <a href="/export/magnitude_detail">Magnitude Details</a>
+  </div>
+</div>
+
+<div class="log-area">
+  <div class="log-header">
+    <h2>Log Output</h2>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="clear-btn" onclick="copyLog()" id="btn-copy">Copy</button>
+      <button class="clear-btn" onclick="downloadLog()">Download</button>
+      <button class="clear-btn" onclick="clearLog()">Clear</button>
+      <span id="status-badge">Idle</span>
+    </div>
+  </div>
+  <pre id="log"></pre>
+</div>
+
+<script>
+const allButtons = () => document.querySelectorAll('button:not(.clear-btn)');
+
+function setBusy(busy) {
+  allButtons().forEach(b => b.disabled = busy);
+}
+
+function setStatus(text, cls) {
+  const badge = document.getElementById('status-badge');
+  badge.textContent = text;
+  badge.className = cls || '';
+}
+
+function appendLog(line) {
+  const pre = document.getElementById('log');
+  pre.textContent += line + '\n';
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log').textContent = '';
+  setStatus('Idle', '');
+}
+
+function copyLog() {
+  const text = document.getElementById('log').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+function downloadLog() {
+  const text = document.getElementById('log').textContent;
+  if (!text) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'imo-vmdb-' + new Date().toISOString().replace(/[:.]/g, '-') + '.log';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function startStream(jobId) {
+  const es = new EventSource('/stream/' + jobId);
+  es.onmessage = e => appendLog(e.data);
+  es.addEventListener('done', () => {
+    es.close();
+    fetch('/status/' + jobId)
+      .then(r => r.json())
+      .then(data => {
+        const ok = data.exit_code === 0;
+        setStatus(ok ? 'Done (exit 0)' : `Failed (exit ${data.exit_code})`, ok ? 'ok' : 'error');
+        setBusy(false);
+      });
+  });
+  es.onerror = () => {
+    es.close();
+    appendLog('[connection lost]');
+    setBusy(false);
+    setStatus('Error', 'error');
+  };
+}
+
+async function runCommand(url) {
+  setBusy(true);
+  setStatus('Running…', 'running');
+  try {
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { appendLog('Error: ' + (data.error || res.statusText)); setBusy(false); setStatus('Error', 'error'); return; }
+    startStream(data.job_id);
+  } catch (e) {
+    appendLog('Error: ' + e.message);
+    setBusy(false);
+    setStatus('Error', 'error');
+  }
+}
+
+function runInitdb() {
+  if (!confirm('This will DELETE ALL DATA in the database. Continue?')) return;
+  runCommand('/run/initdb');
+}
+
+function updateReimportLinks() {
+  const reimport = document.getElementById('opt-reimport').checked;
+  document.getElementById('dl-shower').href  = reimport ? '/export/shower?reimport=1'  : '/export/shower';
+  document.getElementById('dl-radiant').href = reimport ? '/export/radiant?reimport=1' : '/export/radiant';
+}
+
+async function runImport() {
+  const files = document.getElementById('csv-files').files;
+  if (files.length === 0) { alert('Please select at least one CSV file.'); return; }
+  setBusy(true);
+  setStatus('Running…', 'running');
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  if (document.getElementById('opt-delete').checked)     fd.append('do_delete', '1');
+  if (document.getElementById('opt-permissive').checked) fd.append('is_permissive', '1');
+  if (document.getElementById('opt-repair').checked)     fd.append('try_repair', '1');
+  try {
+    const res = await fetch('/run/import_csv', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) { appendLog('Error: ' + (data.error || res.statusText)); setBusy(false); setStatus('Error', 'error'); return; }
+    startStream(data.job_id);
+  } catch (e) {
+    appendLog('Error: ' + e.message);
+    setBusy(false);
+    setStatus('Error', 'error');
+  }
+}
+</script>
+</body>
+</html>

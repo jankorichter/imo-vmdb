@@ -6,16 +6,34 @@ import sys
 
 def config_factory(options, parser):
     config = configparser.ConfigParser()
-    config_file = os.environ['IMO_VMDB_CONFIG'] if 'IMO_VMDB_CONFIG' in os.environ else None
 
+    # Config file is read first — it takes precedence over environment variables
+    config_file = os.environ.get('IMO_VMDB_CONFIG')
     if options.config_file is not None:
         config_file = str(options.config_file)
+    if config_file is not None:
+        config.read(config_file)
 
-    if config_file is None:
+    # Generic fallback: IMO_VMDB_<SECTION>_<KEY> → [section] key
+    prefix = 'IMO_VMDB_'
+    for name, value in os.environ.items():
+        if not name.startswith(prefix) or name == 'IMO_VMDB_CONFIG':
+            continue
+        rest = name[len(prefix):]
+        if '_' not in rest:
+            continue
+        section, key = rest.split('_', 1)
+        section = section.lower()
+        key = key.lower()
+        if not config.has_option(section, key):
+            if not config.has_section(section):
+                config.add_section(section)
+            config.set(section, key, value)
+
+    if not config.has_section('database') or not config.get('database', 'database', fallback=None):
         parser.print_help()
         sys.exit(1)
 
-    config.read(config_file)
     return config
 
 
