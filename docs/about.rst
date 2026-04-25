@@ -9,24 +9,21 @@ What it does
 ------------
 
 The IMO distributes observation data as CSV files.  These raw files contain
-counts and times, but lack the derived quantities needed for most analyses —
-such as solar longitude, radiant altitude, sun and moon positions.
+counts and times, but lack the derived quantities needed for most analyses.
 
-*imo-vmdb* imports the raw CSV data, validates it, and then *normalizes* it:
-each observation is enriched with computed astronomical properties using
-`astropy <https://www.astropy.org/>`_:
+*imo-vmdb* imports the raw CSV data, validates it, and then *normalizes* it —
+enriching each observation with computed astronomical properties:
 
 * **Solar longitude** at the start and end of the observation
-* **Radiant position** (altitude and azimuth) in horizontal coordinates,
-  with zenith attraction applied
+* **Radiant position** (altitude and azimuth) with zenith attraction applied
 * **Sun position** (altitude and azimuth)
 * **Moon position** (altitude, azimuth) and illumination
 * **Field-of-view position** (altitude and azimuth)
-* **Radiant correction factor** for the ZHR calculation
 
-This enrichment is the core value of *imo-vmdb*: filtering and grouping
-observations by these derived quantities — e.g. "all Perseid observations
-with the radiant above 30°" — becomes straightforward.
+The statistical analysis itself happens outside *imo-vmdb*.  The REST API
+provides machine-to-machine access to the prepared data — for example, from
+the `vismeteor <https://CRAN.R-project.org/package=vismeteor>`_
+R package.
 
 Accessing the data
 ------------------

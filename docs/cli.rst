@@ -58,7 +58,7 @@ The following data are computed and stored:
 * position of the sun,
 * position of the moon and its illumination,
 * position of the field of view,
-* correction factor of the radiant altitude for the ZHR calculation.
+* radiant altitude with zenith attraction applied.
 
 All positional data are in the horizontal coordinate system.
 

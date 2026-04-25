@@ -23,7 +23,7 @@ follow the path that fits your setup.
 Database
 --------
 
-*imo-vmdb* supports three database systems.  For most users, **SQLite** is
+*imo-vmdb* supports three database systems. For most users, **SQLite** is
 the right choice.
 
 SQLite (recommended)

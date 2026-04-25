@@ -119,9 +119,18 @@ function setStatus(text, cls) {
   badge.className = cls || '';
 }
 
+function _escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function appendLog(line) {
   const pre = document.getElementById('log');
-  pre.textContent += line + '\n';
+  const esc = _escapeHtml(line);
+  let html;
+  if (/\bERROR\b/.test(line))        html = `<span style="color:#fc8181">${esc}</span>`;
+  else if (/\bWARNING\b/.test(line)) html = `<span style="color:#f6e05e">${esc}</span>`;
+  else                               html = esc;
+  pre.innerHTML += html + '\n';
   pre.scrollTop = pre.scrollHeight;
 }
 

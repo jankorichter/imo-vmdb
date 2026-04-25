@@ -46,8 +46,7 @@ Sporadic meteors
 
 By convention, sporadic meteors are identified by the code ``SPO``.
 They carry no shower assignment and the ``shower`` field is ``null``
-in the API response.
-To filter for sporadic meteors, pass ``shower=SPO``::
+in the API response. To filter for sporadic meteors, pass ``shower=SPO``::
 
     /api/v1/rates?shower=SPO
 

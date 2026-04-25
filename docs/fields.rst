@@ -6,6 +6,29 @@ Field Reference
 This reference covers all fields as they appear in the database, the REST API,
 and CSV exports.  Field names are identical across all three interfaces.
 
+Entity Relationships
+--------------------
+
+.. code-block:: text
+
+    obs_session (id)
+      │
+      ├──< rate (session_id) ──────────────── rate_magnitude (rate_id, magn_id) >──┐
+      │                                                                            │
+      └──< magnitude (session_id) ─────────────────────────────────────────────────┘
+               │
+               └──< magnitude_detail (id → magnitude.id)
+
+    shower   ···  rate.shower, magnitude.shower  (IAU code)
+    radiant  ···  used during normalization only  (uses IAU code)
+
+``obs_session`` is the root.  Each session can have many ``rate`` and
+``magnitude`` records.  ``rate_magnitude`` links a rate observation to the
+magnitude observation covering the same period (many-to-one on the magnitude
+side).  ``magnitude_detail`` holds the per-class breakdown for each magnitude
+observation.  ``shower`` and ``radiant`` are lookup tables referenced by IAU
+code, not by foreign key.
+
 Sessions (``obs_session``)
 --------------------------
 

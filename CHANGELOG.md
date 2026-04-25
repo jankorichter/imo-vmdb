@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.5.1] — 2026-04-25
+
+### Fixed
+
+- `docs/about.rst` — rewrote description to clarify imo-vmdb as a data preparation tool;
+- `docs/cli.rst` — corrected "correction factor of the radiant altitude" to
+  "radiant altitude with zenith attraction applied".
+- `docs/fields.rst` — added entity relationship diagram.
+- Web UI log — ERROR lines highlighted red, WARNING lines highlighted yellow.
+
 ## [1.5.0] — 2026-04-25
 
 ### Added
