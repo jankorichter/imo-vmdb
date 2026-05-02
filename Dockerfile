@@ -8,7 +8,7 @@ COPY docs/ docs/
 RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
     poetry install --extras docs && \
-    sphinx-build -b html docs imo_vmdb/built_docs/html && \
+    poetry run sphinx-build -b html docs imo_vmdb/built_docs && \
     python -m compileall -q imo_vmdb/
 
 ENTRYPOINT ["python", "-m", "imo_vmdb"]

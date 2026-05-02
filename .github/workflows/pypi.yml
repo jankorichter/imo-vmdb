@@ -22,7 +22,7 @@ jobs:
 
       - run: poetry install --extras docs
 
-      - run: poetry run sphinx-build -M html docs imo_vmdb/built_docs
+      - run: poetry run sphinx-build -b html docs imo_vmdb/built_docs
 
       - run: poetry build
 

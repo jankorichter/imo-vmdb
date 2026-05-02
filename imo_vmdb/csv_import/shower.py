@@ -99,7 +99,7 @@ class ShowerParser(CsvParser):
 
         shower_name = row['name'].strip()
         if 0 == len(shower_name):
-            self._logger.warning("%s: name of shower is empty." % iau_code)
+            self._logger.warning("ID %s: name of shower is empty." % iau_code)
 
         zhr = row['zhr'].strip()
         record = {

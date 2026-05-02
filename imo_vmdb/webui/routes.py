@@ -106,7 +106,7 @@ def _start_job(target, *args):
     return job_id
 
 
-_DOCS_DIR = os.path.join(os.path.dirname(__file__), '..', 'built_docs', 'html')
+_DOCS_DIR = os.path.join(os.path.dirname(__file__), '..', 'built_docs')
 
 
 @bp.route('/')

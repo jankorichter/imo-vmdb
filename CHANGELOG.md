@@ -4,8 +4,22 @@
 
 ### Fixed
 
-- `imo_vmdb/model/sky.py` — replaced deprecated `get_moon`/`get_sun` with `get_body`
-  for compatibility with astropy 7.x.
+- **Astropy 7.x compatibility** — deprecated `get_moon`/`get_sun` calls in
+  `imo_vmdb/model/sky.py` replaced with `get_body`; `GeocentricMeanEcliptic`
+  now uses explicit `equinox='J2000'`.
+- **Idempotent import and normalization** — all CSV importers and the normalizer
+  delete existing records before inserting, so import and normalization can be
+  repeated without triggering database errors or producing duplicates.
+- **Built wheel now includes documentation** — `imo_vmdb/built_docs` is built
+  before packaging and embedded in both the wheel and sdist.
+
+### Improved
+
+- **Logging** — discarded observations are now reported uniformly as
+  `session X: observation Y discarded - <reason>` via a new `_log_discard()`
+  method in the base normalizer; CSV importer messages now follow
+  `session X: ID Y: <message>` (rate/magnitude) or `ID X: <message>`
+  (shower/radiant/session) throughout.
 
 ## [1.5.1] — 2026-04-25
 

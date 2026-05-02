@@ -136,40 +136,40 @@ class RateParser(CsvParser):
         t_eff = value.strip()
         if '' == t_eff:
             raise ImportException(
-                'ID %s in session %s: t_eff must be set.' %
-                (rate_id, session_id)
+                'session %s: ID %s: t_eff must be set.' %
+                (session_id, rate_id)
             )
 
         try:
             t_eff = float(t_eff)
         except ValueError:
             raise ImportException(
-                'ID %s in session %s: invalid t_eff. The value is %s.' %
-                (rate_id, session_id, t_eff)
+                'session %s: ID %s: invalid t_eff. The value is %s.' %
+                (session_id, rate_id, t_eff)
             )
 
         if 0.0 == t_eff:
             raise ImportException(
-                'ID %s in session %s: t_eff is 0.' %
-                (rate_id, session_id)
+                'session %s: ID %s: t_eff is 0.' %
+                (session_id, rate_id)
             )
 
         if t_eff < 0.0:
             raise ImportException(
-                'ID %s in session %s: t_eff must be greater than 0 instead of %s.' %
-                (rate_id, session_id, t_eff)
+                'session %s: ID %s: t_eff must be greater than 0 instead of %s.' %
+                (session_id, rate_id, t_eff)
             )
 
         if t_eff > 24.0:
             raise ImportException(
-                'ID %s in session %s: t_eff must be less than 24 instead of %s.' %
-                (rate_id, session_id, t_eff)
+                'session %s: ID %s: t_eff must be less than 24 instead of %s.' %
+                (session_id, rate_id, t_eff)
             )
 
         if not self._is_permissive and t_eff > 7.0:
             raise ImportException(
-                'ID %s in session %s: t_eff must be less than 6 instead of %s.' %
-                (rate_id, session_id, t_eff)
+                'session %s: ID %s: t_eff must be less than 6 instead of %s.' %
+                (session_id, rate_id, t_eff)
             )
 
         return t_eff
@@ -179,22 +179,22 @@ class RateParser(CsvParser):
         f = value.strip()
         if '' == f:
             raise ImportException(
-                'ID %s in session %s: f must be set.' %
-                (rate_id, session_id)
+                'session %s: ID %s: f must be set.' %
+                (session_id, rate_id)
             )
 
         try:
             f = float(f)
         except ValueError:
             raise ImportException(
-                'ID %s in session %s: invalid f. The value is %s.' %
-                (rate_id, session_id, f)
+                'session %s: ID %s: invalid f. The value is %s.' %
+                (session_id, rate_id, f)
             )
 
         if f < 1.0:
             raise ImportException(
-                'ID %s in session %s: f must be greater than 1 instead of %s.' %
-                (rate_id, session_id, f)
+                'session %s: ID %s: f must be greater than 1 instead of %s.' %
+                (session_id, rate_id, f)
             )
 
         return f
@@ -207,14 +207,14 @@ class RateParser(CsvParser):
             value = int(value)
         except ValueError:
             raise ImportException(
-                'ID %s in session %s: %s is an invalid count of meteors.' %
-                (rate_id, session_id, value)
+                'session %s: ID %s: %s is an invalid count of meteors.' %
+                (session_id, rate_id, value)
             )
 
         if value < 0:
             raise ImportException(
-                'ID %s in session %s: count of meteors must be greater than 0 instead of %s.' %
-                (rate_id, session_id, value)
+                'session %s: ID %s: count of meteors must be greater than 0 instead of %s.' %
+                (session_id, rate_id, value)
             )
 
         return value
@@ -224,22 +224,22 @@ class RateParser(CsvParser):
         lm = value.strip()
         if '' == lm:
             raise ImportException(
-                'ID %s in session %s: limiting magnitude must be set.' %
-                (rate_id, session_id)
+                'session %s: ID %s: limiting magnitude must be set.' %
+                (session_id, rate_id)
             )
 
         try:
             lm = float(lm)
         except ValueError:
             raise ImportException(
-                'ID %s in session %s: invalid limiting magnitude. The value is %s.' %
-                (rate_id, session_id, lm)
+                'session %s: ID %s: invalid limiting magnitude. The value is %s.' %
+                (session_id, rate_id, lm)
             )
 
         if lm < 0.0 or lm > 8:
             raise ImportException(
-                'ID %s in session %s: lm must be between 0 and 8 instead of %s.' %
-                (rate_id, session_id, lm)
+                'session %s: ID %s: lm must be between 0 and 8 instead of %s.' %
+                (session_id, rate_id, lm)
             )
 
         return lm

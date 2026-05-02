@@ -48,7 +48,8 @@ connections.  They make sense when:
 
 If you are unsure, use SQLite.
 
-----
+
+.. _docker:
 
 Docker
 ------

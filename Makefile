@@ -1,6 +1,9 @@
-.PHONY: build
+.PHONY: build test
 
-build:
+build: test
 	poetry install --extras docs
-	poetry run sphinx-build -M html docs imo_vmdb/built_docs
+	poetry run sphinx-build -b html docs imo_vmdb/built_docs
 	poetry build
+
+test:
+	poetry run pytest
