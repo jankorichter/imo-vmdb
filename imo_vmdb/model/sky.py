@@ -54,9 +54,11 @@ class Ephemeris(object):
     def __init__(self, day):
         self.day = day
         at = AstropyTime(day, format='datetime', scale='utc')
+        # Times are UTC; solar-system bodies are returned in GCRS (J2000/ICRS epoch).
+        # equinox='J2000' is set explicitly so future Astropy defaults cannot change it.
         with solar_system_ephemeris.set('builtin'):
             sun = get_body('sun', at)
-            self.sun_ecliptic = self._cartesian(sun.transform_to(GeocentricMeanEcliptic))
+            self.sun_ecliptic = self._cartesian(sun.transform_to(GeocentricMeanEcliptic(equinox='J2000')))
             self.sun = self._cartesian(sun)
             self.moon = self._cartesian(get_body('moon', at))
 

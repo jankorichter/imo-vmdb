@@ -10,5 +10,6 @@ __pycache__
 /build/
 /venv
 /imo_vmdb.egg-info/
-/docs/_build/
+/docs/build/
+/imo_vmdb/built_docs/
 /.DS_Store

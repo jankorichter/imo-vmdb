@@ -67,3 +67,24 @@ A temporary SQLite database is created automatically for each test run.
 ```bash
 docker compose up --build
 ```
+
+## Release
+
+Releases are triggered by pushing a version tag. The GitHub Actions workflows in
+`.github/workflows/` handle publishing automatically:
+
+- **`pypi.yml`** — builds the package and publishes it to PyPI
+- **`docker.yml`** — builds and pushes the Docker image to GitHub Container Registry
+
+Before tagging, build and verify the package locally:
+
+```bash
+make        # builds docs, then runs poetry build
+```
+
+Then tag and push:
+
+```bash
+git tag v1.x.y
+git push origin v1.x.y
+```

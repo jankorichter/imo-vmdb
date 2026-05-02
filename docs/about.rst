@@ -25,6 +25,22 @@ provides machine-to-machine access to the prepared data — for example, from
 the `vismeteor <https://CRAN.R-project.org/package=vismeteor>`_
 R package.
 
+Coordinate systems and time
+---------------------------
+
+All observation times are handled in **UTC** (Coordinated Universal Time).
+
+Computed positions — solar longitude, radiant, Sun, Moon, and field-of-view —
+are calculated using the **J2000.0 epoch** (Julian epoch 2000 January 1.5 TT,
+equivalent to JD 2451545.0).  Input right-ascension and declination values
+(e.g. shower radiant coordinates) must therefore also be referenced to J2000.0.
+
+Internally, *imo-vmdb* uses `Astropy <https://www.astropy.org/>`_
+with the built-in solar-system ephemeris.  The ecliptic frame is
+``GeocentricMeanEcliptic`` with ``equinox='J2000'`` set explicitly;
+body positions from :func:`get_body` are in the GCRS frame, whose
+fundamental epoch is J2000 by definition.
+
 Accessing the data
 ------------------
 

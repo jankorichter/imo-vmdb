@@ -23,6 +23,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+include = [
+    { path = "imo_vmdb/built_docs", format = ["wheel", "sdist"] }
+]
+
 [tool.poetry.dependencies]
 python = "^3.10"
 astropy = ">=6.0"

@@ -218,9 +218,6 @@ On Windows::
     [database]
     database = C:\Users\YourName\vmdb\database.db
 
-.. warning::
-   Running ``initdb`` on an existing database will delete all data in it.
-
 Minimal PostgreSQL configuration::
 
     [database]

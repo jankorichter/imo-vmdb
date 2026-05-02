@@ -13,9 +13,12 @@ environment variables.  See :ref:`setup` for configuration details.
 initdb
 ------
 
-Initializes the database schema.  **All existing data will be deleted.**::
+Initializes the database schema::
 
     python -m imo_vmdb initdb -c config.ini
+
+.. warning::
+   Running ``initdb`` on an existing database will delete all data in it.
 
 import_csv
 ----------
@@ -89,6 +92,11 @@ Starts the web server, which provides both the browser-based control panel
 and the REST API::
 
     python -m imo_vmdb web_server -c config.ini
+
+For a quick start without a config file, pass the database path as an
+environment variable::
+
+    IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db python -m imo_vmdb web_server
 
 The server listens on ``http://127.0.0.1:8000`` by default.
 
