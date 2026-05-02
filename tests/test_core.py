@@ -1,4 +1,6 @@
 import logging
+import math
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -6,9 +8,44 @@ import pytest
 import imo_vmdb
 from imo_vmdb import CSVImporter
 from imo_vmdb.db import DBAdapter
+from imo_vmdb.model.sky import Ephemeris, Sky, Location
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 logger = logging.getLogger('test')
+
+
+class TestEphemeris:
+    DAY = datetime(2024, 8, 12, 0, 0, 0)
+
+    def test_sun_cartesian_has_float_components(self):
+        e = Ephemeris(self.DAY)
+        assert isinstance(e.sun.x, float)
+        assert isinstance(e.sun.y, float)
+        assert isinstance(e.sun.z, float)
+
+    def test_moon_cartesian_has_float_components(self):
+        e = Ephemeris(self.DAY)
+        assert isinstance(e.moon.x, float)
+        assert isinstance(e.moon.y, float)
+        assert isinstance(e.moon.z, float)
+
+    def test_sun_distance_roughly_one_au(self):
+        e = Ephemeris(self.DAY)
+        r = math.sqrt(e.sun.x ** 2 + e.sun.y ** 2 + e.sun.z ** 2)
+        assert 0.98 < r < 1.02
+
+    def test_sky_sun_altitude_returns_sphere(self):
+        sky = Sky()
+        t = datetime(2024, 8, 12, 22, 0, 0)
+        loc = Location(lng=math.radians(13.4), lat=math.radians(52.5))
+        result = sky.sun(t, loc)
+        assert hasattr(result, 'lat') and hasattr(result, 'lng')
+
+    def test_sky_moon_illumination_in_range(self):
+        sky = Sky()
+        t = datetime(2024, 8, 12, 22, 0, 0)
+        illum = sky.moon_illumination(t)
+        assert 0.0 <= illum <= 1.0
 
 
 class TestInitdb:

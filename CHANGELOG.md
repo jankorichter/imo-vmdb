@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2] — 2026-05-02
+
+### Fixed
+
+- `imo_vmdb/model/sky.py` — replaced deprecated `get_moon`/`get_sun` with `get_body`
+  for compatibility with astropy 7.x.
+
 ## [1.5.1] — 2026-04-25
 
 ### Fixed

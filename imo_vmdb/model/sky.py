@@ -1,6 +1,6 @@
 import math
 from astropy import units as u
-from astropy.coordinates import solar_system_ephemeris, get_moon, get_sun
+from astropy.coordinates import solar_system_ephemeris, get_body
 from astropy.coordinates import GeocentricMeanEcliptic
 from astropy.time import Time as AstropyTime
 from datetime import datetime, timedelta
@@ -55,10 +55,10 @@ class Ephemeris(object):
         self.day = day
         at = AstropyTime(day, format='datetime', scale='utc')
         with solar_system_ephemeris.set('builtin'):
-            sun = get_sun(at)
+            sun = get_body('sun', at)
             self.sun_ecliptic = self._cartesian(sun.transform_to(GeocentricMeanEcliptic))
             self.sun = self._cartesian(sun)
-            self.moon = self._cartesian(get_moon(at))
+            self.moon = self._cartesian(get_body('moon', at))
 
     @staticmethod
     def _cartesian(spherical):
