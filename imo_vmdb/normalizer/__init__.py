@@ -150,6 +150,9 @@ def create_rate_magn(db_conn):
         raise DBException(str(e))
 
     column_names = [desc[0] for desc in cur.description]
+    delete_stmt = db_conn.convert_stmt(
+        'DELETE FROM rate_magnitude WHERE rate_id = %(rate_id)s'
+    )
     insert_stmt = db_conn.convert_stmt('''
         INSERT INTO rate_magnitude (
             rate_id,
@@ -175,6 +178,7 @@ def create_rate_magn(db_conn):
             'equals': record['equals'],
         }
         try:
+            write_cur.execute(delete_stmt, {'rate_id': record['rate_id']})
             write_cur.execute(insert_stmt, magn_rate)
         except Exception as e:
             raise DBException(str(e))
