@@ -7,7 +7,7 @@ from imo_vmdb.webui import create_app
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser(description='imo-vmdb web server (Web UI and REST API)')
+    parser = argparse.ArgumentParser(description='imo-vmdb web_server (Web UI and REST API)')
     parser.add_argument(
         '-c', '--config',
         dest='config_file',

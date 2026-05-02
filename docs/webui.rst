@@ -11,6 +11,19 @@ Open ``http://localhost:8000`` in your browser to access the control panel.
 For instructions on how to start the server, see :ref:`cli` (Python) or
 :ref:`setup` (Docker).
 
+.. note::
+
+   When the server starts, Flask prints the following message:
+
+   .. code-block:: text
+
+      WARNING: This is a development server. Do not use it in a production
+      deployment. Use a production WSGI server instead.
+
+   This is expected behaviour.  The warning refers to deployments on a
+   public server; it does not apply to local use on your own computer.
+   You can safely ignore it.
+
 Control panel
 -------------
 
