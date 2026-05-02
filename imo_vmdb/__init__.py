@@ -111,8 +111,8 @@ class CSVImporter(object):
                 self.has_errors = True
 
         logger.info(
-            'Parsing of the files has finished. %s of %s records were imported.' %
-            (self.counter_write, self.counter_read)
+            'Parsing of the files has finished. %s of %s records imported, %s discarded.' %
+            (self.counter_write, self.counter_read, self.counter_read - self.counter_write)
         )
 
     def _log_critical(self, msg):
@@ -236,8 +236,8 @@ def normalize(db_conn, logger):
     sn = SessionNormalizer(db_conn, logger)
     sn.run()
     logger.info(
-        'The normalisation of the sessions has been completed. %s of %s records have been written.' %
-        (sn.counter_write, sn.counter_read)
+        'The normalisation of the sessions has been completed. %s of %s records written, %s discarded.' %
+        (sn.counter_write, sn.counter_read, sn.counter_discard)
     )
 
     logger.info('Start of normalization the rates.')
@@ -249,16 +249,16 @@ def normalize(db_conn, logger):
     rn = RateNormalizer(db_conn, logger, sky, showers)
     rn.run()
     logger.info(
-        'The normalisation of the rates has been completed. %s of %s records have been written.' %
-        (rn.counter_write, rn.counter_read)
+        'The normalisation of the rates has been completed. %s of %s records written, %s discarded.' %
+        (rn.counter_write, rn.counter_read, rn.counter_discard)
     )
 
     logger.info('Start of normalization the magnitudes.')
     mn = MagnitudeNormalizer(db_conn, logger, sky)
     mn.run()
     logger.info(
-        'The normalisation of the magnitudes has been completed. %s of %s records have been written.' %
-        (rn.counter_write, rn.counter_read)
+        'The normalisation of the magnitudes has been completed. %s of %s records written, %s discarded.' %
+        (mn.counter_write, mn.counter_read, mn.counter_discard)
     )
 
     logger.info('Start creating rate magnitude relationship.')

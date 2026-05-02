@@ -1,12 +1,14 @@
 import logging
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 import imo_vmdb
 from imo_vmdb import CSVImporter
+from imo_vmdb.csv_import import CsvParser, ImportException
 from imo_vmdb.db import DBAdapter
 from imo_vmdb.model.sky import Ephemeris, Sky, Location
 
@@ -153,3 +155,86 @@ class TestCSVImporter:
         ])
         assert not importer.has_errors
         assert importer.counter_write == 4
+
+
+class TestCheckPeriod:
+    MAX = timedelta(days=0.49)  # ~11h46m, same as all callers
+
+    def _make_parser(self, try_repair=True, is_permissive=False):
+        return CsvParser(MagicMock(), logging.getLogger('test_check_period'),
+                         try_repair=try_repair, is_permissive=is_permissive)
+
+    def test_valid_period_returned_unchanged(self):
+        p = self._make_parser()
+        s = datetime(2018, 8, 11, 21, 15, 0)
+        e = datetime(2018, 8, 11, 23, 0, 0)
+        assert p._check_period(s, e, self.MAX, 1, 1) == (s, e)
+
+    def test_period_too_long_raises(self):
+        p = self._make_parser()
+        s = datetime(2018, 8, 11, 0, 0, 0)
+        e = datetime(2018, 8, 11, 23, 0, 0)
+        with pytest.raises(ImportException):
+            p._check_period(s, e, self.MAX, 1, 1)
+
+    def test_equal_start_end_permissive_warns(self):
+        p = self._make_parser(is_permissive=True)
+        t = datetime(2018, 8, 11, 21, 0, 0)
+        result = p._check_period(t, t, self.MAX, 1, 1)
+        assert result == (t, t)
+
+    def test_equal_start_end_strict_raises(self):
+        p = self._make_parser(is_permissive=False)
+        t = datetime(2018, 8, 11, 21, 0, 0)
+        with pytest.raises(ImportException):
+            p._check_period(t, t, self.MAX, 1, 1)
+
+    def test_swap_used_when_only_valid_candidate(self):
+        # 22:00 -> 20:00 same day: swap=2h (valid), add-1-day=22h (fails max)
+        p = self._make_parser()
+        s = datetime(2018, 8, 11, 22, 0, 0)
+        e = datetime(2018, 8, 11, 20, 0, 0)
+        rs, re = p._check_period(s, e, self.MAX, 1, 1)
+        assert rs == e and re == s
+
+    def test_add_one_day_used_for_near_midnight_crossing(self):
+        # 23:50 -> 00:10 same day: swap gives 23h40m (fails max), add-1-day gives 20min
+        p = self._make_parser()
+        s = datetime(2018, 8, 11, 23, 50, 0)
+        e = datetime(2018, 8, 11, 0, 10, 0)
+        rs, re = p._check_period(s, e, self.MAX, 1, 1)
+        assert rs == s
+        assert re == datetime(2018, 8, 12, 0, 10, 0)
+
+    def test_motivating_example_adds_one_day_to_end(self):
+        # 21:15 -> 02:52 same day: swap gives 18h23m (fails max), add-1-day gives 5h37m
+        p = self._make_parser()
+        s = datetime(2018, 8, 11, 21, 15, 0)
+        e = datetime(2018, 8, 11, 2, 52, 0)
+        rs, re = p._check_period(s, e, self.MAX, 1, 1)
+        assert rs == s
+        assert re == datetime(2018, 8, 12, 2, 52, 0)
+
+    def test_shortest_candidate_wins_when_multiple_valid(self):
+        # Choose a case where swap is valid but shorter than add-1-day
+        # 22:00 -> 21:00 same day: swap=1h, add-1-day=23h (fails max) → swap wins
+        p = self._make_parser()
+        s = datetime(2018, 8, 11, 22, 0, 0)
+        e = datetime(2018, 8, 11, 21, 0, 0)
+        rs, re = p._check_period(s, e, self.MAX, 1, 1)
+        assert rs == e and re == s
+
+    def test_no_valid_candidate_raises(self):
+        # start is 2 days after end: no candidate fits within max_period_duration
+        p = self._make_parser()
+        s = datetime(2018, 8, 13, 0, 0, 0)
+        e = datetime(2018, 8, 11, 0, 0, 0)
+        with pytest.raises(ImportException):
+            p._check_period(s, e, self.MAX, 1, 1)
+
+    def test_try_repair_false_raises_immediately(self):
+        p = self._make_parser(try_repair=False)
+        s = datetime(2018, 8, 11, 23, 0, 0)
+        e = datetime(2018, 8, 11, 1, 0, 0)
+        with pytest.raises(ImportException):
+            p._check_period(s, e, self.MAX, 1, 1)

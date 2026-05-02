@@ -136,9 +136,7 @@ class MagnitudeNormalizer(BaseNormalizer):
 
             record = Record(dict(zip(column_names, _record)))
             if record.observer_id != record.session_observer_id:
-                msg = "session %s: observer ID of the magnitude observation is different"
-                msg += " from the observer ID of the session. Observation %s discarded."
-                self._log_error(msg % (record.session_id, record.id))
+                self._log_discard(record.session_id, record.id, 'observer ID differs from session observer ID')
                 prev_record = record
                 continue
 
@@ -152,14 +150,12 @@ class MagnitudeNormalizer(BaseNormalizer):
                 continue
 
             if record in prev_record:
-                msg = "session %s: magnitude observation %s contains observation %s. Observation %s discarded."
-                self._log_error(msg % (record.session_id, prev_record.id, record.id, prev_record.id))
+                self._log_discard(prev_record.session_id, prev_record.id, 'time period contained by observation %s' % record.id)
                 prev_record = record
                 continue
 
             if prev_record == record:
-                msg = "session %s: magnitude observation %s overlaps observation %s. Observation %s discarded."
-                self._log_error(msg % (record.session_id, prev_record.id, record.id, record.id))
+                self._log_discard(record.session_id, record.id, 'time period overlaps observation %s' % prev_record.id)
                 continue
 
             prev_record.write(write_cur, self._sky)

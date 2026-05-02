@@ -64,9 +64,15 @@ class BaseNormalizer(object):
         self.has_errors = False
         self.counter_read = 0
         self.counter_write = 0
+        self.counter_discard = 0
 
     def _log_error(self, msg):
         self._logger.error(msg)
+        self.has_errors = True
+
+    def _log_discard(self, session_id, obs_id, reason):
+        self._logger.error('session %s: observation %s discarded - %s' % (session_id, obs_id, reason))
+        self.counter_discard += 1
         self.has_errors = True
 
 

@@ -99,14 +99,11 @@ class Record(BaseRecord):
             field_az = math.degrees(field.lng)
 
         if field_alt is not None and field_alt < 0.0:
-            msg = "session %s: field is below horizon (%s degrees)." % (self.session_id, round(field_alt))
-            raise NormalizerException(msg)
+            raise NormalizerException("field is below horizon (%s degrees)" % round(field_alt))
 
         sun = sky.sun(t_mean, self.loc)
         if sun.lat > 0.0:
-            msg = "session %s: sun is above horizon (%s degrees)."
-            msg = msg % (self.session_id, round(math.degrees(sun.lat)))
-            raise NormalizerException(msg)
+            raise NormalizerException("sun is above horizon (%s degrees)" % round(math.degrees(sun.lat)))
 
         moon = sky.moon(t_mean, self.loc)
         moon_illumination = sky.moon_illumination(t_mean)
@@ -120,9 +117,7 @@ class Record(BaseRecord):
             rad_alt = math.degrees(self._zenith_coor(rad_coord.lat, shower.v))
 
         if rad_alt is not None and rad_alt < -5.0:
-            msg = "session %s: radiant of %s is too far below the horizon (%s degrees)."
-            msg = msg % (self.session_id, iau_code, round(rad_alt))
-            raise NormalizerException(msg)
+            raise NormalizerException("radiant of %s is too far below the horizon (%s degrees)" % (iau_code, round(rad_alt)))
 
         rate = {
             'id': self.id,
@@ -209,9 +204,7 @@ class RateNormalizer(BaseNormalizer):
             record = Record(dict(zip(column_names, _record)))
 
             if record.observer_id != record.session_observer_id:
-                msg = "session %s: observer ID of the rate observation is different"
-                msg += " from the observer ID of the session. Observation %s discarded."
-                self._log_error(msg % (record.session_id, record.id))
+                self._log_discard(record.session_id, record.id, 'observer ID differs from session observer ID')
                 prev_record = record
                 continue
 
@@ -225,21 +218,19 @@ class RateNormalizer(BaseNormalizer):
                 continue
 
             if record in prev_record:
-                msg = "session %s: rate observation %s contains observation %s. Observation %s discarded."
-                self._log_error(msg % (record.session_id, prev_record.id, record.id, prev_record.id))
+                self._log_discard(prev_record.session_id, prev_record.id, 'time period contained by observation %s' % record.id)
                 prev_record = record
                 continue
 
             if prev_record == record:
-                msg = "session %s: rate observation %s overlaps observation %s. Observation %s discarded."
-                self._log_error(msg % (record.session_id, prev_record.id, record.id, record.id))
+                self._log_discard(record.session_id, record.id, 'time period overlaps observation %s' % prev_record.id)
                 continue
 
             try:
                 prev_record.write(write_cur, self._sky, self._showers)
             except NormalizerException as err:
+                self._log_discard(prev_record.session_id, prev_record.id, str(err))
                 prev_record = record
-                self._log_error(str(err))
                 continue
 
             self.counter_write += 1
@@ -248,9 +239,9 @@ class RateNormalizer(BaseNormalizer):
         if prev_record is not None:
             try:
                 prev_record.write(write_cur, self._sky, self._showers)
+                self.counter_write += 1
             except NormalizerException as err:
-                self._log_error(str(err))
-            self.counter_write += 1
+                self._log_discard(prev_record.session_id, prev_record.id, str(err))
 
         try:
             cur.close()
