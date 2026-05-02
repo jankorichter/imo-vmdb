@@ -23,6 +23,9 @@ class RateParser(CsvParser):
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
+        self._delete_stmt = self._db_conn.convert_stmt(
+            'DELETE FROM imported_rate WHERE id = %(id)s'
+        )
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO imported_rate (
                 id,
@@ -107,6 +110,7 @@ class RateParser(CsvParser):
         }
 
         try:
+            cur.execute(self._delete_stmt, {'id': rate_id})
             cur.execute(self._insert_stmt, record)
         except Exception as e:
             raise DBException(str(e))

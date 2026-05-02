@@ -14,6 +14,9 @@ class RadiantParser(CsvParser):
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
+        self._delete_stmt = self._db_conn.convert_stmt(
+            'DELETE FROM radiant WHERE shower = %(shower)s AND "month" = %(month)s AND "day" = %(day)s'
+        )
         self._insert_stmt = self._db_conn.convert_stmt('''
             INSERT INTO radiant (
                 shower,
@@ -63,6 +66,7 @@ class RadiantParser(CsvParser):
         }
 
         try:
+            cur.execute(self._delete_stmt, {'shower': shower, 'month': month, 'day': day})
             cur.execute(self._insert_stmt, record)
         except Exception as e:
             raise DBException(str(e))
