@@ -2,24 +2,24 @@ import importlib
 import sys
 
 _COMMANDS = {
-    'cleanup':    ('imo_vmdb.command.cleanup',    'main'),
-    'export':     ('imo_vmdb.command.export',     'main'),
-    'initdb':     ('imo_vmdb.command.initdb',     'main'),
-    'import_csv': ('imo_vmdb.command.import_csv', 'main'),
-    'normalize':  ('imo_vmdb.command.normalize',  'main'),
-    'web_server': ('imo_vmdb.webui.server',       'main'),
+    "cleanup": ("imo_vmdb.command.cleanup", "main"),
+    "export": ("imo_vmdb.command.export", "main"),
+    "initdb": ("imo_vmdb.command.initdb", "main"),
+    "import_csv": ("imo_vmdb.command.import_csv", "main"),
+    "normalize": ("imo_vmdb.command.normalize", "main"),
+    "web_server": ("imo_vmdb.webui.server", "main"),
 }
 
 
 def usage():
-    print('''Syntax: command <options>
+    print("""Syntax: command <options>
 Valid commands are:
     initdb      ... Initializes the database.
     cleanup     ... Removes data that are no longer needed.
     import_csv  ... Imports CSV files.
     normalize   ... Normalize and analyze meteor observations.
     export      ... Export data as CSV.
-    web_server  ... Start the web server (Web UI and REST API).''')
+    web_server  ... Start the web server (Web UI and REST API).""")
 
 
 def main():

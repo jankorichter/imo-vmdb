@@ -3,21 +3,14 @@ from imo_vmdb.db import DBException
 
 
 class RadiantParser(CsvParser):
-
-    _required_columns = {
-        'shower',
-        'ra',
-        'dec',
-        'day',
-        'month'
-    }
+    _required_columns = {"shower", "ra", "dec", "day", "month"}
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
         self._delete_stmt = self._db_conn.convert_stmt(
             'DELETE FROM radiant WHERE shower = %(shower)s AND "month" = %(month)s AND "day" = %(day)s'
         )
-        self._insert_stmt = self._db_conn.convert_stmt('''
+        self._insert_stmt = self._db_conn.convert_stmt("""
             INSERT INTO radiant (
                 shower,
                 ra,
@@ -31,42 +24,44 @@ class RadiantParser(CsvParser):
                 %(month)s,
                 %(day)s
             )
-        ''')
+        """)
 
     def on_start(self, cur):
         if self._do_delete:
             try:
-                cur.execute(self._db_conn.convert_stmt('DELETE FROM radiant'))
+                cur.execute(self._db_conn.convert_stmt("DELETE FROM radiant"))
             except Exception as e:
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
-        row = dict(zip(self.column_names, row))
+        row = dict(zip(self.column_names, row, strict=False))
 
         try:
-            shower = self._parse_shower(row['shower'])
-            ra = self._parse_ra(row['ra'], shower)
-            dec = self._parse_dec(row['dec'], shower)
-            month = self._parse_int(row['month'], 'month', shower)
-            day = self._parse_int(row['day'], 'day', shower)
+            shower = self._parse_shower(row["shower"])
+            ra = self._parse_ra(row["ra"], shower)
+            dec = self._parse_dec(row["dec"], shower)
+            month = self._parse_int(row["month"], "month", shower)
+            day = self._parse_int(row["day"], "day", shower)
             self._validate_date(month, day, shower)
             if ra is None or dec is None:
-                raise ImportException('ID %s: ra and dec must be set.' % shower)
+                raise ImportException("ID %s: ra and dec must be set." % shower)
 
         except ImportException as err:
             self._log_error(str(err))
             return False
 
         record = {
-            'shower': shower,
-            'ra': ra,
-            'dec': dec,
-            'month': month,
-            'day': day,
+            "shower": shower,
+            "ra": ra,
+            "dec": dec,
+            "month": month,
+            "day": day,
         }
 
         try:
-            cur.execute(self._delete_stmt, {'shower': shower, 'month': month, 'day': day})
+            cur.execute(
+                self._delete_stmt, {"shower": shower, "month": month, "day": day}
+            )
             cur.execute(self._insert_stmt, record)
         except Exception as e:
             raise DBException(str(e))
@@ -76,7 +71,7 @@ class RadiantParser(CsvParser):
     @staticmethod
     def _parse_shower(value):
         shower = value.strip()
-        if '' == shower:
+        if "" == shower:
             raise ImportException("Shower code must not be empty.")
 
         return shower.upper()
@@ -88,6 +83,8 @@ class RadiantParser(CsvParser):
         try:
             value = int(value)
         except ValueError:
-            raise ImportException("ID %s: %s is an invalid %s." % (iau_code, value, ctx))
+            raise ImportException(
+                "ID %s: %s is an invalid %s." % (iau_code, value, ctx)
+            )
 
         return value

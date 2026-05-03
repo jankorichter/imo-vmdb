@@ -50,10 +50,14 @@ class JobManager:
         self._lock = threading.Lock()
 
     def _make_logger(self, job_id):
-        q = self._jobs[job_id]['queue']
+        q = self._jobs[job_id]["queue"]
         handler = _QueueHandler(q)
-        handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s', None, '%'))
-        logger = logging.getLogger(f'imo_vmdb.job.{job_id}')
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)s [%(name)s] %(message)s", None, "%"
+            )
+        )
+        logger = logging.getLogger(f"imo_vmdb.job.{job_id}")
         logger.handlers = []
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
@@ -62,16 +66,20 @@ class JobManager:
 
     def _finish_job(self, job_id, exit_code):
         with self._lock:
-            self._jobs[job_id]['running'] = False
-            self._jobs[job_id]['exit_code'] = exit_code
-        self._jobs[job_id]['queue'].put(None)
+            self._jobs[job_id]["running"] = False
+            self._jobs[job_id]["exit_code"] = exit_code
+        self._jobs[job_id]["queue"].put(None)
 
     def _allocate_job(self):
         with self._lock:
-            if any(j['running'] for j in self._jobs.values()):
+            if any(j["running"] for j in self._jobs.values()):
                 return None
             job_id = str(uuid.uuid4())
-            self._jobs[job_id] = {'queue': queue.Queue(), 'running': True, 'exit_code': None}
+            self._jobs[job_id] = {
+                "queue": queue.Queue(),
+                "running": True,
+                "exit_code": None,
+            }
         return job_id
 
     def _run_simple(self, job_id, fn, db_conn_factory: Callable[[], DBAdapter]):
@@ -84,17 +92,26 @@ class JobManager:
             finally:
                 db_conn.close()
         except Exception as exc:
-            logger.critical('Unexpected error: %s', exc)
+            logger.critical("Unexpected error: %s", exc)
             exit_code = 100
         self._finish_job(job_id, exit_code if exit_code is not None else 0)
 
-    def _run_import(self, job_id, db_conn_factory: Callable[[], DBAdapter], file_paths, do_delete, is_permissive, try_repair):
+    def _run_import(
+        self,
+        job_id,
+        db_conn_factory: Callable[[], DBAdapter],
+        file_paths,
+        do_delete,
+        is_permissive,
+        try_repair,
+    ):
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
             try:
                 importer = imo_vmdb.CSVImporter(
-                    db_conn, logger,
+                    db_conn,
+                    logger,
                     do_delete=do_delete,
                     try_repair=try_repair,
                     is_permissive=is_permissive,
@@ -105,7 +122,7 @@ class JobManager:
             finally:
                 db_conn.close()
         except Exception as exc:
-            logger.critical('Unexpected error: %s', exc)
+            logger.critical("Unexpected error: %s", exc)
             exit_code = 100
         finally:
             for path in file_paths:
@@ -147,9 +164,15 @@ class JobManager:
         """
         return self._start(self._run_simple, imo_vmdb.cleanup, db_conn_factory)
 
-    def start_import(self, db_conn_factory: Callable[[], DBAdapter], file_paths: list[str], *,
-                     do_delete: bool = False, is_permissive: bool = False,
-                     try_repair: bool = False) -> str | None:
+    def start_import(
+        self,
+        db_conn_factory: Callable[[], DBAdapter],
+        file_paths: list[str],
+        *,
+        do_delete: bool = False,
+        is_permissive: bool = False,
+        try_repair: bool = False,
+    ) -> str | None:
         """Start a CSV import job.
 
         :param db_conn_factory: Callable returning a new database connection.
@@ -160,8 +183,14 @@ class JobManager:
         :param try_repair: Attempt automatic repair of malformed records.
         :return: Job ID string, or ``None`` if another job is already running.
         """
-        return self._start(self._run_import, db_conn_factory, file_paths,
-                           do_delete, is_permissive, try_repair)
+        return self._start(
+            self._run_import,
+            db_conn_factory,
+            file_paths,
+            do_delete,
+            is_permissive,
+            try_repair,
+        )
 
     def get_status(self, job_id: str) -> dict | None:
         """Return the current status of a job.
@@ -173,7 +202,7 @@ class JobManager:
         job = self._jobs.get(job_id)
         if job is None:
             return None
-        return {'running': job['running'], 'exit_code': job['exit_code']}
+        return {"running": job["running"], "exit_code": job["exit_code"]}
 
     def iter_logs(self, job_id: str) -> Iterator[str] | None:
         """Return a blocking iterator over log lines for a job.
@@ -192,7 +221,7 @@ class JobManager:
         return self._iter_logs_impl(job_id)
 
     def _iter_logs_impl(self, job_id):
-        q = self._jobs[job_id]['queue']
+        q = self._jobs[job_id]["queue"]
         while True:
             line = q.get()
             if line is None:

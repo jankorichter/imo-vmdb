@@ -1,41 +1,41 @@
 import json
 import math
 from datetime import timedelta
+
 from imo_vmdb.csv_import import CsvParser, ImportException
 from imo_vmdb.db import DBException
 
 
 class MagnitudesParser(CsvParser):
-
     _required_columns = {
-        'magnitude id',
-        'user id',
-        'obs session id',
-        'shower',
-        'start date',
-        'end date',
-        'mag n6',
-        'mag n5',
-        'mag n4',
-        'mag n3',
-        'mag n2',
-        'mag n1',
-        'mag 0',
-        'mag 1',
-        'mag 2',
-        'mag 3',
-        'mag 4',
-        'mag 5',
-        'mag 6',
-        'mag 7'
+        "magnitude id",
+        "user id",
+        "obs session id",
+        "shower",
+        "start date",
+        "end date",
+        "mag n6",
+        "mag n5",
+        "mag n4",
+        "mag n3",
+        "mag n2",
+        "mag n1",
+        "mag 0",
+        "mag 1",
+        "mag 2",
+        "mag 3",
+        "mag 4",
+        "mag 5",
+        "mag 6",
+        "mag 7",
     }
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
         self._delete_stmt = self._db_conn.convert_stmt(
-            'DELETE FROM imported_magnitude WHERE id = %(id)s'
+            "DELETE FROM imported_magnitude WHERE id = %(id)s"
         )
-        self._insert_stmt = self._db_conn.convert_stmt('''
+        self._insert_stmt = self._db_conn.convert_stmt("""
             INSERT INTO imported_magnitude (
                 id,
                 observer_id,
@@ -53,31 +53,35 @@ class MagnitudesParser(CsvParser):
                 %(end)s,
                 %(magn)s
             )
-        ''')
+        """)
 
     def on_start(self, cur):
         if self._do_delete:
             try:
-                cur.execute(self._db_conn.convert_stmt('DELETE FROM imported_magnitude'))
+                cur.execute(
+                    self._db_conn.convert_stmt("DELETE FROM imported_magnitude")
+                )
             except Exception as e:
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
-        row = dict(zip(self.column_names, row))
+        row = dict(zip(self.column_names, row, strict=False))
 
         try:
-            magn_id = self._parse_magn_id(row['magnitude id'])
-            session_id = self._parse_session_id(row['obs session id'], magn_id)
-            observer_id = self._parse_observer_id(row['user id'], row['user id'], session_id)
-            shower = self._parse_shower(row['shower'])
-            period_start = self._parse_date_time(row['start date'], 'start date', magn_id, session_id)
-            period_end = self._parse_date_time(row['end date'], 'end date', magn_id, session_id)
+            magn_id = self._parse_magn_id(row["magnitude id"])
+            session_id = self._parse_session_id(row["obs session id"], magn_id)
+            observer_id = self._parse_observer_id(
+                row["user id"], row["user id"], session_id
+            )
+            shower = self._parse_shower(row["shower"])
+            period_start = self._parse_date_time(
+                row["start date"], "start date", magn_id, session_id
+            )
+            period_end = self._parse_date_time(
+                row["end date"], "end date", magn_id, session_id
+            )
             period_start, period_end = self._check_period(
-                period_start,
-                period_end,
-                timedelta(days=0.49),
-                magn_id,
-                session_id
+                period_start, period_end, timedelta(days=0.49), magn_id, session_id
             )
         except ImportException as err:
             self._log_error(str(err))
@@ -86,16 +90,16 @@ class MagnitudesParser(CsvParser):
         magn = {}
         try:
             for column in range(1, 7):
-                n = float(row['mag n' + str(column)])
+                n = float(row["mag n" + str(column)])
                 magn[str(-column)] = n
 
             for column in range(0, 8):
-                n = float(row['mag ' + str(column)])
+                n = float(row["mag " + str(column)])
                 magn[str(column)] = n
         except ValueError:
             self._log_error(
-                'session %s: ID %s: Invalid count value of magnitudes found.' %
-                (session_id, magn_id)
+                "session %s: ID %s: Invalid count value of magnitudes found."
+                % (session_id, magn_id)
             )
             return False
 
@@ -114,17 +118,17 @@ class MagnitudesParser(CsvParser):
         magn = json.dumps({m: n for m, n in magn.items() if n > 0})
 
         record = {
-            'id': magn_id,
-            'observer_id': observer_id,
-            'session_id': session_id,
-            'shower': shower,
-            'start': period_start.isoformat(sep=' '),
-            'end': period_end.isoformat(sep=' '),
-            'magn': magn
+            "id": magn_id,
+            "observer_id": observer_id,
+            "session_id": session_id,
+            "shower": shower,
+            "start": period_start.isoformat(sep=" "),
+            "end": period_end.isoformat(sep=" "),
+            "magn": magn,
         }
 
         try:
-            cur.execute(self._delete_stmt, {'id': magn_id})
+            cur.execute(self._delete_stmt, {"id": magn_id})
             cur.execute(self._insert_stmt, record)
         except Exception as e:
             raise DBException(str(e))
@@ -134,15 +138,17 @@ class MagnitudesParser(CsvParser):
     @staticmethod
     def _parse_magn_id(value):
         magn_id = value.strip()
-        if '' == magn_id:
-            raise ImportException('Observation found without a magnitude id.')
+        if "" == magn_id:
+            raise ImportException("Observation found without a magnitude id.")
 
         try:
             magn_id = int(magn_id)
         except ValueError:
-            raise ImportException('ID %s: invalid magnitude id.' % magn_id)
+            raise ImportException("ID %s: invalid magnitude id." % magn_id)
         if magn_id < 1:
-            raise ImportException('ID %s: magnitude ID must be greater than 0.' % magn_id)
+            raise ImportException(
+                "ID %s: magnitude ID must be greater than 0." % magn_id
+            )
 
         return magn_id
 
@@ -150,8 +156,8 @@ class MagnitudesParser(CsvParser):
     def _validate_count(n, m, magn_id, session_id):
         if n < 0.0:
             raise ImportException(
-                'session %s: ID %s: Invalid count %s found for a meteor magnitude of %s.' %
-                (session_id, magn_id, n, m)
+                "session %s: ID %s: Invalid count %s found for a meteor magnitude of %s."
+                % (session_id, magn_id, n, m)
             )
 
         n_cmp = math.floor(n)
@@ -163,8 +169,9 @@ class MagnitudesParser(CsvParser):
             return
 
         raise ImportException(
-            'session %s: ID %s: Invalid count %s found for a meteor magnitude of %s.' %
-            (session_id, magn_id, n, m))
+            "session %s: ID %s: Invalid count %s found for a meteor magnitude of %s."
+            % (session_id, magn_id, n, m)
+        )
 
     def _validate_total_count(self, magn, magn_id, session_id):
         is_permissive = self._is_permissive
@@ -174,12 +181,12 @@ class MagnitudesParser(CsvParser):
             n_sum += n
             if not is_permissive and 0 == n and math.floor(n_sum) != n_sum:
                 raise ImportException(
-                    'session %s: ID %s: Inconsistent total count of meteors found.' %
-                    (session_id, magn_id)
+                    "session %s: ID %s: Inconsistent total count of meteors found."
+                    % (session_id, magn_id)
                 )
 
         if math.floor(n_sum) != n_sum:
             raise ImportException(
-                'session %s: ID %s: The count of meteors out of a total of %s is invalid.' %
-                (session_id, magn_id, n_sum)
+                "session %s: ID %s: The count of meteors out of a total of %s is invalid."
+                % (session_id, magn_id, n_sum)
             )

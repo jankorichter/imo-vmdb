@@ -1,12 +1,12 @@
 import math
-from astropy import units as u
-from astropy.coordinates import solar_system_ephemeris, get_body
-from astropy.coordinates import GeocentricMeanEcliptic
-from astropy.time import Time as AstropyTime
 from datetime import datetime, timedelta
 
+from astropy import units as u
+from astropy.coordinates import GeocentricMeanEcliptic, get_body, solar_system_ephemeris
+from astropy.time import Time as AstropyTime
 
-class Sphere(object):
+
+class Sphere:
     def __init__(self, lng=None, lat=None, r=1.0, c=None):
         if c is None:
             self.r = r
@@ -15,9 +15,9 @@ class Sphere(object):
             return
 
         self.r = math.sqrt(math.pow(c.x, 2) + math.pow(c.y, 2) + math.pow(c.z, 2))
-        self.lat = math.asin(c.z/self.r)
+        self.lat = math.asin(c.z / self.r)
         if 0.0 == c.x:
-            self.lng = (1.0 if c.y > 0.0 else -1) * math.pi/2
+            self.lng = (1.0 if c.y > 0.0 else -1) * math.pi / 2
         else:
             self.lng = math.atan2(c.y, c.x)
 
@@ -25,7 +25,7 @@ class Sphere(object):
             self.lng += 2 * math.pi
 
     def __str__(self):
-        return 'lng=%s, lat=%s' % (self.lng, self.lat)
+        return "lng=%s, lat=%s" % (self.lng, self.lat)
 
 
 class Location(Sphere):
@@ -33,7 +33,7 @@ class Location(Sphere):
         super().__init__(lng, lat)
 
 
-class Cartesian(object):
+class Cartesian:
     def __init__(self, x=None, y=None, z=None, s=None):
         if s is None:
             self.x = x
@@ -46,21 +46,22 @@ class Cartesian(object):
         self.z = s.r * math.sin(s.lat)
 
     def __str__(self):
-        return 'x=%s, y=%s, z=%s' % (self.x, self.y, self.z)
+        return "x=%s, y=%s, z=%s" % (self.x, self.y, self.z)
 
 
-class Ephemeris(object):
-
+class Ephemeris:
     def __init__(self, day):
         self.day = day
-        at = AstropyTime(day, format='datetime', scale='utc')
+        at = AstropyTime(day, format="datetime", scale="utc")
         # Times are UTC; solar-system bodies are returned in GCRS (J2000/ICRS epoch).
         # equinox='J2000' is set explicitly so future Astropy defaults cannot change it.
-        with solar_system_ephemeris.set('builtin'):
-            sun = get_body('sun', at)
-            self.sun_ecliptic = self._cartesian(sun.transform_to(GeocentricMeanEcliptic(equinox='J2000')))
+        with solar_system_ephemeris.set("builtin"):
+            sun = get_body("sun", at)
+            self.sun_ecliptic = self._cartesian(
+                sun.transform_to(GeocentricMeanEcliptic(equinox="J2000"))
+            )
             self.sun = self._cartesian(sun)
-            self.moon = self._cartesian(get_body('moon', at))
+            self.moon = self._cartesian(get_body("moon", at))
 
     @staticmethod
     def _cartesian(spherical):
@@ -71,8 +72,7 @@ class Ephemeris(object):
         )
 
 
-class Sky(object):
-
+class Sky:
     def __init__(self):
         self._days = {}
 
@@ -87,8 +87,10 @@ class Sky(object):
 
     def solarlong(self, t):
         e0, e1 = self._get_time_range(t)
-        sun = Sphere(c=self._approx(t, e0.day, e1.day, e0.sun_ecliptic, e1.sun_ecliptic))
-        return sun.lng if sun.lng > 0.0 else sun.lng + 2*math.pi
+        sun = Sphere(
+            c=self._approx(t, e0.day, e1.day, e0.sun_ecliptic, e1.sun_ecliptic)
+        )
+        return sun.lng if sun.lng > 0.0 else sun.lng + 2 * math.pi
 
     def moon(self, t, loc=None):
         e0, e1 = self._get_time_range(t)
@@ -105,12 +107,11 @@ class Sky(object):
         sun.r *= 149597870.7  # AE in km
         moon = Sphere(c=self._approx(t, e0.day, e1.day, e0.moon, e1.moon))
         elongation = math.acos(
-            math.sin(sun.lat) * math.sin(moon.lat) +
-            math.cos(sun.lat) * math.cos(moon.lat) * math.cos(sun.lng - moon.lng)
+            math.sin(sun.lat) * math.sin(moon.lat)
+            + math.cos(sun.lat) * math.cos(moon.lat) * math.cos(sun.lng - moon.lng)
         )
         moon_phase_angle = math.atan2(
-            sun.r * math.sin(elongation),
-            moon.r - sun.r * math.cos(elongation)
+            sun.r * math.sin(elongation), moon.r - sun.r * math.cos(elongation)
         )
         return (1 + math.cos(moon_phase_angle)) / 2.0
 
@@ -126,7 +127,7 @@ class Sky(object):
 
     @staticmethod
     def _approx(t, t0, t1, s0, s1):
-        f = ((t - t0) / (t1 - t0))
+        f = (t - t0) / (t1 - t0)
         return Cartesian(
             x=f * (s1.x - s0.x) + s0.x,
             y=f * (s1.y - s0.y) + s0.y,
@@ -135,16 +136,20 @@ class Sky(object):
 
     @staticmethod
     def sidereal_time(t, loc):
-        at = AstropyTime(t, format='datetime', scale='utc')
-        return at.sidereal_time('mean', longitude=loc.lng * u.rad).rad
+        at = AstropyTime(t, format="datetime", scale="utc")
+        return at.sidereal_time("mean", longitude=loc.lng * u.rad).rad
 
     @classmethod
     def alt_az(cls, s, t, loc):
         st = cls.sidereal_time(t, loc)
         st_diff = st - s.lng
-        x = math.sin(loc.lat) * math.cos(s.lat) * math.cos(st_diff) - math.cos(loc.lat) * math.sin(s.lat)
+        x = math.sin(loc.lat) * math.cos(s.lat) * math.cos(st_diff) - math.cos(
+            loc.lat
+        ) * math.sin(s.lat)
         y = math.cos(s.lat) * math.sin(st_diff)
-        z = math.cos(loc.lat) * math.cos(s.lat) * math.cos(st_diff) + math.sin(loc.lat) * math.sin(s.lat)
+        z = math.cos(loc.lat) * math.cos(s.lat) * math.cos(st_diff) + math.sin(
+            loc.lat
+        ) * math.sin(s.lat)
         c = Cartesian(x, y, z)
         s = Sphere(c=c)
         return Sphere(s.lng, s.lat)

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 def _rows_to_dicts(cursor):
     cols = [d[0] for d in cursor.description]
-    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
 
 
 @dataclass
@@ -26,6 +26,7 @@ class RateFilter:
         per-class magnitude-distribution detail rows (from ``magnitude_detail``)
         linked to each rate observation.
     """
+
     showers: list[str] = field(default_factory=list)
     period_start: str | None = None
     period_end: str | None = None
@@ -59,6 +60,7 @@ class MagnitudeFilter:
         per-class magnitude-distribution detail rows (from ``magnitude_detail``)
         for each magnitude observation.
     """
+
     showers: list[str] = field(default_factory=list)
     period_start: str | None = None
     period_end: str | None = None
@@ -75,16 +77,16 @@ class MagnitudeFilter:
 def _add_shower_condition(showers, alias, conditions, params):
     if not showers:
         return
-    normal = [s for s in showers if s != 'SPO']
-    include_sporadic = 'SPO' in showers
+    normal = [s for s in showers if s != "SPO"]
+    include_sporadic = "SPO" in showers
     parts = []
     if normal:
-        phs = ', '.join(f'%(sh_{i})s' for i in range(len(normal)))
-        parts.append(f'{alias}.shower IN ({phs})')
+        phs = ", ".join(f"%(sh_{i})s" for i in range(len(normal)))
+        parts.append(f"{alias}.shower IN ({phs})")
         for i, s in enumerate(normal):
-            params[f'sh_{i}'] = s
+            params[f"sh_{i}"] = s
     if include_sporadic:
-        parts.append(f'{alias}.shower IS NULL')
+        parts.append(f"{alias}.shower IS NULL")
     if parts:
         conditions.append(f'({" OR ".join(parts)})')
 
@@ -93,39 +95,39 @@ def _build_rate_conditions(f: RateFilter):
     conditions = []
     params = {}
 
-    _add_shower_condition(f.showers, 'r', conditions, params)
+    _add_shower_condition(f.showers, "r", conditions, params)
 
     if f.period_start:
-        conditions.append('r.period_start >= %(period_start)s')
-        params['period_start'] = f.period_start
+        conditions.append("r.period_start >= %(period_start)s")
+        params["period_start"] = f.period_start
 
     if f.period_end:
-        conditions.append('r.period_end <= %(period_end)s')
-        params['period_end'] = f.period_end
+        conditions.append("r.period_end <= %(period_end)s")
+        params["period_end"] = f.period_end
 
     for key, col, op, val in [
-        ('sl_min',       'r.sl_start', '>=', f.sl_min),
-        ('sl_max',       'r.sl_end',   '<=', f.sl_max),
-        ('lim_magn_min', 'r.lim_mag',  '>=', f.lim_magn_min),
-        ('lim_magn_max', 'r.lim_mag',  '<=', f.lim_magn_max),
-        ('sun_alt_max',  'r.sun_alt',  '<=', f.sun_alt_max),
-        ('moon_alt_max', 'r.moon_alt', '<=', f.moon_alt_max),
+        ("sl_min", "r.sl_start", ">=", f.sl_min),
+        ("sl_max", "r.sl_end", "<=", f.sl_max),
+        ("lim_magn_min", "r.lim_mag", ">=", f.lim_magn_min),
+        ("lim_magn_max", "r.lim_mag", "<=", f.lim_magn_max),
+        ("sun_alt_max", "r.sun_alt", "<=", f.sun_alt_max),
+        ("moon_alt_max", "r.moon_alt", "<=", f.moon_alt_max),
     ]:
         if val is not None:
-            conditions.append(f'{col} {op} %({key})s')
+            conditions.append(f"{col} {op} %({key})s")
             params[key] = val
 
     if f.session_ids:
-        phs = ', '.join(f'%(sess_{i})s' for i in range(len(f.session_ids)))
-        conditions.append(f'r.session_id IN ({phs})')
+        phs = ", ".join(f"%(sess_{i})s" for i in range(len(f.session_ids)))
+        conditions.append(f"r.session_id IN ({phs})")
         for i, sid in enumerate(f.session_ids):
-            params[f'sess_{i}'] = sid
+            params[f"sess_{i}"] = sid
 
     if f.rate_ids:
-        phs = ', '.join(f'%(rate_{i})s' for i in range(len(f.rate_ids)))
-        conditions.append(f'r.id IN ({phs})')
+        phs = ", ".join(f"%(rate_{i})s" for i in range(len(f.rate_ids)))
+        conditions.append(f"r.id IN ({phs})")
         for i, rid in enumerate(f.rate_ids):
-            params[f'rate_{i}'] = rid
+            params[f"rate_{i}"] = rid
 
     return conditions, params
 
@@ -134,44 +136,44 @@ def _build_magnitude_conditions(f: MagnitudeFilter):
     conditions = []
     params = {}
 
-    _add_shower_condition(f.showers, 'm', conditions, params)
+    _add_shower_condition(f.showers, "m", conditions, params)
 
     if f.period_start:
-        conditions.append('m.period_start >= %(period_start)s')
-        params['period_start'] = f.period_start
+        conditions.append("m.period_start >= %(period_start)s")
+        params["period_start"] = f.period_start
 
     if f.period_end:
-        conditions.append('m.period_end <= %(period_end)s')
-        params['period_end'] = f.period_end
+        conditions.append("m.period_end <= %(period_end)s")
+        params["period_end"] = f.period_end
 
     for key, col, op, val in [
-        ('sl_min',       'm.sl_start', '>=', f.sl_min),
-        ('sl_max',       'm.sl_end',   '<=', f.sl_max),
-        ('lim_magn_min', 'm.lim_mag',  '>=', f.lim_magn_min),
-        ('lim_magn_max', 'm.lim_mag',  '<=', f.lim_magn_max),
+        ("sl_min", "m.sl_start", ">=", f.sl_min),
+        ("sl_max", "m.sl_end", "<=", f.sl_max),
+        ("lim_magn_min", "m.lim_mag", ">=", f.lim_magn_min),
+        ("lim_magn_max", "m.lim_mag", "<=", f.lim_magn_max),
     ]:
         if val is not None:
-            conditions.append(f'{col} {op} %({key})s')
+            conditions.append(f"{col} {op} %({key})s")
             params[key] = val
 
     if f.session_ids:
-        phs = ', '.join(f'%(sess_{i})s' for i in range(len(f.session_ids)))
-        conditions.append(f'm.session_id IN ({phs})')
+        phs = ", ".join(f"%(sess_{i})s" for i in range(len(f.session_ids)))
+        conditions.append(f"m.session_id IN ({phs})")
         for i, sid in enumerate(f.session_ids):
-            params[f'sess_{i}'] = sid
+            params[f"sess_{i}"] = sid
 
     if f.magn_ids:
-        phs = ', '.join(f'%(magn_{i})s' for i in range(len(f.magn_ids)))
-        conditions.append(f'm.id IN ({phs})')
+        phs = ", ".join(f"%(magn_{i})s" for i in range(len(f.magn_ids)))
+        conditions.append(f"m.id IN ({phs})")
         for i, mid in enumerate(f.magn_ids):
-            params[f'magn_{i}'] = mid
+            params[f"magn_{i}"] = mid
 
     return conditions, params
 
 
 def _fetch_sessions(db_conn, session_ids):
-    phs = ', '.join(f'%(sid_{i})s' for i in range(len(session_ids)))
-    params = {f'sid_{i}': sid for i, sid in enumerate(session_ids)}
+    phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
+    params = {f"sid_{i}": sid for i, sid in enumerate(session_ids)}
     stmt = f"""
         SELECT id, longitude, latitude, elevation, country, city,
                observer_id, observer_name
@@ -184,8 +186,8 @@ def _fetch_sessions(db_conn, session_ids):
 
 
 def _fetch_magnitude_details(db_conn, magn_ids):
-    phs = ', '.join(f'%(mid_{i})s' for i in range(len(magn_ids)))
-    params = {f'mid_{i}': mid for i, mid in enumerate(magn_ids)}
+    phs = ", ".join(f"%(mid_{i})s" for i in range(len(magn_ids)))
+    params = {f"mid_{i}": mid for i, mid in enumerate(magn_ids)}
     stmt = f"""
         SELECT id, magn, freq
         FROM magnitude_detail
@@ -235,20 +237,28 @@ def query_rates(db_conn, f: RateFilter) -> dict:
         FROM rate r
         LEFT JOIN rate_magnitude rm ON r.id = rm.rate_id
     """
-    where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     cur = db_conn.cursor()
-    cur.execute(db_conn.convert_stmt(f'{select} {where}'), params)
+    cur.execute(db_conn.convert_stmt(f"{select} {where}"), params)
     observations = _rows_to_dicts(cur)
 
-    result = {'observations': observations}
+    result = {"observations": observations}
 
     if f.include_sessions:
-        session_ids = list({r['session_id'] for r in observations if r['session_id'] is not None})
-        result['sessions'] = _fetch_sessions(db_conn, session_ids) if session_ids else []
+        session_ids = list(
+            {r["session_id"] for r in observations if r["session_id"] is not None}
+        )
+        result["sessions"] = (
+            _fetch_sessions(db_conn, session_ids) if session_ids else []
+        )
 
     if f.include_magnitudes:
-        magn_ids = list({r['magn_id'] for r in observations if r['magn_id'] is not None})
-        result['magnitudes'] = _fetch_magnitude_details(db_conn, magn_ids) if magn_ids else []
+        magn_ids = list(
+            {r["magn_id"] for r in observations if r["magn_id"] is not None}
+        )
+        result["magnitudes"] = (
+            _fetch_magnitude_details(db_conn, magn_ids) if magn_ids else []
+        )
 
     return result
 
@@ -269,19 +279,25 @@ def query_magnitudes(db_conn, f: MagnitudeFilter) -> dict:
             m.session_id, m.freq, m.mean, m.lim_mag
         FROM magnitude m
     """
-    where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     cur = db_conn.cursor()
-    cur.execute(db_conn.convert_stmt(f'{select} {where}'), params)
+    cur.execute(db_conn.convert_stmt(f"{select} {where}"), params)
     observations = _rows_to_dicts(cur)
 
-    result = {'observations': observations}
+    result = {"observations": observations}
 
     if f.include_sessions:
-        session_ids = list({r['session_id'] for r in observations if r['session_id'] is not None})
-        result['sessions'] = _fetch_sessions(db_conn, session_ids) if session_ids else []
+        session_ids = list(
+            {r["session_id"] for r in observations if r["session_id"] is not None}
+        )
+        result["sessions"] = (
+            _fetch_sessions(db_conn, session_ids) if session_ids else []
+        )
 
     if f.include_magnitudes:
-        magn_ids = list({r['id'] for r in observations if r['id'] is not None})
-        result['magnitudes'] = _fetch_magnitude_details(db_conn, magn_ids) if magn_ids else []
+        magn_ids = list({r["id"] for r in observations if r["id"] is not None})
+        result["magnitudes"] = (
+            _fetch_magnitude_details(db_conn, magn_ids) if magn_ids else []
+        )
 
     return result

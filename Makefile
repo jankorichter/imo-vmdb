@@ -1,7 +1,11 @@
-.PHONY: build docs test
+.PHONY: build docs lint test
 
-build: test docs
+build: lint test docs
 	poetry build
+
+lint:
+	poetry run ruff check .
+	poetry run ruff format --check .
 
 test:
 	poetry run pytest

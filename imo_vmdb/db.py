@@ -7,16 +7,15 @@ class DBException(Exception):
     pass
 
 
-class DBAdapter(object):
-
+class DBAdapter:
     def __init__(self, config):
-        self.db_module = config.get('module', 'sqlite3')
-        if 'module' in config:
-            config.pop('module')
+        self.db_module = config.get("module", "sqlite3")
+        if "module" in config:
+            config.pop("module")
         db = importlib.import_module(self.db_module)
         self.conn = db.connect(**config)
-        if 'sqlite3' == self.db_module:
-            self.conn.execute('PRAGMA foreign_keys = ON')
+        if "sqlite3" == self.db_module:
+            self.conn.execute("PRAGMA foreign_keys = ON")
 
     def cursor(self):
         return self.conn.cursor()
@@ -28,9 +27,9 @@ class DBAdapter(object):
         self.conn.close()
 
     def convert_stmt(self, stmt):
-        if 'sqlite3' == self.db_module:
-            stmt = stmt.replace(' %% ', ' % ')
-            return re.sub('%\\(([^)]*)\\)s', ':\\1', stmt)
+        if "sqlite3" == self.db_module:
+            stmt = stmt.replace(" %% ", " % ")
+            return re.sub("%\\(([^)]*)\\)s", ":\\1", stmt)
 
         return stmt
 
@@ -40,19 +39,20 @@ def create_tables(db_conn):
 
     try:
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore')
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate_magnitude'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude_detail'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS rate'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS magnitude'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS obs_session'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS shower'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS radiant'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_session'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_rate'))
-            cur.execute(db_conn.convert_stmt('DROP TABLE IF EXISTS imported_magnitude'))
+            warnings.filterwarnings("ignore")
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS rate_magnitude"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS magnitude_detail"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS rate"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS magnitude"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS obs_session"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS shower"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS radiant"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS imported_session"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS imported_rate"))
+            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS imported_magnitude"))
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE obs_session
             (
                 id integer PRIMARY KEY,
@@ -63,9 +63,11 @@ def create_tables(db_conn):
                 observer_name TEXT NULL,
                 country TEXT NOT NULL,
                 city TEXT NOT NULL
-            )'''))
+            )""")
+        )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE rate (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -93,14 +95,16 @@ def create_tables(db_conn):
                     REFERENCES obs_session(id) MATCH SIMPLE
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
-            )'''))
+            )""")
+        )
         cur.execute(
             db_conn.convert_stmt(
-                'CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)'
+                "CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)"
             )
         )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE magnitude (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -117,14 +121,16 @@ def create_tables(db_conn):
                     REFERENCES obs_session(id) MATCH SIMPLE
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
-            )'''))
+            )""")
+        )
         cur.execute(
             db_conn.convert_stmt(
-                'CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)'
+                "CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)"
             )
         )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE magnitude_detail (
                 id integer NOT NULL,
                 magn integer NOT NULL,
@@ -134,14 +140,16 @@ def create_tables(db_conn):
                     REFERENCES magnitude(id) MATCH SIMPLE
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
-            )'''))
+            )""")
+        )
         cur.execute(
             db_conn.convert_stmt(
-                'CREATE INDEX fki_magnitude_detail_fk ON magnitude_detail(id)'
+                "CREATE INDEX fki_magnitude_detail_fk ON magnitude_detail(id)"
             )
         )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE rate_magnitude (
                 rate_id integer NOT NULL,
                 magn_id integer NOT NULL,
@@ -155,14 +163,16 @@ def create_tables(db_conn):
                     REFERENCES magnitude(id) MATCH SIMPLE
                     ON UPDATE CASCADE
                     ON DELETE CASCADE
-            )'''))
+            )""")
+        )
         cur.execute(
             db_conn.convert_stmt(
-                'CREATE INDEX fki_rate_magnitude_magn_fk ON rate_magnitude(magn_id)'
+                "CREATE INDEX fki_rate_magnitude_magn_fk ON rate_magnitude(magn_id)"
             )
         )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE shower (
                 id integer NOT NULL,
                 iau_code varchar(6) NOT NULL,
@@ -180,9 +190,11 @@ def create_tables(db_conn):
                 zhr real,
                 CONSTRAINT shower_pkey PRIMARY KEY (id),
                 CONSTRAINT shower_iau_code_ukey UNIQUE (iau_code)
-            )'''))
+            )""")
+        )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE radiant
             (
                 shower char(3) NOT NULL,
@@ -191,9 +203,11 @@ def create_tables(db_conn):
                 ra real NOT NULL,
                 "dec" real NOT NULL,
                 CONSTRAINT radiant_pkey PRIMARY KEY (shower, "month", "day")
-            )'''))
+            )""")
+        )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE imported_session
             (
                 id integer PRIMARY KEY,
@@ -204,9 +218,11 @@ def create_tables(db_conn):
                 elevation real NULL,
                 country TEXT NOT NULL,
                 city TEXT NOT NULL
-            )'''))
+            )""")
+        )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE imported_rate
             (
                 id integer NOT NULL,
@@ -223,8 +239,10 @@ def create_tables(db_conn):
                 "dec" real,
                 "number" integer NOT NULL,
                 CONSTRAINT imported_rate_pkey PRIMARY KEY (id)
-            )'''))
-        cur.execute(db_conn.convert_stmt('''
+            )""")
+        )
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE INDEX imported_rate_order_key ON
                 imported_rate(
                     session_id,
@@ -232,9 +250,11 @@ def create_tables(db_conn):
                     "start",
                     "end"
                 )
-        '''))
+        """)
+        )
 
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE TABLE imported_magnitude
             (
                 id integer NOT NULL,
@@ -245,8 +265,10 @@ def create_tables(db_conn):
                 "end" timestamp NOT NULL,
                 magn text NOT NULL,
                 CONSTRAINT imported_magnitude_pkey PRIMARY KEY (id)
-            )'''))
-        cur.execute(db_conn.convert_stmt('''
+            )""")
+        )
+        cur.execute(
+            db_conn.convert_stmt("""
             CREATE INDEX imported_magnitude_order_key ON
                 imported_magnitude(
                     session_id,
@@ -254,7 +276,8 @@ def create_tables(db_conn):
                     "start",
                     "end"
                 )
-        '''))
+        """)
+        )
 
         cur.close()
     except Exception as e:

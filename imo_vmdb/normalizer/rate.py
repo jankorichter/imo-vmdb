@@ -1,11 +1,12 @@
 import math
+
 from imo_vmdb.db import DBException
 from imo_vmdb.model.sky import Location, Sphere
-from imo_vmdb.normalizer import BaseRecord, BaseNormalizer, NormalizerException
+from imo_vmdb.normalizer import BaseNormalizer, BaseRecord, NormalizerException
 
 
 class Record(BaseRecord):
-    _insert_stmt = '''
+    _insert_stmt = """
         INSERT INTO rate (
             id,
             shower,
@@ -51,19 +52,18 @@ class Record(BaseRecord):
             %(rad_alt)s,
             %(rad_az)s
         )
-    '''
+    """
 
     def __init__(self, record):
         super().__init__(record)
-        self.freq = record['freq']
-        self.lm = record['lm']
-        self.t_eff = record['t_eff']
-        self.f = record['f']
-        self.ra = record['ra']
-        self.dec = record['dec']
+        self.freq = record["freq"]
+        self.lm = record["lm"]
+        self.t_eff = record["t_eff"]
+        self.f = record["f"]
+        self.ra = record["ra"]
+        self.dec = record["dec"]
         self.loc = Location(
-            math.radians(record['longitude']),
-            math.radians(record['latitude'])
+            math.radians(record["longitude"]), math.radians(record["latitude"])
         )
 
     @classmethod
@@ -73,10 +73,10 @@ class Record(BaseRecord):
     @staticmethod
     def _zenith_coor(alt, v):
         # Peter S. Gural, WGN 29:4 (2000), p134-138
-        z = math.pi/2.0 - alt
+        z = math.pi / 2.0 - alt
         w = math.sqrt(pow(v, 2) + 123.06)
         zo = z / 2.0 + math.asin(v * math.sin(z / 2.0) / w)
-        return math.pi/2.0 - zo
+        return math.pi / 2.0 - zo
 
     def write(self, cur, sky, showers):
         iau_code = self.shower
@@ -91,19 +91,21 @@ class Record(BaseRecord):
         field_az = None
         if self.ra is not None and self.dec is not None:
             field = sky.alt_az(
-                Sphere(math.radians(self.ra), math.radians(self.dec)),
-                t_mean,
-                self.loc
+                Sphere(math.radians(self.ra), math.radians(self.dec)), t_mean, self.loc
             )
             field_alt = math.degrees(field.lat)
             field_az = math.degrees(field.lng)
 
         if field_alt is not None and field_alt < 0.0:
-            raise NormalizerException("field is below horizon (%s degrees)" % round(field_alt))
+            raise NormalizerException(
+                "field is below horizon (%s degrees)" % round(field_alt)
+            )
 
         sun = sky.sun(t_mean, self.loc)
         if sun.lat > 0.0:
-            raise NormalizerException("sun is above horizon (%s degrees)" % round(math.degrees(sun.lat)))
+            raise NormalizerException(
+                "sun is above horizon (%s degrees)" % round(math.degrees(sun.lat))
+            )
 
         moon = sky.moon(t_mean, self.loc)
         moon_illumination = sky.moon_illumination(t_mean)
@@ -117,30 +119,33 @@ class Record(BaseRecord):
             rad_alt = math.degrees(self._zenith_coor(rad_coord.lat, shower.v))
 
         if rad_alt is not None and rad_alt < -5.0:
-            raise NormalizerException("radiant of %s is too far below the horizon (%s degrees)" % (iau_code, round(rad_alt)))
+            raise NormalizerException(
+                "radiant of %s is too far below the horizon (%s degrees)"
+                % (iau_code, round(rad_alt))
+            )
 
         rate = {
-            'id': self.id,
-            'shower': iau_code,
-            'period_start': self.start.isoformat(sep=' '),
-            'period_end': self.end.isoformat(sep=' '),
-            'sl_start': math.degrees(sl_start),
-            'sl_end': math.degrees(sl_end),
-            'session_id': self.session_id,
-            'freq': self.freq,
-            'lim_mag': self.lm,
-            't_eff': self.t_eff,
-            'f': self.f,
-            'sidereal_time': math.degrees(sky.sidereal_time(t_mean, self.loc)),
-            'sun_alt': math.degrees(sun.lat),
-            'sun_az': math.degrees(sun.lng),
-            'moon_alt': math.degrees(moon.lat),
-            'moon_az': math.degrees(moon.lng),
-            'moon_illum': moon_illumination,
-            'field_alt': field_alt,
-            'field_az': field_az,
-            'rad_alt': rad_alt,
-            'rad_az': rad_az
+            "id": self.id,
+            "shower": iau_code,
+            "period_start": self.start.isoformat(sep=" "),
+            "period_end": self.end.isoformat(sep=" "),
+            "sl_start": math.degrees(sl_start),
+            "sl_end": math.degrees(sl_end),
+            "session_id": self.session_id,
+            "freq": self.freq,
+            "lim_mag": self.lm,
+            "t_eff": self.t_eff,
+            "f": self.f,
+            "sidereal_time": math.degrees(sky.sidereal_time(t_mean, self.loc)),
+            "sun_alt": math.degrees(sun.lat),
+            "sun_az": math.degrees(sun.lng),
+            "moon_alt": math.degrees(moon.lat),
+            "moon_az": math.degrees(moon.lng),
+            "moon_illum": moon_illumination,
+            "field_alt": field_alt,
+            "field_az": field_az,
+            "rad_alt": rad_alt,
+            "rad_az": rad_az,
         }
 
         try:
@@ -150,7 +155,6 @@ class Record(BaseRecord):
 
 
 class RateNormalizer(BaseNormalizer):
-
     def __init__(self, db_conn, logger, sky, showers):
         super().__init__(db_conn, logger)
         self._sky = sky
@@ -161,7 +165,8 @@ class RateNormalizer(BaseNormalizer):
         db_conn = self._db_conn
         try:
             cur = db_conn.cursor()
-            cur.execute(db_conn.convert_stmt('''
+            cur.execute(
+                db_conn.convert_stmt("""
                 SELECT
                     r.id,
                     s.longitude,
@@ -186,7 +191,8 @@ class RateNormalizer(BaseNormalizer):
                     r.shower ASC,
                     r."start" ASC,
                     r."end" DESC
-            '''))
+            """)
+            )
         except Exception as e:
             raise DBException(str(e))
 
@@ -198,18 +204,22 @@ class RateNormalizer(BaseNormalizer):
             raise DBException(str(e))
 
         prev_record = None
-        delete_stmt = db_conn.convert_stmt('DELETE FROM rate WHERE id = %(id)s')
+        delete_stmt = db_conn.convert_stmt("DELETE FROM rate WHERE id = %(id)s")
         for _record in cur:
             self.counter_read += 1
-            record = Record(dict(zip(column_names, _record)))
+            record = Record(dict(zip(column_names, _record, strict=False)))
 
             if record.observer_id != record.session_observer_id:
-                self._log_discard(record.session_id, record.id, 'observer ID differs from session observer ID')
+                self._log_discard(
+                    record.session_id,
+                    record.id,
+                    "observer ID differs from session observer ID",
+                )
                 prev_record = record
                 continue
 
             try:
-                write_cur.execute(delete_stmt, {'id': record.id})
+                write_cur.execute(delete_stmt, {"id": record.id})
             except Exception as err:
                 raise DBException(str(err))
 
@@ -218,12 +228,20 @@ class RateNormalizer(BaseNormalizer):
                 continue
 
             if record in prev_record:
-                self._log_discard(prev_record.session_id, prev_record.id, 'time period contained by observation %s' % record.id)
+                self._log_discard(
+                    prev_record.session_id,
+                    prev_record.id,
+                    "time period contained by observation %s" % record.id,
+                )
                 prev_record = record
                 continue
 
             if prev_record == record:
-                self._log_discard(record.session_id, record.id, 'time period overlaps observation %s' % prev_record.id)
+                self._log_discard(
+                    record.session_id,
+                    record.id,
+                    "time period overlaps observation %s" % prev_record.id,
+                )
                 continue
 
             try:

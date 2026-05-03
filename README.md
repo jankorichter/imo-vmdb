@@ -52,6 +52,20 @@ poetry install --extras docs
 poetry run python -m imo_vmdb web_server -c config.ini
 ```
 
+**Run the linter:**
+
+```bash
+poetry run ruff check .
+poetry run ruff format --check .
+```
+
+To auto-fix issues:
+
+```bash
+poetry run ruff check --fix .
+poetry run ruff format .
+```
+
 **Run the test suite:**
 
 ```bash

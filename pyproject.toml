@@ -46,9 +46,29 @@ imo-vmdb-webui = "imo_vmdb.webui.server:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
+ruff = "^0.5.3"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/jankorichter/imo-vmdb/issues"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # import sorting
+    "UP",  # pyupgrade
+    "B",   # bugbear
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "UP031", # percent-format (legacy style kept intentionally)
+    "B904",  # raise-without-from-inside-except
+]
+

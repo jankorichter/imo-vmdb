@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from astropy import units as u
 from astropy.coordinates import EarthLocation
-from datetime import datetime
+
 from imo_vmdb.db import DBException
 
 
@@ -8,25 +10,26 @@ class NormalizerException(Exception):
     pass
 
 
-class BaseRecord(object):
-
+class BaseRecord:
     def __init__(self, record):
-        self.id = record['id']
-        self.shower = record['shower']
-        self.session_id = record['session_id']
-        self.observer_id = record['observer_id']
-        self.session_observer_id = record['session_observer_id']
-        self.loc = EarthLocation(lat=record['latitude']*u.deg, lon=record['longitude']*u.deg)
+        self.id = record["id"]
+        self.shower = record["shower"]
+        self.session_id = record["session_id"]
+        self.observer_id = record["observer_id"]
+        self.session_observer_id = record["session_observer_id"]
+        self.loc = EarthLocation(
+            lat=record["latitude"] * u.deg, lon=record["longitude"] * u.deg
+        )
 
-        if isinstance(record['start'], datetime):
-            self.start = record['start']
+        if isinstance(record["start"], datetime):
+            self.start = record["start"]
         else:
-            self.start = datetime.strptime(record['start'], '%Y-%m-%d %H:%M:%S')
+            self.start = datetime.strptime(record["start"], "%Y-%m-%d %H:%M:%S")
 
-        if isinstance(record['end'], datetime):
-            self.end = record['end']
+        if isinstance(record["end"], datetime):
+            self.end = record["end"]
         else:
-            self.end = datetime.strptime(record['end'], '%Y-%m-%d %H:%M:%S')
+            self.end = datetime.strptime(record["end"], "%Y-%m-%d %H:%M:%S")
 
     def __eq__(self, other):
         return not self != other
@@ -56,8 +59,7 @@ class BaseRecord(object):
         return True
 
 
-class BaseNormalizer(object):
-
+class BaseNormalizer:
     def __init__(self, db_conn, logger):
         self._db_conn = db_conn
         self._logger = logger
@@ -71,7 +73,9 @@ class BaseNormalizer(object):
         self.has_errors = True
 
     def _log_discard(self, session_id, obs_id, reason):
-        self._logger.error('session %s: observation %s discarded - %s' % (session_id, obs_id, reason))
+        self._logger.error(
+            "session %s: observation %s discarded - %s" % (session_id, obs_id, reason)
+        )
         self.counter_discard += 1
         self.has_errors = True
 
@@ -80,7 +84,8 @@ def create_rate_magn(db_conn):
     try:
         cur = db_conn.cursor()
         # find magnitude-rate-pairs containing each other
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(
+            db_conn.convert_stmt("""
             WITH selection AS (
                 SELECT
                     r.id as rate_id,
@@ -151,15 +156,16 @@ def create_rate_magn(db_conn):
             )
 
             SELECT rate_id, magn_id, "equals" FROM unique_rate_ids
-        '''))
+        """)
+        )
     except Exception as e:
         raise DBException(str(e))
 
     column_names = [desc[0] for desc in cur.description]
     delete_stmt = db_conn.convert_stmt(
-        'DELETE FROM rate_magnitude WHERE rate_id = %(rate_id)s'
+        "DELETE FROM rate_magnitude WHERE rate_id = %(rate_id)s"
     )
-    insert_stmt = db_conn.convert_stmt('''
+    insert_stmt = db_conn.convert_stmt("""
         INSERT INTO rate_magnitude (
             rate_id,
             magn_id,
@@ -169,7 +175,7 @@ def create_rate_magn(db_conn):
             %(magn_id)s,
             %(equals)s
         )
-    ''')
+    """)
 
     try:
         write_cur = db_conn.cursor()
@@ -177,22 +183,23 @@ def create_rate_magn(db_conn):
         raise DBException(str(e))
 
     for record in cur:
-        record = dict(zip(column_names, record))
+        record = dict(zip(column_names, record, strict=False))
         magn_rate = {
-            'rate_id': record['rate_id'],
-            'magn_id': record['magn_id'],
-            'equals': record['equals'],
+            "rate_id": record["rate_id"],
+            "magn_id": record["magn_id"],
+            "equals": record["equals"],
         }
         try:
-            write_cur.execute(delete_stmt, {'rate_id': record['rate_id']})
+            write_cur.execute(delete_stmt, {"rate_id": record["rate_id"]})
             write_cur.execute(insert_stmt, magn_rate)
         except Exception as e:
             raise DBException(str(e))
 
     # set limiting magnitude
     try:
-        cur.execute(db_conn.convert_stmt('UPDATE magnitude SET lim_mag = NULL'))
-        cur.execute(db_conn.convert_stmt('''
+        cur.execute(db_conn.convert_stmt("UPDATE magnitude SET lim_mag = NULL"))
+        cur.execute(
+            db_conn.convert_stmt("""
             WITH limiting_magnitudes AS (
                 SELECT rm.magn_id, sum(r.t_eff*r.lim_mag)/sum(r.t_eff) as lim_mag
                 FROM rate r
@@ -201,21 +208,22 @@ def create_rate_magn(db_conn):
             )
             SELECT magn_id, round(lim_mag*100)/100.0 as lim_mag
             FROM limiting_magnitudes
-        '''))
+        """)
+        )
     except Exception as e:
         raise DBException(str(e))
 
     column_names = [desc[0] for desc in cur.description]
     update_stmt = db_conn.convert_stmt(
-        'UPDATE magnitude SET lim_mag = %(lim_mag)s WHERE id = %(magn_id)s'
+        "UPDATE magnitude SET lim_mag = %(lim_mag)s WHERE id = %(magn_id)s"
     )
     for record in cur:
-        record = dict(zip(column_names, record))
+        record = dict(zip(column_names, record, strict=False))
         try:
-            write_cur.execute(update_stmt, {
-                'lim_mag': record['lim_mag'],
-                'magn_id': record['magn_id']
-            })
+            write_cur.execute(
+                update_stmt,
+                {"lim_mag": record["lim_mag"], "magn_id": record["magn_id"]},
+            )
         except Exception as e:
             raise DBException(str(e))
 
