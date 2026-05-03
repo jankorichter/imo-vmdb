@@ -118,8 +118,8 @@ class MagnitudesParser(CsvParser):
             'observer_id': observer_id,
             'session_id': session_id,
             'shower': shower,
-            'start': period_start,
-            'end': period_end,
+            'start': period_start.isoformat(sep=' '),
+            'end': period_end.isoformat(sep=' '),
             'magn': magn
         }
 

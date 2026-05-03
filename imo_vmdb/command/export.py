@@ -1,20 +1,12 @@
 import csv
-import os
 import sys
 from optparse import OptionParser
-from pathlib import Path
 
+from imo_vmdb import export_table
 from imo_vmdb.command import config_factory
 from imo_vmdb.db import DBAdapter, DBException
 
-_DATA_DIR = Path(os.path.dirname(os.path.realpath(__file__))).parent / 'data'
-
 REIMPORT_TABLES = {'shower', 'radiant'}
-
-STATIC_FILES = {
-    'shower':  'showers.csv',
-    'radiant': 'radiants.csv',
-}
 
 DB_TABLES = {
     'shower':           'shower',
@@ -53,22 +45,13 @@ def main(command_args):
         if options.output_file else sys.stdout
 
     try:
-        if table in REIMPORT_TABLES and options.reimport:
-            _export_static(table, out)
-        else:
-            _export_db(table, options, parser, out)
+        _export_db(table, options, parser, out, reimport=options.reimport)
     finally:
         if options.output_file:
             out.close()
 
 
-def _export_static(table, out):
-    src = _DATA_DIR / STATIC_FILES[table]
-    with open(src, 'r', encoding='utf-8-sig') as f:
-        out.write(f.read())
-
-
-def _export_db(table, options, parser, out):
+def _export_db(table, options, parser, out, reimport=False):
     try:
         config = config_factory(options, parser)
     except SystemExit:
@@ -76,10 +59,7 @@ def _export_db(table, options, parser, out):
 
     try:
         db_conn = DBAdapter(dict(config['database']))
-        cur = db_conn.cursor()
-        cur.execute(f'SELECT * FROM {DB_TABLES[table]}')
-        cols = [d[0] for d in cur.description]
-        rows = cur.fetchall()
+        cols, rows = export_table(db_conn, DB_TABLES[table], reimport=reimport)
         db_conn.close()
     except DBException as e:
         print(f'Database error: {e}', file=sys.stderr)

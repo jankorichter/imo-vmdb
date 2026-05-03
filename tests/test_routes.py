@@ -29,20 +29,26 @@ class TestExport:
         assert r.status_code == 200
         assert b';' in r.data
 
-    def test_shower_reimport_returns_original_header(self, client):
-        r = client.get('/export/shower?reimport=1')
-        assert r.status_code == 200
-        assert b'IAU_code' in r.data
-
     def test_radiant_returns_csv(self, client):
         r = client.get('/export/radiant')
         assert r.status_code == 200
         assert b';' in r.data
 
+    def test_shower_reimport_has_compatible_columns(self, client):
+        r = client.get('/export/shower?reimport=1')
+        assert r.status_code == 200
+        header = r.data.split(b'\n')[0].decode().strip()
+        cols = {c.lower() for c in header.split(';')}
+        required = {'id', 'iau_code', 'name', 'start', 'end', 'peak', 'ra', 'de', 'v', 'r', 'zhr'}
+        assert required.issubset(cols)
+
     def test_radiant_reimport_returns_original_format(self, client):
         r = client.get('/export/radiant?reimport=1')
         assert r.status_code == 200
-        assert b'shower' in r.data
+        header = r.data.split(b'\n')[0].decode().strip()
+        cols = {c.lower() for c in header.split(';')}
+        required = {'shower', 'ra', 'dec', 'day', 'month'}
+        assert required.issubset(cols)
 
     def test_session_export_returns_200(self, client):
         r = client.get('/export/session')

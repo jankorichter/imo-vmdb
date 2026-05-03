@@ -54,3 +54,62 @@ def app(_app_db_path):
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture
+def db_conn_factory(tmp_path):
+    path = str(tmp_path / 'job.db')
+    def factory():
+        return DBAdapter({'database': path})
+    return factory
+
+
+@pytest.fixture
+def schema_db(tmp_path):
+    """SQLite DB with table schema only — no data at all."""
+    from imo_vmdb.db import create_tables
+    db_conn = DBAdapter({'database': str(tmp_path / 'schema.db')})
+    create_tables(db_conn)
+    db_conn.commit()
+    yield db_conn
+    db_conn.close()
+
+
+@pytest.fixture
+def observation_db(seeded_db):
+    """seeded_db augmented with one session, two rate and two magnitude records."""
+    cur = seeded_db.cursor()
+
+    cur.execute(
+        "INSERT INTO obs_session (id, longitude, latitude, elevation, country, city) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (1, 13.4, 52.5, 50.0, 'DE', 'Berlin'),
+    )
+
+    rate_fields = (
+        "id, shower, period_start, period_end, sl_start, sl_end, session_id, "
+        "freq, lim_mag, t_eff, f, sidereal_time, sun_alt, sun_az, moon_alt, moon_az, moon_illum"
+    )
+    cur.execute(
+        f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (1, 'PER', '2023-08-12 22:00', '2023-08-12 23:00', 139.5, 140.5, 1,
+         10, 6.5, 1.0, 1.0, 180.0, -20.0, 270.0, -10.0, 90.0, 0.1),
+    )
+    cur.execute(
+        f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (2, 'GEM', '2023-12-14 22:00', '2023-12-14 23:00', 260.0, 261.0, 1,
+         5, 5.5, 1.0, 1.0, 200.0, -30.0, 280.0, -5.0, 95.0, 0.2),
+    )
+
+    magn_fields = "id, shower, period_start, period_end, sl_start, sl_end, session_id, freq, mean, lim_mag"
+    cur.execute(
+        f"INSERT INTO magnitude ({magn_fields}) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (1, 'PER', '2023-08-12 22:00', '2023-08-12 23:00', 139.5, 140.5, 1, 50, 3.2, 6.5),
+    )
+    cur.execute(
+        f"INSERT INTO magnitude ({magn_fields}) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (2, 'GEM', '2023-12-14 22:00', '2023-12-14 23:00', 260.0, 261.0, 1, 30, 2.8, 5.5),
+    )
+
+    seeded_db.commit()
+    return seeded_db

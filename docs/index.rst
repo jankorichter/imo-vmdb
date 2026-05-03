@@ -3,8 +3,8 @@ Introduction
 
 *imo-vmdb* imports, normalizes, and enriches visual meteor observation data
 from the `Visual Meteor Database (VMDB) <https://www.imo.net/members/imo_vmdb/>`_.
-Enriched observations can be accessed via a REST API, CSV export, or direct
-database connection.
+Enriched observations can be accessed via a REST API, CSV export, direct
+database connection, or the :ref:`Python API <api>` (``imo_vmdb``, ``imo_vmdb.server``).
 
 The tool can be used in two ways:
 
