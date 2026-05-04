@@ -1,3 +1,5 @@
+import csv
+import io
 import logging
 import os
 import queue
@@ -19,25 +21,11 @@ class _QueueHandler(logging.Handler):
 
 
 class JobManager:
-    """Manages long-running background jobs (initdb, normalize, cleanup, import).
+    """Manages long-running background jobs (initdb, normalize, cleanup, import, export).
 
     At most one job runs at a time. Start methods return ``None`` if another
     job is already running. Use :meth:`get_status` and :meth:`iter_logs` to
     monitor progress.
-
-    Example usage without Flask::
-
-        from imo_vmdb.db import DBAdapter
-        from imo_vmdb.server import JobManager
-
-        def db_factory():
-            return DBAdapter({'database': '/path/to/db.sqlite'})
-
-        jm = JobManager()
-        job_id = jm.start_initdb(db_factory)
-        if job_id:
-            for line in jm.iter_logs(job_id):
-                print(line)
 
     .. note::
         Completed job records remain in memory for the lifetime of the
@@ -132,6 +120,39 @@ class JobManager:
                     pass
         self._finish_job(job_id, exit_code)
 
+    def _run_export(
+        self,
+        job_id,
+        db_conn_factory: Callable[[], DBAdapter],
+        table,
+        output_path,
+        reimport,
+    ):
+        logger = self._make_logger(job_id)
+        try:
+            db_conn = db_conn_factory()
+            try:
+                cols, rows = imo_vmdb.export_table(db_conn, table, reimport=reimport)
+                out = io.StringIO()
+                writer = csv.writer(out, delimiter=";")
+                writer.writerow(cols)
+                writer.writerows(rows)
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(out.getvalue())
+                logger.info(
+                    "Exported %d rows from '%s' to %s", len(rows), table, output_path
+                )
+                exit_code = 0
+            except Exception as exc:
+                logger.error("Export failed: %s", exc)
+                exit_code = 1
+            finally:
+                db_conn.close()
+        except Exception as exc:
+            logger.critical("Unexpected error: %s", exc)
+            exit_code = 100
+        self._finish_job(job_id, exit_code)
+
     def _start(self, target, *args):
         job_id = self._allocate_job()
         if job_id is None:
@@ -190,6 +211,26 @@ class JobManager:
             do_delete,
             is_permissive,
             try_repair,
+        )
+
+    def start_export(
+        self,
+        db_conn_factory: Callable[[], DBAdapter],
+        table: str,
+        output_path: str,
+        *,
+        reimport: bool = False,
+    ) -> str | None:
+        """Start a CSV export job.
+
+        :param db_conn_factory: Callable returning a new database connection.
+        :param table: Table name to export (see :func:`imo_vmdb.export_table`).
+        :param output_path: Path where the CSV file (``;``-separated) will be written.
+        :param reimport: If ``True``, export in reimport-compatible format.
+        :return: Job ID string, or ``None`` if another job is already running.
+        """
+        return self._start(
+            self._run_export, db_conn_factory, table, output_path, reimport
         )
 
     def get_status(self, job_id: str) -> dict | None:

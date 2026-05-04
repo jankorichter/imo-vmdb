@@ -1,7 +1,7 @@
 from flask import Flask
 
 from imo_vmdb.restapi import api_bp
-from imo_vmdb.server import JobManager
+from imo_vmdb.webui.jobs import JobManager
 
 
 def create_app(config, upload_dir):
