@@ -6,17 +6,18 @@ import queue
 import threading
 import uuid
 from collections.abc import Callable, Iterator
+from typing import Any
 
 import imo_vmdb
 from imo_vmdb.db import DBAdapter
 
 
 class _QueueHandler(logging.Handler):
-    def __init__(self, q):
+    def __init__(self, q: queue.Queue[str]) -> None:
         super().__init__()
         self.queue = q
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         self.queue.put(self.format(record))
 
 
@@ -37,7 +38,7 @@ class JobManager:
         self._jobs = {}
         self._lock = threading.Lock()
 
-    def _make_logger(self, job_id):
+    def _make_logger(self, job_id: str) -> logging.Logger:
         q = self._jobs[job_id]["queue"]
         handler = _QueueHandler(q)
         handler.setFormatter(
@@ -52,13 +53,13 @@ class JobManager:
         logger.propagate = False
         return logger
 
-    def _finish_job(self, job_id, exit_code):
+    def _finish_job(self, job_id: str, exit_code: int) -> None:
         with self._lock:
             self._jobs[job_id]["running"] = False
             self._jobs[job_id]["exit_code"] = exit_code
         self._jobs[job_id]["queue"].put(None)
 
-    def _allocate_job(self):
+    def _allocate_job(self) -> str | None:
         with self._lock:
             if any(j["running"] for j in self._jobs.values()):
                 return None
@@ -70,7 +71,12 @@ class JobManager:
             }
         return job_id
 
-    def _run_simple(self, job_id, fn, db_conn_factory: Callable[[], DBAdapter]):
+    def _run_simple(
+        self,
+        job_id: str,
+        fn: Callable[[DBAdapter, logging.Logger], int | None],
+        db_conn_factory: Callable[[], DBAdapter],
+    ) -> None:
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
@@ -86,13 +92,13 @@ class JobManager:
 
     def _run_import(
         self,
-        job_id,
+        job_id: str,
         db_conn_factory: Callable[[], DBAdapter],
-        file_paths,
-        do_delete,
-        is_permissive,
-        try_repair,
-    ):
+        file_paths: list[str],
+        do_delete: bool,
+        is_permissive: bool,
+        try_repair: bool,
+    ) -> None:
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
@@ -122,12 +128,12 @@ class JobManager:
 
     def _run_export(
         self,
-        job_id,
+        job_id: str,
         db_conn_factory: Callable[[], DBAdapter],
-        table,
-        output_path,
-        reimport,
-    ):
+        table: str,
+        output_path: str,
+        reimport: bool,
+    ) -> None:
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
@@ -153,7 +159,7 @@ class JobManager:
             exit_code = 100
         self._finish_job(job_id, exit_code)
 
-    def _start(self, target, *args):
+    def _start(self, target: Callable[..., Any], *args: Any) -> str | None:
         job_id = self._allocate_job()
         if job_id is None:
             return None
@@ -261,7 +267,7 @@ class JobManager:
             return None
         return self._iter_logs_impl(job_id)
 
-    def _iter_logs_impl(self, job_id):
+    def _iter_logs_impl(self, job_id: str) -> Iterator[str]:
         q = self._jobs[job_id]["queue"]
         while True:
             line = q.get()

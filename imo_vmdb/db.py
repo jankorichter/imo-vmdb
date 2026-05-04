@@ -1,6 +1,7 @@
 import importlib
 import re
 import warnings
+from typing import Any
 
 
 class DBException(Exception):
@@ -8,7 +9,7 @@ class DBException(Exception):
 
 
 class DBAdapter:
-    def __init__(self, config):
+    def __init__(self, config: dict[str, str]) -> None:
         self.db_module = config.get("module", "sqlite3")
         if "module" in config:
             config.pop("module")
@@ -17,16 +18,16 @@ class DBAdapter:
         if "sqlite3" == self.db_module:
             self.conn.execute("PRAGMA foreign_keys = ON")
 
-    def cursor(self):
+    def cursor(self) -> Any:
         return self.conn.cursor()
 
-    def commit(self):
+    def commit(self) -> None:
         self.conn.commit()
 
-    def close(self):
+    def close(self) -> None:
         self.conn.close()
 
-    def convert_stmt(self, stmt):
+    def convert_stmt(self, stmt: str) -> str:
         if "sqlite3" == self.db_module:
             stmt = stmt.replace(" %% ", " % ")
             return re.sub("%\\(([^)]*)\\)s", ":\\1", stmt)
@@ -34,7 +35,7 @@ class DBAdapter:
         return stmt
 
 
-def create_tables(db_conn):
+def create_tables(db_conn: "DBAdapter") -> None:
     cur = db_conn.cursor()
 
     try:

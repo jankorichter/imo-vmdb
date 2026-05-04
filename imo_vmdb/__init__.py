@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from imo_vmdb.csv_import.radiant import RadiantParser
 from imo_vmdb.csv_import.rate import RateParser
 from imo_vmdb.csv_import.session import SessionParser
 from imo_vmdb.csv_import.shower import ShowerParser
-from imo_vmdb.db import create_tables
+from imo_vmdb.db import DBAdapter, create_tables
 from imo_vmdb.model.radiant import Storage as RadiantStorage
 from imo_vmdb.model.shower import Storage as ShowerStorage
 from imo_vmdb.model.sky import Sky
@@ -47,14 +48,14 @@ _VALID_TABLES = frozenset(
 )
 
 
-def _format_date(month, day) -> str:
+def _format_date(month: int | None, day: int | None) -> str:
     if month is None or day is None:
         return ""
     return f"{_MONTH_NAMES[month]} {day}"
 
 
 def export_table(
-    db_conn, table: str, reimport: bool = False
+    db_conn: DBAdapter, table: str, reimport: bool = False
 ) -> tuple[list[str], list[tuple]]:
     """Export all rows from a database table.
 
@@ -83,7 +84,7 @@ def export_table(
     return cols, rows
 
 
-def _export_shower_reimport(db_conn) -> tuple[list[str], list[tuple]]:
+def _export_shower_reimport(db_conn: DBAdapter) -> tuple[list[str], list[tuple]]:
     cur = db_conn.cursor()
     cur.execute(
         "SELECT id, iau_code, name, start_month, start_day, end_month, end_day,"
@@ -158,8 +159,13 @@ class CSVImporter:
     }
 
     def __init__(
-        self, db_conn, logger, do_delete=False, try_repair=False, is_permissive=False
-    ):
+        self,
+        db_conn: DBAdapter,
+        logger: logging.Logger,
+        do_delete: bool = False,
+        try_repair: bool = False,
+        is_permissive: bool = False,
+    ) -> None:
         self._db_conn = db_conn
         self._logger = logger
         self._do_delete = do_delete
@@ -170,7 +176,7 @@ class CSVImporter:
         self.counter_write = 0
         self.has_errors = False
 
-    def run(self, file_list):
+    def run(self, file_list: list[str]) -> None:
         """
         Import CSV files specified in the files_list into the database.
 
@@ -226,7 +232,7 @@ class CSVImporter:
             )
         )
 
-    def _log_critical(self, msg):
+    def _log_critical(self, msg: str) -> None:
         self._logger.critical(msg)
         self.has_errors = True
 
@@ -281,7 +287,7 @@ class CSVImporter:
         return csv_parser
 
 
-def cleanup(db_conn, logger):
+def cleanup(db_conn: DBAdapter, logger: logging.Logger) -> int:
     """
     Remove all previously imported data, if any, while preserving normalized data in the database.
 
@@ -305,7 +311,7 @@ def cleanup(db_conn, logger):
     return 0
 
 
-def initdb(db_conn, logger):
+def initdb(db_conn: DBAdapter, logger: logging.Logger) -> int:
     """
     Initialize an empty database, removing all data if the database already exists.
 
@@ -330,7 +336,7 @@ def initdb(db_conn, logger):
     return int(csv_import.has_errors)
 
 
-def normalize(db_conn, logger):
+def normalize(db_conn: DBAdapter, logger: logging.Logger) -> int:
     """
     Establish relationships between imported records and enrich observations with additional information.
 

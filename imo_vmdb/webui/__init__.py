@@ -1,10 +1,12 @@
+from configparser import RawConfigParser
+
 from flask import Flask
 
 from imo_vmdb.restapi import api_bp
 from imo_vmdb.webui.jobs import JobManager
 
 
-def create_app(config, upload_dir):
+def create_app(config: RawConfigParser, upload_dir: str) -> Flask:
     app = Flask(__name__, template_folder="templates")
     app.config["IMO_CONFIG"] = config
     app.config["UPLOAD_DIR"] = upload_dir

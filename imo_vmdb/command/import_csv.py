@@ -6,7 +6,7 @@ from imo_vmdb.command import LoggerFactory, config_factory
 from imo_vmdb.db import DBAdapter, DBException
 
 
-def main(command_args):
+def main(command_args: list[str]) -> None:
     parser = OptionParser(usage="import_csv [options]")
     parser.add_option(
         "-c", action="store", dest="config_file", help="path to config file"

@@ -1,6 +1,7 @@
 import csv
 import sys
-from optparse import OptionParser
+from optparse import OptionParser, Values
+from typing import IO
 
 from imo_vmdb import export_table
 from imo_vmdb.command import config_factory
@@ -21,7 +22,7 @@ DB_TABLES = {
 ALL_TABLES = list(DB_TABLES)
 
 
-def main(command_args):
+def main(command_args: list[str]) -> None:
     parser = OptionParser(
         usage="export <table> [options]\n\nTables: " + ", ".join(ALL_TABLES)
     )
@@ -69,7 +70,13 @@ def main(command_args):
             out.close()
 
 
-def _export_db(table, options, parser, out, reimport=False):
+def _export_db(
+    table: str,
+    options: Values,
+    parser: OptionParser,
+    out: IO[str],
+    reimport: bool = False,
+) -> None:
     try:
         config = config_factory(options, parser)
     except SystemExit:

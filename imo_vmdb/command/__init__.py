@@ -2,9 +2,11 @@ import configparser
 import logging
 import os
 import sys
+from configparser import RawConfigParser
+from typing import Any
 
 
-def config_factory(options, parser):
+def config_factory(options: Any, parser: Any) -> RawConfigParser:
     config = configparser.ConfigParser()
 
     # Config file is read first — it takes precedence over environment variables
@@ -40,7 +42,7 @@ def config_factory(options, parser):
 
 
 class LoggerFactory:
-    def __init__(self, config):
+    def __init__(self, config: RawConfigParser) -> None:
         self._log_level = config.get("logging", "level", fallback=logging.INFO)
         log_file = config.get("logging", "file", fallback=None)
 
@@ -58,7 +60,7 @@ class LoggerFactory:
         )
         self._log_handler = handler
 
-    def get_logger(self, name):
+    def get_logger(self, name: str) -> logging.Logger:
         logger = logging.getLogger(name)
         logger.addHandler(self._log_handler)
         logger.setLevel(self._log_level)
