@@ -5,6 +5,13 @@ from imo_vmdb.db import DBException
 
 
 class RateParser(CsvParser):
+    """CSV parser for rate observation data.
+
+    Upserts rows into the ``imported_rate`` table (delete by rate ID, then
+    insert).  With ``do_delete=True``, all existing rows are removed before
+    import.
+    """
+
     _required_columns = {
         "rate id",
         "user id",
@@ -66,6 +73,14 @@ class RateParser(CsvParser):
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
+        """Validate and insert a single rate observation row.
+
+        :param row: Raw CSV row as a list of strings.
+        :param cur: Open database cursor.
+        :return: ``True`` on success, ``False`` if the row was skipped due to
+            a validation error.
+        :raises DBException: On database error.
+        """
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
@@ -121,6 +136,12 @@ class RateParser(CsvParser):
 
     @staticmethod
     def _parse_rate_id(value):
+        """Parse and validate a rate observation ID field.
+
+        :param value: Raw rate ID string from the CSV.
+        :return: Rate ID as a positive integer.
+        :raises ImportException: If the value is empty, non-integer, or less than 1.
+        """
         rate_id = value.strip()
         if "" == rate_id:
             raise ImportException("Observation found without a rate id.")
@@ -135,6 +156,16 @@ class RateParser(CsvParser):
         return rate_id
 
     def _parse_t_eff(self, value, rate_id, session_id):
+        """Parse and validate the effective observation time t_eff in hours.
+
+        :param value: Raw t_eff string from the CSV.
+        :param rate_id: Rate ID used in error messages.
+        :param session_id: Session ID used in error messages.
+        :return: Effective time as a float in (0, 24].  Values above 7 h are
+            only accepted in permissive mode.
+        :raises ImportException: If the value is empty, zero, negative, or
+            exceeds the allowed limit.
+        """
         t_eff = value.strip()
         if "" == t_eff:
             raise ImportException(
@@ -176,6 +207,17 @@ class RateParser(CsvParser):
 
     @staticmethod
     def _parse_f(value, rate_id, session_id):
+        """Parse and validate the field obstruction factor *f*.
+
+        *f* represents the inverse fraction of the sky that is unobstructed;
+        it must be ≥ 1.
+
+        :param value: Raw f string from the CSV.
+        :param rate_id: Rate ID used in error messages.
+        :param session_id: Session ID used in error messages.
+        :return: Obstruction factor as a float ≥ 1.
+        :raises ImportException: If the value is empty, non-numeric, or less than 1.
+        """
         f = value.strip()
         if "" == f:
             raise ImportException(
@@ -200,6 +242,14 @@ class RateParser(CsvParser):
 
     @staticmethod
     def _parse_freq(value, rate_id, session_id):
+        """Parse and validate the observed meteor count.
+
+        :param value: Raw meteor count string from the CSV.
+        :param rate_id: Rate ID used in error messages.
+        :param session_id: Session ID used in error messages.
+        :return: Meteor count as a non-negative integer.
+        :raises ImportException: If the value is non-integer or negative.
+        """
         value = value.strip()
 
         try:
@@ -220,6 +270,14 @@ class RateParser(CsvParser):
 
     @staticmethod
     def _parse_lm(value, rate_id, session_id):
+        """Parse and validate the limiting magnitude of the observation.
+
+        :param value: Raw limiting magnitude string from the CSV.
+        :param rate_id: Rate ID used in error messages.
+        :param session_id: Session ID used in error messages.
+        :return: Limiting magnitude as a float in [0, 8].
+        :raises ImportException: If the value is empty, non-numeric, or out of range.
+        """
         lm = value.strip()
         if "" == lm:
             raise ImportException(

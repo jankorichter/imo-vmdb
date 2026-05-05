@@ -5,10 +5,22 @@ from typing import Any
 
 
 class DBException(Exception):
-    pass
+    """Raised when a database operation fails."""
 
 
 class DBAdapter:
+    """Database connection adapter supporting SQLite and PostgreSQL.
+
+    Wraps a DB-API 2.0 connection and handles driver-specific SQL dialect
+    differences through :meth:`convert_stmt`.  The default backend is
+    ``sqlite3``; a different module can be selected via the ``module`` key
+    in *config*.
+
+    :param config: Connection parameters forwarded to the DB driver's
+        ``connect()`` call.  The optional ``module`` key selects the DB-API
+        module (default: ``"sqlite3"``).
+    """
+
     def __init__(self, config: dict[str, str]) -> None:
         self.db_module = config.get("module", "sqlite3")
         if "module" in config:
@@ -19,15 +31,30 @@ class DBAdapter:
             self.conn.execute("PRAGMA foreign_keys = ON")
 
     def cursor(self) -> Any:
+        """Return a new database cursor.
+
+        :return: A new cursor object from the underlying DB-API 2.0 connection.
+        """
         return self.conn.cursor()
 
     def commit(self) -> None:
+        """Commit the current transaction."""
         self.conn.commit()
 
     def close(self) -> None:
+        """Close the database connection."""
         self.conn.close()
 
     def convert_stmt(self, stmt: str) -> str:
+        """Convert a SQL statement to the active backend's dialect.
+
+        For SQLite, ``%(name)s`` placeholders are rewritten to ``:name`` and
+        ``%%`` sequences are replaced by ``%``.  For all other backends the
+        statement is returned unchanged.
+
+        :param stmt: SQL statement using PostgreSQL-style named placeholders.
+        :return: Dialect-adjusted SQL statement.
+        """
         if "sqlite3" == self.db_module:
             stmt = stmt.replace(" %% ", " % ")
             return re.sub("%\\(([^)]*)\\)s", ":\\1", stmt)
@@ -36,6 +63,15 @@ class DBAdapter:
 
 
 def create_tables(db_conn: "DBAdapter") -> None:
+    """Create the full database schema, dropping all existing tables first.
+
+    Builds the tables ``obs_session``, ``rate``, ``magnitude``,
+    ``magnitude_detail``, ``rate_magnitude``, ``shower``, ``radiant``,
+    ``imported_session``, ``imported_rate``, and ``imported_magnitude``.
+
+    :param db_conn: An open :class:`DBAdapter` connection.
+    :raises DBException: If any DDL statement fails.
+    """
     cur = db_conn.cursor()
 
     try:

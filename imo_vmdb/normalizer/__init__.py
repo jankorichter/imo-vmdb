@@ -7,10 +7,20 @@ from imo_vmdb.db import DBException
 
 
 class NormalizerException(Exception):
-    pass
+    """Raised when a normalised record cannot be written (e.g. radiant below horizon)."""
 
 
 class BaseRecord:
+    """Shared fields for a single imported observation (rate or magnitude).
+
+    Parses and exposes the observation window, session and observer IDs, and
+    the observer's geographic location.  Equality and containment operators
+    implement time-period overlap semantics used for deduplication during
+    normalisation.
+
+    :param record: Dict of raw database columns as returned by the import query.
+    """
+
     def __init__(self, record):
         self.id = record["id"]
         self.shower = record["shower"]
@@ -32,9 +42,20 @@ class BaseRecord:
             self.end = datetime.strptime(record["end"], "%Y-%m-%d %H:%M:%S")
 
     def __eq__(self, other):
+        """Return ``True`` if the observations overlap (same session, same shower, intersecting periods).
+
+        :param other: Another :class:`BaseRecord` to compare against.
+        :return: ``True`` if the two records overlap, ``False`` otherwise.
+        """
         return not self != other
 
     def __ne__(self, other):
+        """Return ``True`` if the observations do not overlap.
+
+        :param other: Another :class:`BaseRecord` to compare against.
+        :return: ``True`` if the records differ in session, shower, or have
+            non-overlapping time periods.
+        """
         if self.session_id != other.session_id:
             return True
 
@@ -50,6 +71,12 @@ class BaseRecord:
         return False
 
     def __contains__(self, other):
+        """Return ``True`` if *other*'s time period is fully contained within this observation's period.
+
+        :param other: Another :class:`BaseRecord` to compare against.
+        :return: ``True`` if *other* overlaps this record and its period falls
+            entirely within this record's period.
+        """
         if self != other:
             return False
 
@@ -60,6 +87,14 @@ class BaseRecord:
 
 
 class BaseNormalizer:
+    """Base class for normalisation passes.
+
+    Tracks read/write/discard counters and provides error-logging helpers.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    :param logger: Logger for error messages.
+    """
+
     def __init__(self, db_conn, logger):
         self._db_conn = db_conn
         self._logger = logger
@@ -69,10 +104,20 @@ class BaseNormalizer:
         self.counter_discard = 0
 
     def _log_error(self, msg):
+        """Log *msg* as an error and set :attr:`has_errors`.
+
+        :param msg: Error message string.
+        """
         self._logger.error(msg)
         self.has_errors = True
 
     def _log_discard(self, session_id, obs_id, reason):
+        """Log that an observation was discarded and increment :attr:`counter_discard`.
+
+        :param session_id: Session ID used in the log message.
+        :param obs_id: Observation ID used in the log message.
+        :param reason: Human-readable reason for discarding the record.
+        """
         self._logger.error(
             "session %s: observation %s discarded - %s" % (session_id, obs_id, reason)
         )
@@ -81,6 +126,18 @@ class BaseNormalizer:
 
 
 def create_rate_magn(db_conn):
+    """Link rate observations to their corresponding magnitude observations.
+
+    Populates the ``rate_magnitude`` table by matching rate and magnitude
+    records that share the same session and shower and whose time periods are
+    equal or where the magnitude period fully contains the rate period.  Each
+    rate may be linked to at most one magnitude record.  Also computes the
+    effective limiting magnitude for each magnitude record as the
+    t_eff-weighted mean of the linked rate limiting magnitudes.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    :raises DBException: On any database error.
+    """
     try:
         cur = db_conn.cursor()
         # find magnitude-rate-pairs containing each other

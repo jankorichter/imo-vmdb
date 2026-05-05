@@ -3,6 +3,12 @@ from imo_vmdb.db import DBException
 
 
 class ShowerParser(CsvParser):
+    """CSV parser for shower catalogue data.
+
+    Upserts rows into the ``shower`` table (delete by IAU code, then insert).
+    With ``do_delete=True``, all existing shower rows are removed before import.
+    """
+
     _month_names = {
         None: None,
         "Jan": 1,
@@ -80,6 +86,14 @@ class ShowerParser(CsvParser):
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
+        """Validate and insert a single shower row.
+
+        :param row: Raw CSV row as a list of strings.
+        :param cur: Open database cursor.
+        :return: ``True`` on success, ``False`` if the row was skipped due to
+            a validation error.
+        :raises DBException: On database error.
+        """
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
@@ -128,6 +142,12 @@ class ShowerParser(CsvParser):
 
     @staticmethod
     def _parse_iau_code(value):
+        """Parse and validate a shower IAU code (must be non-empty).
+
+        :param value: Raw IAU code string from the CSV.
+        :return: Uppercased IAU code.
+        :raises ImportException: If the value is empty.
+        """
         iau_code = value.strip()
         if "" == iau_code:
             raise ImportException("Shower found without an iau_code.")
@@ -136,6 +156,13 @@ class ShowerParser(CsvParser):
 
     @staticmethod
     def _parse_velocity(value, iau_code):
+        """Parse and validate the geocentric entry velocity of a shower in km/s.
+
+        :param value: Raw velocity string from the CSV.
+        :param iau_code: Shower IAU code used in error messages.
+        :return: Velocity in km/s as a float, or ``None`` if the field is empty.
+        :raises ImportException: If the value is non-numeric or outside [11, 75].
+        """
         v = value.strip()
         if "" == v:
             return None
@@ -157,6 +184,13 @@ class ShowerParser(CsvParser):
 
     @staticmethod
     def _parse_r_value(value, iau_code):
+        """Parse and validate the population index *r* of a shower.
+
+        :param value: Raw r-value string from the CSV.
+        :param iau_code: Shower IAU code used in error messages.
+        :return: Population index as a float, or ``None`` if the field is empty.
+        :raises ImportException: If the value is non-numeric or outside [1, 5].
+        """
         r = value.strip()
         if "" == r:
             return None
@@ -177,6 +211,16 @@ class ShowerParser(CsvParser):
 
     @classmethod
     def _create_date(cls, date_str, ctx, iau_code):
+        """Parse a ``Mon DD`` date string into a ``[month, day]`` list.
+
+        :param date_str: Raw date string from the CSV (e.g. ``'Aug 12'``).
+        :param ctx: Field label used in error messages (e.g. ``'start'``).
+        :param iau_code: Shower IAU code used in error messages.
+        :return: List ``[month, day]`` with integer values, or ``[None, None]``
+            if *date_str* is empty.
+        :raises ImportException: If the format is invalid or the date is not
+            a plausible calendar date.
+        """
         date_str = date_str.strip()
 
         if "" == date_str:

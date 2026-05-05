@@ -3,6 +3,11 @@ from imo_vmdb.normalizer import BaseNormalizer
 
 
 class Record:
+    """An observation session record ready to be written to ``obs_session``.
+
+    :param record: Dict of columns from the import query.
+    """
+
     _insert_stmt = """
         INSERT INTO obs_session (
             id,
@@ -37,9 +42,18 @@ class Record:
 
     @classmethod
     def init_stmt(cls, db_conn):
+        """Compile the INSERT statement for the current database dialect.
+
+        :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+        """
         cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
 
     def write(self, cur):
+        """Insert this record into ``obs_session`` using *cur*.
+
+        :param cur: Open database cursor.
+        :raises DBException: On database error.
+        """
         rate = {
             "id": self.id,
             "latitude": self.latitude,
@@ -57,11 +71,24 @@ class Record:
 
 
 class SessionNormalizer(BaseNormalizer):
+    """Copies rows from ``imported_session`` into ``obs_session``.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    :param logger: Logger for error messages.
+    """
+
     def __init__(self, db_conn, logger):
         super().__init__(db_conn, logger)
         Record.init_stmt(db_conn)
 
     def run(self):
+        """Execute the session normalisation pass.
+
+        Reads all rows from ``imported_session`` and upserts them into
+        ``obs_session`` (delete-then-insert by primary key).
+
+        :raises DBException: On database error.
+        """
         db_conn = self._db_conn
 
         try:

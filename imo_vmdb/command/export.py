@@ -23,6 +23,10 @@ ALL_TABLES = list(DB_TABLES)
 
 
 def main(command_args: list[str]) -> None:
+    """Parse arguments and run the CSV export command.
+
+    :param command_args: CLI argument list (typically ``sys.argv[1:]``).
+    """
     parser = OptionParser(
         usage="export <table> [options]\n\nTables: " + ", ".join(ALL_TABLES)
     )
@@ -77,6 +81,14 @@ def _export_db(
     out: IO[str],
     reimport: bool = False,
 ) -> None:
+    """Connect to the database, export *table*, and write semicolon-delimited CSV to *out*.
+
+    :param table: Logical table name (key in :data:`DB_TABLES`).
+    :param options: Parsed options object with a ``config_file`` attribute.
+    :param parser: CLI parser used to print usage on configuration errors.
+    :param out: Writable text stream to receive the CSV output.
+    :param reimport: If ``True``, export in reimport-compatible format.
+    """
     try:
         config = config_factory(options, parser)
     except SystemExit:

@@ -5,6 +5,13 @@ from imo_vmdb.model.radiant import Position
 
 
 class Shower:
+    """A meteor shower with its activity window, radiant drift model, and physical parameters.
+
+    :param record: Dict of database columns from the ``shower`` table.
+    :param drift: :class:`~imo_vmdb.model.radiant.Drift` for this shower, or
+        ``None`` if no per-day radiant positions are available.
+    """
+
     def __init__(self, record, drift):
         self._drift = drift
         self.id = record["id"]
@@ -25,6 +32,14 @@ class Shower:
             self.position = Position(record["ra"], record["dec"])
 
     def get_radiant(self, time):
+        """Return the radiant position for the given observation time.
+
+        Returns ``None`` if *time* falls outside the shower's activity window
+        or if no radiant data is available.
+
+        :param time: :class:`~datetime.datetime` of the observation.
+        :return: :class:`~imo_vmdb.model.radiant.Position`, or ``None``.
+        """
         year = time.year
         start = datetime.datetime(year, self.start_month, self.start_day, 0, 0, 0)
         end = datetime.datetime(year, self.end_month, self.end_day, 23, 59, 59)
@@ -42,10 +57,22 @@ class Shower:
 
 
 class Storage:
+    """Loads shower records from the database and attaches radiant drift models.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    """
+
     def __init__(self, db_conn):
         self._db_conn = db_conn
 
     def load(self, radiants):
+        """Load all shower rows and return a mapping of IAU code to :class:`Shower`.
+
+        :param radiants: Dict of IAU code to :class:`~imo_vmdb.model.radiant.Drift`
+            as returned by :meth:`imo_vmdb.model.radiant.Storage.load`.
+        :return: Dict mapping IAU code strings to :class:`Shower` objects.
+        :raises DBException: On database error.
+        """
         try:
             cur = self._db_conn.cursor()
             cur.execute("SELECT * FROM shower")

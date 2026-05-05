@@ -3,6 +3,13 @@ from imo_vmdb.db import DBException
 
 
 class SessionParser(CsvParser):
+    """CSV parser for observer session data.
+
+    Upserts rows into the ``imported_session`` table (delete by session ID,
+    then insert).  With ``do_delete=True``, all existing rows are removed
+    before import.
+    """
+
     _required_columns = {
         "session id",
         "observer id",
@@ -49,6 +56,14 @@ class SessionParser(CsvParser):
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
+        """Validate and insert a single session row.
+
+        :param row: Raw CSV row as a list of strings.
+        :param cur: Open database cursor.
+        :return: ``True`` on success, ``False`` if the row was skipped due to
+            a validation error.
+        :raises DBException: On database error.
+        """
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
@@ -87,6 +102,13 @@ class SessionParser(CsvParser):
 
     @staticmethod
     def _parse_session_id(value, obs_id=None):
+        """Parse and validate a session ID field.
+
+        :param value: Raw session ID string from the CSV.
+        :param obs_id: Unused; kept for signature compatibility with the base class.
+        :return: Session ID as a positive integer.
+        :raises ImportException: If the value is empty, non-integer, or less than 1.
+        """
         session_id = value.strip()
         if "" == session_id:
             raise ImportException("Session found without a session id.")
@@ -104,6 +126,13 @@ class SessionParser(CsvParser):
 
     @staticmethod
     def _parse_latitude(value, session_id):
+        """Parse and validate a geographic latitude value in degrees.
+
+        :param value: Raw latitude string from the CSV.
+        :param session_id: Session ID used in error messages.
+        :return: Latitude in degrees as a float in [-90, 90].
+        :raises ImportException: If the value is empty, non-numeric, or out of range.
+        """
         lat = value.strip()
         if "" == lat:
             raise ImportException("ID %s: latitude must not be empty." % session_id)
@@ -125,6 +154,13 @@ class SessionParser(CsvParser):
 
     @staticmethod
     def _parse_longitude(value, session_id):
+        """Parse and validate a geographic longitude value in degrees.
+
+        :param value: Raw longitude string from the CSV.
+        :param session_id: Session ID used in error messages.
+        :return: Longitude in degrees as a float in [-180, 180].
+        :raises ImportException: If the value is empty, non-numeric, or out of range.
+        """
         long = value.strip()
         if "" == long:
             raise ImportException("ID %s: longitude must not be empty." % session_id)
@@ -145,6 +181,15 @@ class SessionParser(CsvParser):
         return long
 
     def _parse_elevation(self, value, session_id):
+        """Parse and validate a site elevation value in metres.
+
+        :param value: Raw elevation string from the CSV.
+        :param session_id: Session ID used in error messages.
+        :return: Elevation as a float, or ``None`` if empty and
+            :attr:`_is_permissive` is enabled.
+        :raises ImportException: If the value is empty (in strict mode) or
+            non-numeric.
+        """
         elevation = value.strip()
         if "" == elevation:
             if self._is_permissive:
@@ -166,6 +211,15 @@ class SessionParser(CsvParser):
 
     @staticmethod
     def _parse_text(value, ctx, session_id):
+        """Parse and validate a required text field.
+
+        :param value: Raw string from the CSV.
+        :param ctx: Field label used in error messages (e.g. ``'city'``).
+        :param session_id: Session ID used in error messages.
+        :return: Stripped non-empty string.
+        :raises ImportException: If the value is empty or cannot be converted
+            to a string.
+        """
         value = value.strip()
         if "" == value:
             raise ImportException("ID %s: %s must be set." % (session_id, ctx))
@@ -180,6 +234,12 @@ class SessionParser(CsvParser):
         return value
 
     def _parse_observer_name(self, value, session_id):
+        """Parse an optional observer name field.
+
+        :param value: Raw observer name string from the CSV.
+        :param session_id: Session ID used in error and warning messages.
+        :return: Stripped observer name string, or ``None`` if empty.
+        """
         value = value.strip()
         if "" == value:
             self._logger.warning("ID %s: observer name is empty." % session_id)

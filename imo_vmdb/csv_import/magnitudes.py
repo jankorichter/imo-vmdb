@@ -7,6 +7,14 @@ from imo_vmdb.db import DBException
 
 
 class MagnitudesParser(CsvParser):
+    """CSV parser for magnitude distribution data.
+
+    Reads per-magnitude counts (mag n6 … mag 7) and stores them as a JSON
+    blob in ``imported_magnitude``.  Rows with a total meteor count of zero
+    are silently skipped.  With ``do_delete=True``, all existing rows are
+    removed before import.
+    """
+
     _required_columns = {
         "magnitude id",
         "user id",
@@ -65,6 +73,14 @@ class MagnitudesParser(CsvParser):
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
+        """Validate and insert a single magnitude observation row.
+
+        :param row: Raw CSV row as a list of strings.
+        :param cur: Open database cursor.
+        :return: ``True`` on success, ``False`` if the row was skipped due to
+            a validation error.
+        :raises DBException: On database error.
+        """
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
@@ -137,6 +153,12 @@ class MagnitudesParser(CsvParser):
 
     @staticmethod
     def _parse_magn_id(value):
+        """Parse and validate a magnitude observation ID field.
+
+        :param value: Raw magnitude ID string from the CSV.
+        :return: Magnitude ID as a positive integer.
+        :raises ImportException: If the value is empty, non-integer, or less than 1.
+        """
         magn_id = value.strip()
         if "" == magn_id:
             raise ImportException("Observation found without a magnitude id.")
@@ -154,6 +176,14 @@ class MagnitudesParser(CsvParser):
 
     @staticmethod
     def _validate_count(n, m, magn_id, session_id):
+        """Validate that a per-magnitude count is non-negative and a whole or half number.
+
+        :param n: Count value to validate.
+        :param m: Magnitude class (string key) used in error messages.
+        :param magn_id: Magnitude ID used in error messages.
+        :param session_id: Session ID used in error messages.
+        :raises ImportException: If *n* is negative or not a whole or half-integer.
+        """
         if n < 0.0:
             raise ImportException(
                 "session %s: ID %s: Invalid count %s found for a meteor magnitude of %s."
@@ -174,6 +204,14 @@ class MagnitudesParser(CsvParser):
         )
 
     def _validate_total_count(self, magn, magn_id, session_id):
+        """Validate that the sum of all magnitude counts is a whole number.
+
+        :param magn: Dict mapping magnitude class strings to count values.
+        :param magn_id: Magnitude ID used in error messages.
+        :param session_id: Session ID used in error messages.
+        :raises ImportException: If the cumulative sum contains a fractional
+            remainder or the total is not an integer.
+        """
         is_permissive = self._is_permissive
         n_sum = 0
         for m in sorted(magn.keys(), key=int):

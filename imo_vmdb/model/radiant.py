@@ -2,16 +2,39 @@ from imo_vmdb.db import DBException
 
 
 class Position:
+    """Right ascension and declination of a meteor shower radiant.
+
+    :param ra: Right ascension in degrees.
+    :param dec: Declination in degrees.
+    """
+
     def __init__(self, ra, dec):
         self.ra = ra
         self.dec = dec
 
 
 class Drift:
+    """Radiant drift model that interpolates radiant position between tabulated daily entries.
+
+    For showers that provide multiple radiant positions keyed by day-of-year,
+    :meth:`get_position` linearly interpolates between the two nearest entries.
+    Interpolated positions are cached in the position list.
+
+    :param positions: List of dicts, each with keys ``yday`` (integer day of
+        year) and ``pos`` (:class:`Position`).
+    """
+
     def __init__(self, positions):
         self._positions = positions
 
     def get_position(self, time):
+        """Return the interpolated radiant position for the given date.
+
+        :param time: :class:`~datetime.datetime` whose day-of-year is used for
+            interpolation.
+        :return: Interpolated :class:`Position`, or ``None`` if the date falls
+            outside the tabulated range.
+        """
         positions = self._positions
         if len(positions) == 1:
             p = positions[0]
@@ -65,11 +88,17 @@ class Drift:
 
 
 class Storage:
+    """Loads radiant drift data from the database.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    """
+
     def __init__(self, db_conn):
         self._db_conn = db_conn
 
     @staticmethod
     def _get_ydays():
+        """Return cumulative day-of-year offsets for each month (no leap-year adjustment)."""
         month_lengths = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30]
         ydays = []  # day of the year per month
         last = 0
@@ -81,6 +110,11 @@ class Storage:
         return ydays
 
     def load(self):
+        """Load all radiant entries and return a mapping of IAU code to :class:`Drift`.
+
+        :return: Dict mapping shower IAU code strings to :class:`Drift` objects.
+        :raises DBException: On database error.
+        """
         ydays = self._get_ydays()
         radiants = {}
 

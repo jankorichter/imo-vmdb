@@ -7,6 +7,18 @@ from astropy.time import Time as AstropyTime
 
 
 class Sphere:
+    """A point in spherical coordinates (longitude, latitude, radius).
+
+    All angles are in radians. Can be constructed from explicit ``(lng, lat)``
+    values or by converting a :class:`Cartesian` point.
+
+    :param lng: Longitude in radians (normalised to [0, 2π]).
+    :param lat: Latitude in radians.
+    :param r: Radius (default 1.0).
+    :param c: :class:`Cartesian` point to convert; if given, ``lng``, ``lat``
+        and ``r`` are derived from it.
+    """
+
     def __init__(self, lng=None, lat=None, r=1.0, c=None):
         if c is None:
             self.r = r
@@ -29,11 +41,29 @@ class Sphere:
 
 
 class Location(Sphere):
+    """Geographic observer location on the Earth's surface.
+
+    :param lng: Geographic longitude in radians (east positive).
+    :param lat: Geographic latitude in radians (north positive).
+    """
+
     def __init__(self, lng=None, lat=None):
         super().__init__(lng, lat)
 
 
 class Cartesian:
+    """A point in 3-D Cartesian coordinates.
+
+    Can be constructed from explicit ``(x, y, z)`` values or by converting a
+    :class:`Sphere` point.
+
+    :param x: X component.
+    :param y: Y component.
+    :param z: Z component.
+    :param s: :class:`Sphere` point to convert; if given, explicit components
+        are ignored.
+    """
+
     def __init__(self, x=None, y=None, z=None, s=None):
         if s is None:
             self.x = x
@@ -50,6 +80,15 @@ class Cartesian:
 
 
 class Ephemeris:
+    """Pre-computed heliocentric and geocentric body positions for a single UTC day.
+
+    Fetches Sun and Moon positions via :mod:`astropy` (built-in ephemeris) and
+    stores them as :class:`Cartesian` vectors so they can be linearly
+    interpolated within the day by :class:`Sky`.
+
+    :param day: Midnight UTC of the day as a :class:`~datetime.datetime`.
+    """
+
     def __init__(self, day):
         self.day = day
         at = AstropyTime(day, format="datetime", scale="utc")
@@ -65,6 +104,12 @@ class Ephemeris:
 
     @staticmethod
     def _cartesian(spherical):
+        """Extract Cartesian components from an astropy SkyCoord.
+
+        :param spherical: Astropy sky coordinate object with a ``cartesian``
+            attribute exposing ``.x``, ``.y``, ``.z`` in AU.
+        :return: :class:`Cartesian` with the extracted components.
+        """
         return Cartesian(
             x=spherical.cartesian.x.value,
             y=spherical.cartesian.y.value,
@@ -73,10 +118,25 @@ class Ephemeris:
 
 
 class Sky:
+    """Astronomical calculations for observation normalisation.
+
+    Caches daily :class:`Ephemeris` objects and interpolates body positions to
+    arbitrary UTC times within each day.  All returned angles are in radians
+    unless noted otherwise.
+    """
+
     def __init__(self):
         self._days = {}
 
     def sun(self, t, loc=None):
+        """Return the Sun's position at time *t*.
+
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :param loc: Observer :class:`Location`. When given, returns horizontal
+            coordinates (altitude in ``lat``, azimuth in ``lng``); otherwise
+            equatorial (RA, Dec).
+        :return: :class:`Sphere` with the Sun's position in radians.
+        """
         e0, e1 = self._get_time_range(t)
         coord = self._approx(t, e0.day, e1.day, e0.sun, e1.sun)
         s = Sphere(c=coord)
@@ -86,6 +146,11 @@ class Sky:
         return self.alt_az(s, t, loc)
 
     def solarlong(self, t):
+        """Return the ecliptic longitude of the Sun (solar longitude) at *t*.
+
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :return: Solar longitude in radians, in [0, 2π].
+        """
         e0, e1 = self._get_time_range(t)
         sun = Sphere(
             c=self._approx(t, e0.day, e1.day, e0.sun_ecliptic, e1.sun_ecliptic)
@@ -93,6 +158,13 @@ class Sky:
         return sun.lng if sun.lng > 0.0 else sun.lng + 2 * math.pi
 
     def moon(self, t, loc=None):
+        """Return the Moon's position at time *t*.
+
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :param loc: Observer :class:`Location`. When given, returns horizontal
+            coordinates; otherwise equatorial.
+        :return: :class:`Sphere` with the Moon's position in radians.
+        """
         e0, e1 = self._get_time_range(t)
         coord = self._approx(t, e0.day, e1.day, e0.moon, e1.moon)
         s = Sphere(c=coord)
@@ -102,6 +174,11 @@ class Sky:
         return self.alt_az(s, t, loc)
 
     def moon_illumination(self, t):
+        """Return the fraction of the Moon's disk that is illuminated at *t*.
+
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :return: Illuminated fraction in [0, 1].
+        """
         e0, e1 = self._get_time_range(t)
         sun = Sphere(c=self._approx(t, e0.day, e1.day, e0.sun, e1.sun))
         sun.r *= 149597870.7  # AE in km
@@ -116,6 +193,12 @@ class Sky:
         return (1 + math.cos(moon_phase_angle)) / 2.0
 
     def _get_time_range(self, t):
+        """Return the pair of :class:`Ephemeris` objects bracketing *t* (today and tomorrow).
+
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :return: Tuple ``(e0, e1)`` where ``e0`` is the ephemeris for midnight
+            of *t*'s date and ``e1`` is for the following midnight.
+        """
         t0 = datetime(t.year, t.month, t.day, 0, 0, 0)
         t1 = t0 + timedelta(days=1)
         if t0 not in self._days:
@@ -127,6 +210,15 @@ class Sky:
 
     @staticmethod
     def _approx(t, t0, t1, s0, s1):
+        """Linearly interpolate between two :class:`Cartesian` positions.
+
+        :param t: Target time as :class:`~datetime.datetime`.
+        :param t0: Start time (midnight of the day) as :class:`~datetime.datetime`.
+        :param t1: End time (midnight of the next day) as :class:`~datetime.datetime`.
+        :param s0: :class:`Cartesian` position at *t0*.
+        :param s1: :class:`Cartesian` position at *t1*.
+        :return: Interpolated :class:`Cartesian` position at *t*.
+        """
         f = (t - t0) / (t1 - t0)
         return Cartesian(
             x=f * (s1.x - s0.x) + s0.x,
@@ -136,11 +228,25 @@ class Sky:
 
     @staticmethod
     def sidereal_time(t, loc):
+        """Return the mean local sidereal time in radians for observer *loc* at time *t*.
+
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :param loc: Observer :class:`Location`.
+        :return: Local mean sidereal time in radians.
+        """
         at = AstropyTime(t, format="datetime", scale="utc")
         return at.sidereal_time("mean", longitude=loc.lng * u.rad).rad
 
     @classmethod
     def alt_az(cls, s, t, loc):
+        """Convert equatorial coordinates to horizontal (altitude/azimuth) coordinates.
+
+        :param s: :class:`Sphere` with equatorial coordinates (RA, Dec in radians).
+        :param t: UTC time as :class:`~datetime.datetime`.
+        :param loc: Observer :class:`Location`.
+        :return: :class:`Sphere` with altitude in ``lat`` and azimuth in ``lng``,
+            both in radians.
+        """
         st = cls.sidereal_time(t, loc)
         st_diff = st - s.lng
         x = math.sin(loc.lat) * math.cos(s.lat) * math.cos(st_diff) - math.cos(

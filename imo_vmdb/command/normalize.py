@@ -7,6 +7,10 @@ from imo_vmdb.db import DBAdapter, DBException
 
 
 def main(command_args: list[str]) -> None:
+    """Parse arguments and run the normalisation command.
+
+    :param command_args: CLI argument list (typically ``sys.argv[1:]``).
+    """
     parser = OptionParser(usage="normalize [options]")
     parser.add_option(
         "-c", action="store", dest="config_file", help="path to config file"

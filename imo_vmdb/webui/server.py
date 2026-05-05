@@ -7,6 +7,14 @@ from imo_vmdb.webui import create_app
 
 
 def main(args=None):
+    """Parse CLI arguments and start the Flask development server.
+
+    Reads configuration via :func:`~imo_vmdb.command.config_factory`, resolves
+    the bind port (CLI flag > config file ``[webui] port`` > default 8000),
+    and runs the app with threading enabled.
+
+    :param args: Argument list; defaults to ``sys.argv[1:]`` when ``None``.
+    """
     parser = argparse.ArgumentParser(
         description="imo-vmdb web_server (Web UI and REST API)"
     )

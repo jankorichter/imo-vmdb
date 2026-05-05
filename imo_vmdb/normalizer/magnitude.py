@@ -6,6 +6,15 @@ from imo_vmdb.normalizer import BaseNormalizer, BaseRecord
 
 
 class Record(BaseRecord):
+    """A single magnitude observation with its per-magnitude counts.
+
+    Extends :class:`~imo_vmdb.normalizer.BaseRecord` with the JSON-encoded
+    magnitude distribution and the :meth:`write` method that computes the
+    mean magnitude and inserts both the summary and detail rows.
+
+    :param record: Dict of columns from the import query.
+    """
+
     _insert_stmt = """
         INSERT INTO magnitude (
             id,
@@ -48,10 +57,20 @@ class Record(BaseRecord):
 
     @classmethod
     def init_stmt(cls, db_conn):
+        """Compile INSERT statements for the current database dialect.
+
+        :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+        """
         cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
         cls._insert_detail_stmt = db_conn.convert_stmt(cls._insert_detail_stmt)
 
     def write(self, cur, sky):
+        """Compute the mean magnitude and insert rows into ``magnitude`` and ``magnitude_detail``.
+
+        :param cur: Open database cursor.
+        :param sky: :class:`~imo_vmdb.model.sky.Sky` instance for solar longitude.
+        :raises DBException: On database error.
+        """
         mid = self.id
         freq = int(sum(m for m in self.magn.values()))
         magn_items = self.magn.items()
@@ -89,12 +108,27 @@ class Record(BaseRecord):
 
 
 class MagnitudeNormalizer(BaseNormalizer):
+    """Normalises magnitude observations from ``imported_magnitude`` into ``magnitude``.
+
+    Reads records joined to ``obs_session``, discards observations with
+    mismatched observer IDs or overlapping time periods, and writes the
+    remainder with computed solar longitude and mean magnitude.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    :param logger: Logger for error messages.
+    :param sky: :class:`~imo_vmdb.model.sky.Sky` instance for solar longitude.
+    """
+
     def __init__(self, db_conn, logger, sky):
         super().__init__(db_conn, logger)
         self._sky = sky
         Record.init_stmt(db_conn)
 
     def run(self):
+        """Execute the magnitude normalisation pass.
+
+        :raises DBException: On database error.
+        """
         db_conn = self._db_conn
         try:
             cur = db_conn.cursor()

@@ -3,6 +3,12 @@ from imo_vmdb.db import DBException
 
 
 class RadiantParser(CsvParser):
+    """CSV parser for radiant drift data (columns: shower, ra, dec, month, day).
+
+    Upserts rows into the ``radiant`` table.  With ``do_delete=True``, all
+    existing radiant rows are removed before import.
+    """
+
     _required_columns = {"shower", "ra", "dec", "day", "month"}
 
     def __init__(self, *args, **kwars):
@@ -34,6 +40,14 @@ class RadiantParser(CsvParser):
                 raise DBException(str(e))
 
     def parse_row(self, row, cur):
+        """Validate and insert a single radiant row.
+
+        :param row: Raw CSV row as a list of strings.
+        :param cur: Open database cursor.
+        :return: ``True`` on success, ``False`` if the row was skipped due to
+            a validation error.
+        :raises DBException: On database error.
+        """
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
@@ -70,6 +84,12 @@ class RadiantParser(CsvParser):
 
     @staticmethod
     def _parse_shower(value):
+        """Parse and validate a shower code (must be non-empty).
+
+        :param value: Raw shower code string from the CSV.
+        :return: Uppercased shower IAU code.
+        :raises ImportException: If the value is empty.
+        """
         shower = value.strip()
         if "" == shower:
             raise ImportException("Shower code must not be empty.")
@@ -78,6 +98,14 @@ class RadiantParser(CsvParser):
 
     @staticmethod
     def _parse_int(value, ctx, iau_code):
+        """Parse a string as an integer.
+
+        :param value: Raw integer string from the CSV.
+        :param ctx: Field label used in error messages (e.g. ``'month'``).
+        :param iau_code: Shower IAU code used in error messages.
+        :return: Parsed integer value.
+        :raises ImportException: If the value cannot be converted to an integer.
+        """
         value = value.strip()
 
         try:

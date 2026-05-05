@@ -49,6 +49,13 @@ _VALID_TABLES = frozenset(
 
 
 def _format_date(month: int | None, day: int | None) -> str:
+    """Format a month/day pair as an abbreviated month name and day number.
+
+    :param month: Month as an integer (1–12), or ``None``.
+    :param day: Day as an integer, or ``None``.
+    :return: Formatted string such as ``'Aug 12'``, or an empty string if
+        either value is ``None``.
+    """
     if month is None or day is None:
         return ""
     return f"{_MONTH_NAMES[month]} {day}"
@@ -85,6 +92,14 @@ def export_table(
 
 
 def _export_shower_reimport(db_conn: DBAdapter) -> tuple[list[str], list[tuple]]:
+    """Export the ``shower`` table in a format compatible with :class:`CSVImporter`.
+
+    Converts start/end/peak month–day pairs into ``'Mon DD'`` strings and
+    renames the ``dec`` column to ``de`` to match the import CSV schema.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    :return: Tuple ``(column_names, rows)`` ready for CSV serialisation.
+    """
     cur = db_conn.cursor()
     cur.execute(
         "SELECT id, iau_code, name, start_month, start_day, end_month, end_day,"
@@ -237,6 +252,13 @@ class CSVImporter:
         self.has_errors = True
 
     def _parse_csv_file(self, csv_file, cur):
+        """Parse a single open CSV file, routing each row to the appropriate parser.
+
+        :param csv_file: Open text file object for the CSV file.
+        :param cur: Open database cursor passed to the parser's row handler.
+        :raises CSVFileException: If the CSV reader cannot be initialised.
+        :raises CSVParserException: If no parser recognises the file's columns.
+        """
         try:
             csv_reader = csv.reader(csv_file, delimiter=";")
         except Exception:
@@ -260,6 +282,14 @@ class CSVImporter:
                 self.counter_write += 1
 
     def _create_csv_parser(self, row):
+        """Return the parser responsible for the CSV file identified by *row*.
+
+        Re-uses an already active parser of the same type if one exists.
+
+        :param row: Header row of the CSV file as a list of strings.
+        :return: Initialised :class:`~imo_vmdb.csv_import.CsvParser` subclass
+            instance, or ``None`` if no registered parser recognises the columns.
+        """
         args = (self._db_conn, self._logger)
         kwargs = {
             "do_delete": self._do_delete,

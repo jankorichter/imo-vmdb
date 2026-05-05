@@ -6,6 +6,16 @@ from imo_vmdb.normalizer import BaseNormalizer, BaseRecord, NormalizerException
 
 
 class Record(BaseRecord):
+    """A single rate observation enriched with computed astronomical quantities.
+
+    Extends :class:`~imo_vmdb.normalizer.BaseRecord` with observation-specific
+    fields (effective time, field limitation factor, limiting magnitude, field
+    pointing, radiant) and the :meth:`write` method that computes and persists
+    the derived values.
+
+    :param record: Dict of columns from the import query.
+    """
+
     _insert_stmt = """
         INSERT INTO rate (
             id,
@@ -68,10 +78,23 @@ class Record(BaseRecord):
 
     @classmethod
     def init_stmt(cls, db_conn):
+        """Compile the INSERT statement for the current database dialect.
+
+        :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+        """
         cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
 
     @staticmethod
     def _zenith_coor(alt, v):
+        """Apply zenith attraction correction to an altitude.
+
+        Corrects the observed radiant altitude for the gravitational focusing
+        of meteors towards the zenith (Gural 2000, WGN 29:4, pp. 134–138).
+
+        :param alt: Observed altitude in radians.
+        :param v: Shower geocentric velocity in km/s.
+        :return: Corrected altitude in radians.
+        """
         # Peter S. Gural, WGN 29:4 (2000), p134-138
         z = math.pi / 2.0 - alt
         w = math.sqrt(pow(v, 2) + 123.06)
@@ -79,6 +102,18 @@ class Record(BaseRecord):
         return math.pi / 2.0 - zo
 
     def write(self, cur, sky, showers):
+        """Compute derived values and insert the record into the ``rate`` table.
+
+        Derives solar longitude, sidereal time, Sun and Moon positions, field
+        alt/az, and radiant alt/az (with zenith attraction correction).
+
+        :param cur: Database cursor.
+        :param sky: :class:`~imo_vmdb.model.sky.Sky` instance for ephemeris lookups.
+        :param showers: Dict of IAU code to :class:`~imo_vmdb.model.shower.Shower`.
+        :raises DBException: On database error.
+        :raises NormalizerException: If the field or radiant is too far below
+            the horizon, or the Sun is above the horizon.
+        """
         iau_code = self.shower
         t_abs = self.end - self.start
         t_mean = self.start + t_abs / 2
@@ -155,6 +190,18 @@ class Record(BaseRecord):
 
 
 class RateNormalizer(BaseNormalizer):
+    """Normalises rate observations from ``imported_rate`` into the ``rate`` table.
+
+    Reads records joined to ``obs_session``, discards observations with
+    mismatched observer IDs or overlapping time periods, and writes the
+    remainder with computed astronomical quantities.
+
+    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
+    :param logger: Logger for error messages.
+    :param sky: :class:`~imo_vmdb.model.sky.Sky` instance for ephemeris lookups.
+    :param showers: Dict of IAU code to :class:`~imo_vmdb.model.shower.Shower`.
+    """
+
     def __init__(self, db_conn, logger, sky, showers):
         super().__init__(db_conn, logger)
         self._sky = sky
@@ -162,6 +209,10 @@ class RateNormalizer(BaseNormalizer):
         Record.init_stmt(db_conn)
 
     def run(self):
+        """Execute the rate normalisation pass.
+
+        :raises DBException: On database error.
+        """
         db_conn = self._db_conn
         try:
             cur = db_conn.cursor()

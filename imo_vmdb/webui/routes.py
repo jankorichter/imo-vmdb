@@ -24,11 +24,22 @@ _DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "built_docs")
 
 
 def _db_factory(config):
+    """Return a factory callable that opens a new :class:`~imo_vmdb.db.DBAdapter` from *config*.
+
+    :param config: Parsed :class:`~configparser.RawConfigParser` with a
+        ``[database]`` section.
+    :return: Zero-argument callable that returns a new :class:`~imo_vmdb.db.DBAdapter`.
+    """
     db_section = dict(config["database"]) if config.has_section("database") else {}
     return lambda: DBAdapter(db_section)
 
 
 def _get_db():
+    """Return ``(db_conn, None)`` or ``(None, error_message)`` using the current app config.
+
+    :return: Tuple ``(db_conn, None)`` on success, or ``(None, str)`` if no
+        database is configured.
+    """
     config = current_app.config["IMO_CONFIG"]
     if not config.has_section("database"):
         return None, "No database configured"
@@ -36,6 +47,14 @@ def _get_db():
 
 
 def _csv_response(content, filename):
+    """Wrap *content* in an HTTP response with CSV download headers.
+
+    :param content: CSV string to send as the response body.
+    :param filename: Suggested download filename for the
+        ``Content-Disposition`` header.
+    :return: :class:`flask.Response` with ``text/csv`` content type and
+        attachment disposition.
+    """
     resp = make_response(content)
     resp.headers["Content-Type"] = "text/csv; charset=utf-8"
     resp.headers["Content-Disposition"] = f"attachment; filename={filename}"
@@ -43,6 +62,12 @@ def _csv_response(content, filename):
 
 
 def _table_to_csv(cols, rows):
+    """Serialise *cols* and *rows* to a semicolon-delimited CSV string.
+
+    :param cols: List of column header strings.
+    :param rows: Iterable of row tuples.
+    :return: Complete CSV string including the header row.
+    """
     out = io.StringIO()
     writer = csv.writer(out, delimiter=";")
     writer.writerow(cols)
@@ -51,6 +76,13 @@ def _table_to_csv(cols, rows):
 
 
 def _export_table_route(table, filename, reimport=False):
+    """Query *table* and return its contents as a downloadable CSV response.
+
+    :param table: Database table name to export.
+    :param filename: Suggested download filename.
+    :param reimport: If ``True``, export in reimport-compatible format.
+    :return: CSV download response, or a JSON error response with status 503.
+    """
     db_conn, err = _get_db()
     if err:
         return jsonify({"error": err}), 503
@@ -65,12 +97,21 @@ def _export_table_route(table, filename, reimport=False):
 
 @bp.route("/")
 def index():
+    """Render the main web UI page.
+
+    :return: Rendered ``index.html`` template.
+    """
     return render_template("index.html")
 
 
 @bp.route("/docs/")
 @bp.route("/docs/<path:filename>")
 def docs(filename="index.html"):
+    """Serve static documentation files from the pre-built docs directory.
+
+    :param filename: Path within the docs directory (default: ``index.html``).
+    :return: Static file response, or a 404 text response if the docs are not built.
+    """
     docs_dir = os.path.abspath(_DOCS_DIR)
     if not os.path.isdir(docs_dir):
         return "Documentation not built.", 404
@@ -79,6 +120,11 @@ def docs(filename="index.html"):
 
 @bp.route("/run/initdb", methods=["POST"])
 def run_initdb():
+    """Start a database initialisation job.
+
+    :return: JSON ``{"job_id": str}`` on success, or
+        ``{"error": str}`` with status 409 if a job is already running.
+    """
     config = current_app.config["IMO_CONFIG"]
     job_manager = current_app.config["JOB_MANAGER"]
     job_id = job_manager.start_initdb(_db_factory(config))
@@ -89,6 +135,11 @@ def run_initdb():
 
 @bp.route("/run/normalize", methods=["POST"])
 def run_normalize():
+    """Start a normalisation job.
+
+    :return: JSON ``{"job_id": str}`` on success, or
+        ``{"error": str}`` with status 409 if a job is already running.
+    """
     config = current_app.config["IMO_CONFIG"]
     job_manager = current_app.config["JOB_MANAGER"]
     job_id = job_manager.start_normalize(_db_factory(config))
@@ -99,6 +150,11 @@ def run_normalize():
 
 @bp.route("/run/cleanup", methods=["POST"])
 def run_cleanup():
+    """Start a cleanup job.
+
+    :return: JSON ``{"job_id": str}`` on success, or
+        ``{"error": str}`` with status 409 if a job is already running.
+    """
     config = current_app.config["IMO_CONFIG"]
     job_manager = current_app.config["JOB_MANAGER"]
     job_id = job_manager.start_cleanup(_db_factory(config))
@@ -109,6 +165,15 @@ def run_cleanup():
 
 @bp.route("/run/import_csv", methods=["POST"])
 def run_import_csv():
+    """Accept uploaded CSV files and start a CSV import job.
+
+    Reads form fields ``do_delete``, ``is_permissive``, and ``try_repair``
+    (each ``"1"`` to enable) and a ``files`` multipart upload list.
+
+    :return: JSON ``{"job_id": str}`` on success, ``{"error": str}`` with
+        status 400 if no files were provided, or status 409 if a job is
+        already running.
+    """
     config = current_app.config["IMO_CONFIG"]
     job_manager = current_app.config["JOB_MANAGER"]
     upload_dir = current_app.config["UPLOAD_DIR"]
@@ -151,6 +216,13 @@ def run_import_csv():
 
 @bp.route("/stream/<job_id>")
 def stream(job_id):
+    """Stream log output for a job as Server-Sent Events.
+
+    :param job_id: Job ID from a previous ``/run/*`` response.
+    :return: SSE stream (``text/event-stream``) with one ``data:`` event per
+        log line, terminated by a ``done`` event.  Returns JSON with status
+        404 if the job ID is unknown.
+    """
     job_manager = current_app.config["JOB_MANAGER"]
     log_iter = job_manager.iter_logs(job_id)
     if log_iter is None:
@@ -171,6 +243,12 @@ def stream(job_id):
 
 @bp.route("/status/<job_id>")
 def status(job_id):
+    """Return the current status of a job.
+
+    :param job_id: Job ID from a previous ``/run/*`` response.
+    :return: JSON ``{"running": bool, "exit_code": int|null}``, or JSON with
+        status 404 if the job ID is unknown.
+    """
     job_manager = current_app.config["JOB_MANAGER"]
     job_status = job_manager.get_status(job_id)
     if job_status is None:
@@ -180,36 +258,68 @@ def status(job_id):
 
 @bp.route("/export/shower")
 def export_shower():
+    """Export the shower catalogue as a CSV download.
+
+    Accepts optional query parameter ``reimport=1`` to use reimport format.
+
+    :return: Semicolon-delimited CSV response with the ``shower`` table contents.
+    """
     reimport = request.args.get("reimport") == "1"
     return _export_table_route("shower", "shower.csv", reimport=reimport)
 
 
 @bp.route("/export/radiant")
 def export_radiant():
+    """Export the radiant drift table as a CSV download.
+
+    Accepts optional query parameter ``reimport=1`` to use reimport format.
+
+    :return: Semicolon-delimited CSV response with the ``radiant`` table contents.
+    """
     reimport = request.args.get("reimport") == "1"
     return _export_table_route("radiant", "radiant.csv", reimport=reimport)
 
 
 @bp.route("/export/session")
 def export_session():
+    """Export the observation session table as a CSV download.
+
+    :return: Semicolon-delimited CSV response with the ``obs_session`` table contents.
+    """
     return _export_table_route("obs_session", "session.csv")
 
 
 @bp.route("/export/rate")
 def export_rate():
+    """Export the rate observation table as a CSV download.
+
+    :return: Semicolon-delimited CSV response with the ``rate`` table contents.
+    """
     return _export_table_route("rate", "rate.csv")
 
 
 @bp.route("/export/rate_magnitude")
 def export_rate_magnitude():
+    """Export the rate–magnitude linking table as a CSV download.
+
+    :return: Semicolon-delimited CSV response with the ``rate_magnitude`` table contents.
+    """
     return _export_table_route("rate_magnitude", "rate_magnitude.csv")
 
 
 @bp.route("/export/magnitude")
 def export_magnitude():
+    """Export the magnitude observation table as a CSV download.
+
+    :return: Semicolon-delimited CSV response with the ``magnitude`` table contents.
+    """
     return _export_table_route("magnitude", "magnitude.csv")
 
 
 @bp.route("/export/magnitude_detail")
 def export_magnitude_detail():
+    """Export the magnitude detail table as a CSV download.
+
+    :return: Semicolon-delimited CSV response with the ``magnitude_detail`` table contents.
+    """
     return _export_table_route("magnitude_detail", "magnitude_detail.csv")

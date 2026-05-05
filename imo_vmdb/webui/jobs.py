@@ -13,11 +13,17 @@ from imo_vmdb.db import DBAdapter
 
 
 class _QueueHandler(logging.Handler):
+    """Logging handler that forwards formatted records to a :class:`queue.Queue`.
+
+    :param q: Queue to push formatted log line strings to.
+    """
+
     def __init__(self, q: queue.Queue[str]) -> None:
         super().__init__()
         self.queue = q
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Format *record* and push it to the queue."""
         self.queue.put(self.format(record))
 
 
@@ -39,6 +45,11 @@ class JobManager:
         self._lock = threading.Lock()
 
     def _make_logger(self, job_id: str) -> logging.Logger:
+        """Create a job-specific logger that writes formatted lines to the job's queue.
+
+        :param job_id: ID of the job whose queue will receive log records.
+        :return: Configured :class:`logging.Logger` instance for the job.
+        """
         q = self._jobs[job_id]["queue"]
         handler = _QueueHandler(q)
         handler.setFormatter(
@@ -54,12 +65,21 @@ class JobManager:
         return logger
 
     def _finish_job(self, job_id: str, exit_code: int) -> None:
+        """Mark *job_id* as finished, record its exit code, and signal the log iterator to stop.
+
+        :param job_id: ID of the job to finalise.
+        :param exit_code: Exit code to store (0 = success).
+        """
         with self._lock:
             self._jobs[job_id]["running"] = False
             self._jobs[job_id]["exit_code"] = exit_code
         self._jobs[job_id]["queue"].put(None)
 
     def _allocate_job(self) -> str | None:
+        """Atomically allocate a new job ID if no other job is currently running.
+
+        :return: New UUID job ID string, or ``None`` if a job is already running.
+        """
         with self._lock:
             if any(j["running"] for j in self._jobs.values()):
                 return None
@@ -77,6 +97,13 @@ class JobManager:
         fn: Callable[[DBAdapter, logging.Logger], int | None],
         db_conn_factory: Callable[[], DBAdapter],
     ) -> None:
+        """Thread target for single-function jobs (initdb, normalize, cleanup).
+
+        :param job_id: Allocated job ID.
+        :param fn: Core function to call with ``(db_conn, logger)``; its return
+            value is used as the exit code (``None`` is treated as 0).
+        :param db_conn_factory: Callable returning a new database connection.
+        """
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
@@ -99,6 +126,16 @@ class JobManager:
         is_permissive: bool,
         try_repair: bool,
     ) -> None:
+        """Thread target for CSV import jobs. Deletes uploaded files after completion.
+
+        :param job_id: Allocated job ID.
+        :param db_conn_factory: Callable returning a new database connection.
+        :param file_paths: Paths to the uploaded CSV files; deleted after the
+            job finishes regardless of outcome.
+        :param do_delete: Delete existing records before importing.
+        :param is_permissive: Accept non-critical data errors.
+        :param try_repair: Attempt automatic repair of malformed records.
+        """
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
@@ -134,6 +171,14 @@ class JobManager:
         output_path: str,
         reimport: bool,
     ) -> None:
+        """Thread target for CSV export jobs.
+
+        :param job_id: Allocated job ID.
+        :param db_conn_factory: Callable returning a new database connection.
+        :param table: Table name to export (passed to :func:`~imo_vmdb.export_table`).
+        :param output_path: File path where the semicolon-delimited CSV is written.
+        :param reimport: If ``True``, export in reimport-compatible format.
+        """
         logger = self._make_logger(job_id)
         try:
             db_conn = db_conn_factory()
@@ -160,6 +205,12 @@ class JobManager:
         self._finish_job(job_id, exit_code)
 
     def _start(self, target: Callable[..., Any], *args: Any) -> str | None:
+        """Allocate a job, spawn a daemon thread running *target*, and return the job ID.
+
+        :param target: Thread target callable; receives the job ID prepended to *args*.
+        :param args: Additional positional arguments forwarded to *target*.
+        :return: Allocated job ID string, or ``None`` if a job is already running.
+        """
         job_id = self._allocate_job()
         if job_id is None:
             return None
@@ -268,6 +319,11 @@ class JobManager:
         return self._iter_logs_impl(job_id)
 
     def _iter_logs_impl(self, job_id: str) -> Iterator[str]:
+        """Blocking generator that yields log lines from the job queue until the job finishes.
+
+        :param job_id: ID of the job to stream logs for.
+        :return: Iterator of formatted log line strings.
+        """
         q = self._jobs[job_id]["queue"]
         while True:
             line = q.get()
