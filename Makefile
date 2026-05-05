@@ -1,7 +1,9 @@
-.PHONY: build docs lint test
+.PHONY: build docs lint review test
 
-build: lint test docs
+build: review
 	poetry build
+
+review: lint test docs
 
 lint:
 	poetry run ruff check .

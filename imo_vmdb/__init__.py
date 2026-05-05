@@ -16,6 +16,40 @@ from imo_vmdb.normalizer import create_rate_magn
 from imo_vmdb.normalizer.magnitude import MagnitudeNormalizer
 from imo_vmdb.normalizer.rate import RateNormalizer
 from imo_vmdb.normalizer.session import SessionNormalizer
+from imo_vmdb.query import (
+    Magnitude,
+    MagnitudeDetail,
+    MagnitudeFilter,
+    Magnitudes,
+    Rate,
+    RateFilter,
+    Rates,
+    Session,
+    Shower,
+    query_magnitudes,
+    query_rates,
+    query_showers,
+)
+
+__all__ = [
+    "CSVImporter",
+    "Magnitude",
+    "MagnitudeDetail",
+    "MagnitudeFilter",
+    "Magnitudes",
+    "Rate",
+    "RateFilter",
+    "Rates",
+    "Session",
+    "Shower",
+    "cleanup",
+    "export_table",
+    "initdb",
+    "normalize",
+    "query_magnitudes",
+    "query_rates",
+    "query_showers",
+]
 
 _MONTH_NAMES = {
     1: "Jan",
