@@ -9,7 +9,7 @@ The data is enriched with computed properties (radiant positions, sun/moon posit
 illumination) and validated for plausibility.
 No analysis is performed by the tool itself — the database is the output.
 
-For full documentation see <https://imo-vmdb.readthedocs.io/en/latest/>.
+For full documentation see <https://imo-vmdb.readthedocs.io/en/stable/>.
 
 ---
 

@@ -11,7 +11,7 @@ license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/jankorichter/imo-vmdb"
 repository = "https://github.com/jankorichter/imo-vmdb"
-documentation = "https://imo-vmdb.readthedocs.io/en/latest/"
+documentation = "https://imo-vmdb.readthedocs.io/en/stable/"
 keywords = [
     "IMO",
     "VMDB",
