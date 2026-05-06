@@ -48,12 +48,12 @@ The control panel consists of four action cards.
       data before the new import begins.  Useful when re-importing a file you
       have already imported, without having to run Cleanup first.
       (CLI equivalent: ``-d``)
-    * *Permissive mode* — accepts records with minor data problems that would
-      otherwise be rejected, issuing a warning instead of an error.
-      (CLI equivalent: ``-p``)
-    * *Attempt repair on errors* — tries to automatically correct common
-      problems such as swapped start/end times or invalid optional fields.
-      (CLI equivalent: ``-r``)
+    * *Permissive mode* — accepts certain records that would otherwise be
+      rejected, issuing a warning instead of an error.
+      (CLI equivalent: ``-p`` — see :ref:`cli` for a full description)
+    * *Attempt repair on errors* — tries to automatically correct certain
+      malformed values before validation.
+      (CLI equivalent: ``-r`` — see :ref:`cli` for a full description)
 
     For the expected file format and column names, see :ref:`csv-import`.
 

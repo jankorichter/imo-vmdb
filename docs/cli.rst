@@ -38,13 +38,41 @@ Example — import all 2020 files::
 Available options:
 
 * ``-d`` — delete previously imported data before importing
-* ``-p`` — permissive mode: accept records that would normally be rejected with
-  a warning instead of an error
-* ``-r`` — attempt to repair records: detect and correct swapped start/end
-  times, strip invalid optional fields
+* ``-p`` — permissive mode (see below)
+* ``-r`` — repair mode (see below)
 
 The ``-d`` option is useful when you want to re-import a single file without
 running ``cleanup`` first.
+
+**Permissive mode** (``-p``) accepts records that would normally be rejected,
+logging a warning instead of an error.  The following cases are affected:
+
+* Observation periods where start time equals end time.
+* Sessions with no elevation value (normally a required field).
+* Rate observations with a ``teff`` (effective observing time) greater than
+  7 hours, up to a maximum of 24 hours.
+* Magnitude records where the running magnitude-count sum has a fractional
+  remainder at an intermediate step.  The final total across all magnitude
+  classes must still be a whole number in all cases.
+
+**Repair mode** (``-r``) attempts to automatically correct certain malformed
+values before validation.  A warning is logged for every correction applied.
+The following corrections are attempted:
+
+* **Sentinel values in declination** — values ``990`` and ``999`` are treated
+  as missing rather than causing a rejection.
+* **Sentinel value in right ascension** — a value of ``999`` is treated as
+  missing.
+* **Asymmetric RA/Dec pair** — if only one of right ascension or declination
+  is set, both are cleared to missing.
+* **Inverted observation period** — if the end time precedes the start time,
+  the two are swapped, provided the resulting duration does not exceed
+  0.49 days (~11 h 46 min).
+* **Off-by-one-day error** — if the observation period is invalid but becomes
+  valid by shifting the end date one day forward or backward, that correction
+  is applied (subject to the same maximum duration).
+
+Both options can be combined.
 
 normalize
 ---------
