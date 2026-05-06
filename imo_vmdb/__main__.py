@@ -7,7 +7,7 @@ _COMMANDS = {
     "initdb": ("imo_vmdb.command.initdb", "main"),
     "import_csv": ("imo_vmdb.command.import_csv", "main"),
     "normalize": ("imo_vmdb.command.normalize", "main"),
-    "web_server": ("imo_vmdb.webui.server", "main"),
+    "web_server": ("imo_vmdb.httpd", "main"),
 }
 
 

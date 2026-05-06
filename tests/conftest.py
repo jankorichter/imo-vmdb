@@ -154,7 +154,7 @@ def app(_app_db_path):
     cfg.add_section("database")
     cfg.set("database", "database", _app_db_path)
 
-    from imo_vmdb.webui import create_app
+    from imo_vmdb.httpd import create_app
 
     flask_app = create_app(cfg, tempfile.gettempdir())
     flask_app.config["TESTING"] = True
@@ -215,7 +215,7 @@ def obs_app(_obs_db_path):
     cfg.add_section("database")
     cfg.set("database", "database", _obs_db_path)
 
-    from imo_vmdb.webui import create_app
+    from imo_vmdb.httpd import create_app
 
     flask_app = create_app(cfg, tempfile.gettempdir())
     flask_app.config["TESTING"] = True
@@ -230,7 +230,7 @@ def obs_client(obs_app):
 @pytest.fixture(scope="session")
 def no_db_app():
     """Flask app with no database section — triggers 503 responses."""
-    from imo_vmdb.webui import create_app
+    from imo_vmdb.httpd import create_app
 
     flask_app = create_app(configparser.ConfigParser(), tempfile.gettempdir())
     flask_app.config["TESTING"] = True

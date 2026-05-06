@@ -42,7 +42,7 @@ pgsql = ["psycopg2"]
 docs = ["Sphinx", "sphinx-rtd-theme"]
 
 [tool.poetry.scripts]
-imo-vmdb-webui = "imo_vmdb.webui.server:main"
+imo-vmdb-webui = "imo_vmdb.httpd:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
