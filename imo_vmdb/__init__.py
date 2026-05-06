@@ -447,6 +447,9 @@ def normalize(db_conn: DBAdapter, logger: logging.Logger) -> int:
     logger.info("The relationship between rate and magnitude was created.")
     logger.info("Normalisation completed.")
 
+    if sn.has_errors:
+        return 1
+
     if rn.has_errors:
         return 1
 

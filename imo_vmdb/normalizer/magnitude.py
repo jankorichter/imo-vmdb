@@ -206,13 +206,21 @@ class MagnitudeNormalizer(BaseNormalizer):
                 )
                 continue
 
-            prev_record.write(write_cur, self._sky)
+            try:
+                prev_record.write(write_cur, self._sky)
+            except DBException as err:
+                self._log_discard(prev_record.session_id, prev_record.id, str(err))
+                prev_record = record
+                continue
             self.counter_write += 1
             prev_record = record
 
         if prev_record is not None:
-            prev_record.write(write_cur, self._sky)
-            self.counter_write += 1
+            try:
+                prev_record.write(write_cur, self._sky)
+                self.counter_write += 1
+            except DBException as err:
+                self._log_discard(prev_record.session_id, prev_record.id, str(err))
 
         try:
             cur.close()
