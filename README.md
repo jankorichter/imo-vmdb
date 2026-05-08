@@ -7,7 +7,8 @@ into a relational SQL database.
 
 The data is enriched with computed properties (radiant positions, sun/moon position and
 illumination) and validated for plausibility.
-No analysis is performed by the tool itself — the database is the output.
+The processed data is accessible via a public Python API, a REST interface, CLI commands,
+and a Web UI.
 
 For full documentation see <https://imo-vmdb.readthedocs.io/en/stable/>.
 
@@ -46,11 +47,13 @@ poetry run python -m imo_vmdb
 poetry install --extras docs
 ```
 
-**Run the web UI locally:**
+**Run the web UI and REST API locally:**
 
 ```bash
-poetry run python -m imo_vmdb web_server -c config.ini
+IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db poetry run python -m imo_vmdb web_server
 ```
+
+Opens the control panel at `http://localhost:8000`; the REST API is available at `http://localhost:8000/api/v1`.
 
 **Run the linter:**
 
@@ -85,10 +88,11 @@ docker compose up --build
 ## Release
 
 Releases are triggered by pushing a version tag. The GitHub Actions workflows in
-`.github/workflows/` handle publishing automatically:
+`.github/workflows/` handle CI and publishing automatically:
 
-- **`pypi.yml`** — builds the package and publishes it to PyPI
-- **`docker.yml`** — builds and pushes the Docker image to GitHub Container Registry
+- **`tests.yml`** — runs lint and tests on every push to any branch
+- **`pypi.yml`** — builds the package and publishes it to PyPI (version tags only)
+- **`docker.yml`** — builds and pushes the Docker image to GitHub Container Registry (version tags only)
 
 Before tagging, build and verify the package locally:
 

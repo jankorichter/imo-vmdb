@@ -4,4 +4,6 @@ __pycache__
 *.pyo
 .venv
 data/
-docs/_build/
+docs/
+tests/
+*.md

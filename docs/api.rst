@@ -7,6 +7,12 @@ The ``imo_vmdb`` package provides a Python API that can be used independently
 of any web framework or HTTP connection.  It covers importing, normalising,
 cleaning up, exporting, and querying meteor observation data.
 
+Database connection
+-------------------
+
+.. autoclass:: imo_vmdb.DBAdapter
+   :members:
+
 Operations
 ----------
 

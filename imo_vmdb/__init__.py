@@ -33,6 +33,7 @@ from imo_vmdb.query import (
 
 __all__ = [
     "CSVImporter",
+    "DBAdapter",
     "Magnitude",
     "MagnitudeDetail",
     "MagnitudeFilter",
