@@ -67,6 +67,24 @@ class TestQueryRates:
         )
         assert isinstance(result, Rates)
 
+    def test_period_filter_does_not_error(self, seeded_db):
+        result = query_rates(
+            seeded_db, RateFilter(period_start="2020-01-01", period_end="2020-12-31")
+        )
+        assert isinstance(result, Rates)
+
+    def test_lim_magn_max_does_not_error(self, seeded_db):
+        result = query_rates(seeded_db, RateFilter(lim_magn_max=7.0))
+        assert isinstance(result, Rates)
+
+    def test_sun_alt_max_does_not_error(self, seeded_db):
+        result = query_rates(seeded_db, RateFilter(sun_alt_max=-5.0))
+        assert isinstance(result, Rates)
+
+    def test_moon_alt_max_does_not_error(self, seeded_db):
+        result = query_rates(seeded_db, RateFilter(moon_alt_max=30.0))
+        assert isinstance(result, Rates)
+
     def test_shower_filter_returns_only_matching(self, observation_db):
         result = query_rates(observation_db, RateFilter(showers=["PER"]))
         showers = [r.shower for r in result.observations]
@@ -110,6 +128,17 @@ class TestQueryMagnitudes:
 
     def test_shower_filter_does_not_error(self, seeded_db):
         result = query_magnitudes(seeded_db, MagnitudeFilter(showers=["PER"]))
+        assert isinstance(result, Magnitudes)
+
+    def test_period_filter_does_not_error(self, seeded_db):
+        result = query_magnitudes(
+            seeded_db,
+            MagnitudeFilter(period_start="2020-01-01", period_end="2020-12-31"),
+        )
+        assert isinstance(result, Magnitudes)
+
+    def test_lim_magn_max_does_not_error(self, seeded_db):
+        result = query_magnitudes(seeded_db, MagnitudeFilter(lim_magn_max=7.0))
         assert isinstance(result, Magnitudes)
 
     def test_shower_filter_returns_only_matching(self, observation_db):
@@ -169,3 +198,73 @@ class TestMagnitudeShape:
         )
         assert len(result.magnitudes) > 0
         assert all(isinstance(d, MagnitudeDetail) for d in result.magnitudes)
+
+
+class TestSessionFields:
+    def test_numeric_geo_fields_are_float(self, observation_db):
+        result = query_rates(observation_db, RateFilter(include_sessions=True))
+        session = result.sessions[0]
+        assert isinstance(session.longitude, float)
+        assert isinstance(session.latitude, float)
+        assert isinstance(session.elevation, float)
+
+    def test_string_location_fields(self, observation_db):
+        result = query_rates(observation_db, RateFilter(include_sessions=True))
+        session = result.sessions[0]
+        assert isinstance(session.country, str)
+        assert isinstance(session.city, str)
+
+
+class TestRateFields:
+    def _rate(self, observation_db):
+        return query_rates(observation_db, RateFilter()).observations[0]
+
+    def test_id_is_int(self, observation_db):
+        assert isinstance(self._rate(observation_db).id, int)
+
+    def test_shower_is_str(self, observation_db):
+        assert isinstance(self._rate(observation_db).shower, str)
+
+    def test_freq_is_int(self, observation_db):
+        assert isinstance(self._rate(observation_db).freq, int)
+
+    def test_float_fields(self, observation_db):
+        rate = self._rate(observation_db)
+        for field in ("lim_mag", "sl_start", "sl_end"):
+            assert isinstance(getattr(rate, field), float), f"{field} should be float"
+
+    def test_period_fields_are_str(self, observation_db):
+        rate = self._rate(observation_db)
+        assert isinstance(rate.period_start, str)
+        assert isinstance(rate.period_end, str)
+
+
+class TestMagnitudeFields:
+    def _magn(self, observation_db):
+        return query_magnitudes(observation_db, MagnitudeFilter()).observations[0]
+
+    def test_id_is_int(self, observation_db):
+        assert isinstance(self._magn(observation_db).id, int)
+
+    def test_shower_is_str(self, observation_db):
+        assert isinstance(self._magn(observation_db).shower, str)
+
+    def test_freq_is_int(self, observation_db):
+        assert isinstance(self._magn(observation_db).freq, int)
+
+    def test_float_fields(self, observation_db):
+        magn = self._magn(observation_db)
+        for field in ("sl_start", "sl_end", "mean"):
+            assert isinstance(getattr(magn, field), float), f"{field} should be float"
+
+
+class TestMagnitudeDetailFields:
+    def test_magn_is_int(self, observation_db):
+        result = query_rates(observation_db, RateFilter(include_magnitudes=True))
+        detail = result.magnitudes[0]
+        assert isinstance(detail.magn, int)
+
+    def test_freq_is_float(self, observation_db):
+        result = query_rates(observation_db, RateFilter(include_magnitudes=True))
+        detail = result.magnitudes[0]
+        assert isinstance(detail.freq, float)

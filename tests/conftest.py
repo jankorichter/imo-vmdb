@@ -189,6 +189,26 @@ def schema_db(tmp_path):
 
 
 @pytest.fixture
+def imported_db(seeded_db):
+    """seeded_db with all three CSV fixture files imported but not yet normalized."""
+    from pathlib import Path
+
+    from imo_vmdb import CSVImporter
+
+    fixtures = Path(__file__).parent / "fixtures"
+    importer = CSVImporter(seeded_db, logger)
+    importer.run(
+        [
+            str(fixtures / "sessions.csv"),
+            str(fixtures / "rates.csv"),
+            str(fixtures / "magnitudes.csv"),
+        ]
+    )
+    seeded_db.commit()
+    return seeded_db
+
+
+@pytest.fixture
 def observation_db(seeded_db):
     """seeded_db augmented with one session, two rate and two magnitude records."""
     cur = seeded_db.cursor()
