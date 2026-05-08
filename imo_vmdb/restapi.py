@@ -4,13 +4,13 @@ import os
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
 
 from imo_vmdb import (
+    DBAdapter,
     MagnitudeFilter,
     RateFilter,
     query_magnitudes,
     query_rates,
     query_showers,
 )
-from imo_vmdb.db import DBAdapter
 
 api_bp = Blueprint("api", __name__)
 

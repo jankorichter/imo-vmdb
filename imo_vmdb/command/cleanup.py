@@ -2,8 +2,8 @@ import sys
 from optparse import OptionParser
 
 import imo_vmdb
+from imo_vmdb import DBAdapter, DBException
 from imo_vmdb.command import LoggerFactory, config_factory
-from imo_vmdb.db import DBAdapter, DBException
 
 
 def main(command_args: list[str]) -> None:

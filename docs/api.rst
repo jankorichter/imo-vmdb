@@ -13,6 +13,34 @@ Database connection
 .. autoclass:: imo_vmdb.DBAdapter
    :members:
 
+The keys of the *config* dict correspond directly to the ``[database]``
+section of the configuration file (see :ref:`setup`).  Examples:
+
+.. code-block:: python
+
+   import imo_vmdb
+
+   # SQLite
+   db = imo_vmdb.DBAdapter({"database": "/path/to/vmdb.db"})
+
+   # PostgreSQL
+   db = imo_vmdb.DBAdapter({
+       "module": "psycopg2",
+       "database": "vmdb",
+       "user": "vmdb",
+       "host": "localhost",
+   })
+
+   # MySQL
+   db = imo_vmdb.DBAdapter({
+       "module": "pymysql",
+       "database": "vmdb",
+       "user": "vmdb",
+   })
+
+.. autoclass:: imo_vmdb.DBException
+   :members:
+
 Operations
 ----------
 

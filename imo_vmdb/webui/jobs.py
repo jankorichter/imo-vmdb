@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import imo_vmdb
-from imo_vmdb.db import DBAdapter
+from imo_vmdb import DBAdapter
 
 
 class _QueueHandler(logging.Handler):

@@ -8,7 +8,7 @@ from imo_vmdb.csv_import.radiant import RadiantParser
 from imo_vmdb.csv_import.rate import RateParser
 from imo_vmdb.csv_import.session import SessionParser
 from imo_vmdb.csv_import.shower import ShowerParser
-from imo_vmdb.db import DBAdapter, create_tables
+from imo_vmdb.db import DBAdapter, DBException, create_tables
 from imo_vmdb.model.radiant import Storage as RadiantStorage
 from imo_vmdb.model.shower import Storage as ShowerStorage
 from imo_vmdb.model.sky import Sky
@@ -34,6 +34,7 @@ from imo_vmdb.query import (
 __all__ = [
     "CSVImporter",
     "DBAdapter",
+    "DBException",
     "Magnitude",
     "MagnitudeDetail",
     "MagnitudeFilter",

@@ -9,16 +9,37 @@ class DBException(Exception):
 
 
 class DBAdapter:
-    """Database connection adapter supporting SQLite and PostgreSQL.
+    """Lightweight database connection adapter supporting SQLite, PostgreSQL, and MySQL.
 
-    Wraps a DB-API 2.0 connection and handles driver-specific SQL dialect
-    differences through :meth:`convert_stmt`.  The default backend is
-    ``sqlite3``; a different module can be selected via the ``module`` key
-    in *config*.
+    A dedicated adapter is used instead of a heavier abstraction (e.g. SQLAlchemy)
+    because the SQL in this project is straightforward and the only cross-backend
+    difference is placeholder syntax.  The adapter handles three concerns:
 
-    :param config: Connection parameters forwarded to the DB driver's
-        ``connect()`` call.  The optional ``module`` key selects the DB-API
-        module (default: ``"sqlite3"``).
+    * **Dynamic driver selection** — the DB-API 2.0 module (``sqlite3``,
+      ``psycopg2``, ``mysql.connector``, …) is imported at runtime from *config*,
+      so no specific driver is a hard dependency of the package.
+    * **SQLite initialisation** — enables foreign-key enforcement via
+      ``PRAGMA foreign_keys = ON``, which SQLite disables by default.
+    * **Placeholder normalisation** — see :meth:`convert_stmt`.
+
+    The default backend is ``sqlite3``; a different module can be selected via
+    the ``module`` key in *config*.
+
+    :param config: Connection parameters.  The optional ``module`` key names
+        the DB-API 2.0 module to load (default: ``"sqlite3"``); all remaining
+        keys are forwarded verbatim to that module's ``connect()`` call.
+
+        Typical keys per backend:
+
+        * **SQLite** — ``database``: path to the ``.db`` file.
+        * **PostgreSQL** (``module = psycopg2``) — ``database``, ``user``,
+          optionally ``host``, ``password``.
+        * **MySQL** (``module = pymysql``) — ``database``, ``user``,
+          optionally ``host``, ``password``, plus any driver-specific keys
+          such as ``sql_mode`` or ``init_command``.
+
+        These correspond directly to the ``[database]`` section of the
+        *imo-vmdb* configuration file.
     """
 
     def __init__(self, config: dict[str, str]) -> None:
@@ -48,11 +69,12 @@ class DBAdapter:
     def convert_stmt(self, stmt: str) -> str:
         """Convert a SQL statement to the active backend's dialect.
 
-        For SQLite, ``%(name)s`` placeholders are rewritten to ``:name`` and
-        ``%%`` sequences are replaced by ``%``.  For all other backends the
-        statement is returned unchanged.
+        SQLite requires ``:name`` placeholders; this method rewrites
+        ``%(name)s`` to ``:name`` and replaces ``%%`` with ``%``.
+        PostgreSQL (psycopg2) and MySQL (mysql-connector-python) accept
+        ``%(name)s`` natively, so their statements are returned unchanged.
 
-        :param stmt: SQL statement using PostgreSQL-style named placeholders.
+        :param stmt: SQL statement using ``%(name)s``-style named placeholders.
         :return: Dialect-adjusted SQL statement.
         """
         if "sqlite3" == self.db_module:

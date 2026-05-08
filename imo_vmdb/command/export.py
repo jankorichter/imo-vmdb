@@ -3,9 +3,8 @@ import sys
 from optparse import OptionParser, Values
 from typing import IO
 
-from imo_vmdb import export_table
+from imo_vmdb import DBAdapter, DBException, export_table
 from imo_vmdb.command import config_factory
-from imo_vmdb.db import DBAdapter, DBException
 
 REIMPORT_TABLES = {"shower", "radiant"}
 

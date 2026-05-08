@@ -15,8 +15,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from imo_vmdb import export_table
-from imo_vmdb.db import DBAdapter
+from imo_vmdb import DBAdapter, export_table
 
 bp = Blueprint("main", __name__)
 
