@@ -156,7 +156,7 @@ def app(_app_db_path):
 
     from imo_vmdb.httpd import create_app
 
-    flask_app = create_app(cfg, tempfile.gettempdir())
+    flask_app = create_app(cfg, tempfile.gettempdir(), enable_webui=True)
     flask_app.config["TESTING"] = True
     return flask_app
 
@@ -237,7 +237,7 @@ def obs_app(_obs_db_path):
 
     from imo_vmdb.httpd import create_app
 
-    flask_app = create_app(cfg, tempfile.gettempdir())
+    flask_app = create_app(cfg, tempfile.gettempdir(), enable_webui=True)
     flask_app.config["TESTING"] = True
     return flask_app
 
@@ -252,7 +252,9 @@ def no_db_app():
     """Flask app with no database section — triggers 503 responses."""
     from imo_vmdb.httpd import create_app
 
-    flask_app = create_app(configparser.ConfigParser(), tempfile.gettempdir())
+    flask_app = create_app(
+        configparser.ConfigParser(), tempfile.gettempdir(), enable_webui=True
+    )
     flask_app.config["TESTING"] = True
     return flask_app
 

@@ -68,8 +68,12 @@ Starting the web UI::
         -p 8000:8000 \
         -v /your/local/data:/data \
         -e IMO_VMDB_DATABASE_DATABASE=/data/vmdb.db \
-        -e IMO_VMDB_WEBUI_UPLOAD_DIR=/data/uploads \
+        -e IMO_VMDB_WEBSERVER_UPLOAD_DIR=/data/uploads \
+        -e IMO_VMDB_WEBSERVER_ENABLE_WEBUI=true \
         ghcr.io/jankorichter/imo-vmdb
+
+The Web UI is opt-in.  Without ``IMO_VMDB_WEBSERVER_ENABLE_WEBUI=true`` the
+container serves only the REST API at ``/api/v1``.
 
 Replace ``/your/local/data`` with your data folder path.
 Open ``http://localhost:8000`` in your browser.  Press ``Ctrl+C`` to stop.
@@ -123,15 +127,21 @@ All Environment Variables
    * - ``IMO_VMDB_LOGGING_LEVEL``
      - ``[logging] level``
      - ``INFO``
-   * - ``IMO_VMDB_WEBUI_UPLOAD_DIR``
-     - ``[webui] upload_dir``
+   * - ``IMO_VMDB_WEBSERVER_UPLOAD_DIR``
+     - ``[webserver] upload_dir``
      - system temp dir
-   * - ``IMO_VMDB_WEBUI_PORT``
-     - ``[webui] port``
+   * - ``IMO_VMDB_WEBSERVER_HOST``
+     - ``[webserver] host``
+     - ``127.0.0.1`` (Dev), ``0.0.0.0`` (Gunicorn)
+   * - ``IMO_VMDB_WEBSERVER_PORT``
+     - ``[webserver] port``
      - ``8000``
-   * - ``IMO_VMDB_WEBUI_THREADS``
+   * - ``IMO_VMDB_WEBSERVER_THREADS``
      - *(Gunicorn only)*
      - ``4``
+   * - ``IMO_VMDB_WEBSERVER_ENABLE_WEBUI``
+     - ``[webserver] enable_webui``
+     - ``false``
 
 Environment variables work with any *imo-vmdb* installation — not just Docker.
 

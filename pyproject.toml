@@ -44,7 +44,7 @@ web = ["gunicorn"]
 docs = ["Sphinx", "sphinx-rtd-theme"]
 
 [tool.poetry.scripts]
-imo-vmdb-webui = "imo_vmdb.httpd:main"
+imo-vmdb-webserver = "imo_vmdb.httpd:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"

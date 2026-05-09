@@ -116,22 +116,27 @@ results::
 web_server
 ----------
 
-Starts the web server, which provides both the browser-based control panel
-and the REST API::
+Starts the web server, which always serves the REST API at ``/api/v1``.
+The browser-based control panel (Web UI) is opt-in::
 
-    python -m imo_vmdb web_server -c config.ini
+    python -m imo_vmdb web_server -c config.ini                  # REST API only
+    python -m imo_vmdb web_server -c config.ini --enable-webui   # REST API + Web UI
 
 For a quick start without a config file, pass the database path as an
 environment variable::
 
-    IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db python -m imo_vmdb web_server
+    IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db python -m imo_vmdb web_server --enable-webui
 
 The server listens on ``http://127.0.0.1:8000`` by default.
 
 Additional options:
 
-* ``--host HOST`` — network interface to bind to (default: ``127.0.0.1``)
-* ``--port PORT`` — port number (default: ``8000``)
+* ``--host HOST`` — network interface to bind to (default: ``127.0.0.1``,
+  also configurable via ``IMO_VMDB_WEBSERVER_HOST``)
+* ``--port PORT`` — port number (default: ``8000``,
+  also configurable via ``IMO_VMDB_WEBSERVER_PORT``)
+* ``--enable-webui`` — also serve the browser-based control panel at ``/``
+  (also configurable via ``IMO_VMDB_WEBSERVER_ENABLE_WEBUI=true``)
 
 To make the server reachable from other machines on the network::
 

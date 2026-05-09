@@ -7,6 +7,10 @@ REST API
 content as JSON.
 Any HTTP client can query the API without a direct database connection.
 
+The REST API is served by the ``web_server`` command and is always enabled.
+The browser-based control panel (Web UI) is opt-in and runs on the same
+server when explicitly requested.
+
 Base URL
 --------
 
@@ -101,4 +105,5 @@ Open either in any OpenAPI-compatible tool such as
 `Swagger UI <https://swagger.io/tools/swagger-ui/>`_ or
 `Redoc <https://redocly.com/redoc>`_.
 
-For running the server, see :ref:`webui` and :ref:`docker`.
+For running the server, see :ref:`cli` (Python) and :ref:`docker` (Docker).
+For enabling the optional browser-based control panel, see :ref:`webui`.

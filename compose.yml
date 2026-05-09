@@ -1,11 +1,12 @@
 services:
-  webui:
+  webserver:
     build: .
     container_name: imo-vmdb
     ports:
-      - "${IMO_VMDB_WEBUI_PORT:-8000}:8000"
+      - "${IMO_VMDB_WEBSERVER_PORT:-8000}:8000"
     environment:
       IMO_VMDB_DATABASE_DATABASE: /data/vmdb.db
-      IMO_VMDB_WEBUI_UPLOAD_DIR: /data/uploads
+      IMO_VMDB_WEBSERVER_UPLOAD_DIR: /data/uploads
+      IMO_VMDB_WEBSERVER_ENABLE_WEBUI: "true"
     volumes:
       - ./data:/data

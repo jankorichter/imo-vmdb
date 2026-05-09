@@ -1,6 +1,12 @@
 """Tests for the Web UI HTTP routes (/, /export/*, /run/*, /status/*)."""
 
+import configparser
+import tempfile
 import time
+
+import pytest
+
+from imo_vmdb.httpd import create_app
 
 
 def _start_job(client, url, timeout=10.0):
@@ -114,3 +120,28 @@ class TestJobManagement:
             time.sleep(0.2)
 
         assert status["exit_code"] == 0
+
+
+class TestWebuiDisabled:
+    """When create_app(enable_webui=False), only the REST API is served."""
+
+    @pytest.fixture
+    def api_only_client(self, _app_db_path):
+        cfg = configparser.ConfigParser()
+        cfg.add_section("database")
+        cfg.set("database", "database", _app_db_path)
+        app = create_app(cfg, tempfile.gettempdir(), enable_webui=False)
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_index_returns_404(self, api_only_client):
+        r = api_only_client.get("/")
+        assert r.status_code == 404
+
+    def test_export_returns_404(self, api_only_client):
+        r = api_only_client.get("/export/shower")
+        assert r.status_code == 404
+
+    def test_rest_api_still_works(self, api_only_client):
+        r = api_only_client.get("/api/v1/showers")
+        assert r.status_code == 200

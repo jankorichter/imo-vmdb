@@ -11,6 +11,15 @@ Open ``http://localhost:8000`` in your browser to access the control panel.
 For instructions on how to start the server, see :ref:`cli` (Python) or
 :ref:`setup` (Docker).
 
+.. important::
+
+   The Web UI is **opt-in**.  Starting the server without further options
+   serves only the REST API (see :ref:`rest-api`).  To enable the Web UI,
+   pass ``--enable-webui`` on the command line, or set
+   ``IMO_VMDB_WEBSERVER_ENABLE_WEBUI=true`` in the environment, or
+   ``enable_webui = true`` in the ``[webserver]`` section of your config
+   file.
+
 .. note::
 
    When the server starts, Flask prints the following message:
