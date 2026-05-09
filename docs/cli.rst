@@ -5,7 +5,7 @@ Command Line Interface
 
 All commands share the same syntax::
 
-    python -m imo_vmdb <command> [options]
+    imo-vmdb <command> [options]
 
 The database is configured either via a config file (``-c config.ini``) or via
 environment variables.  See :ref:`setup` for configuration details.
@@ -15,7 +15,7 @@ initdb
 
 Initializes the database schema::
 
-    python -m imo_vmdb initdb -c config.ini
+    imo-vmdb initdb -c config.ini
 
 .. warning::
    Running ``initdb`` on an existing database will delete all data in it.
@@ -33,7 +33,7 @@ For the expected column names and format of each file type, see :ref:`csv-import
 
 Example — import all 2020 files::
 
-    python -m imo_vmdb import_csv -c config.ini data/*-2020.csv
+    imo-vmdb import_csv -c config.ini data/*-2020.csv
 
 Available options:
 
@@ -80,7 +80,7 @@ normalize
 Normalizes the imported records and enriches observations with computed
 astronomical data::
 
-    python -m imo_vmdb normalize -c config.ini
+    imo-vmdb normalize -c config.ini
 
 The following data are computed and stored:
 
@@ -111,7 +111,7 @@ cleanup
 Removes raw imported data from the database while preserving all normalized
 results::
 
-    python -m imo_vmdb cleanup -c config.ini
+    imo-vmdb cleanup -c config.ini
 
 web_server
 ----------
@@ -119,13 +119,13 @@ web_server
 Starts the web server, which always serves the REST API at ``/api/v1``.
 The browser-based control panel (Web UI) is opt-in::
 
-    python -m imo_vmdb web_server -c config.ini                  # REST API only
-    python -m imo_vmdb web_server -c config.ini --enable-webui   # REST API + Web UI
+    imo-vmdb web_server -c config.ini                  # REST API only
+    imo-vmdb web_server -c config.ini --enable-webui   # REST API + Web UI
 
 For a quick start without a config file, pass the database path as an
 environment variable::
 
-    IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db python -m imo_vmdb web_server --enable-webui
+    IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db imo-vmdb web_server --enable-webui
 
 The server listens on ``http://127.0.0.1:8000`` by default.
 
@@ -140,7 +140,7 @@ Additional options:
 
 To make the server reachable from other machines on the network::
 
-    python -m imo_vmdb web_server -c config.ini --host 0.0.0.0
+    imo-vmdb web_server -c config.ini --host 0.0.0.0
 
 .. note::
    The web server is intended for local or trusted-network use only.
@@ -166,7 +166,7 @@ export
 
 Exports a table as a semicolon-delimited CSV file::
 
-    python -m imo_vmdb export <table> [-c config.ini] [-o output.csv]
+    imo-vmdb export <table> [-c config.ini] [-o output.csv]
 
 Available tables:
 
@@ -197,7 +197,7 @@ The ``--reimport`` flag is available for ``shower`` and ``radiant``.  It
 exports the original embedded reference files in the exact format required for
 re-import with ``import_csv``::
 
-    python -m imo_vmdb export shower --reimport -o showers_edited.csv
+    imo-vmdb export shower --reimport -o showers_edited.csv
 
 Without ``--reimport``, all tables — including ``shower`` and ``radiant`` —
 are exported directly from the database using the field names documented in

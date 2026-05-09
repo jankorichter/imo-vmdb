@@ -162,16 +162,13 @@ See the `Python`_ section below for the configuration file format.
 Python
 ------
 
-If you already have Python 3.10 or newer installed, you can install
-*imo-vmdb* directly (system-wide or in a virtual environment).
+If you already have Python 3.10 or newer installed, *imo-vmdb* can be
+installed in two equally supported ways: into a **virtual environment**
+with ``pip``, or globally for the current user with **pipx**.  Both work
+identically on macOS, Linux, and Windows.
 
-**System-wide installation**
 
-::
-
-    pip install imo-vmdb
-
-**Virtual environment (recommended for local use)**
+**Virtual environment**
 
 A virtual environment keeps *imo-vmdb* isolated from other Python packages
 on your system::
@@ -185,20 +182,37 @@ open a new terminal before running *imo-vmdb*.
 
 Verify the installation::
 
-    python -m imo_vmdb
+    imo-vmdb
 
 A short help text listing the available commands should appear.
 
-.. note::
-   The rest of this documentation assumes *imo-vmdb* is either installed
-   system-wide or that the virtual environment is already activated.
+**pipx**
+
+`pipx <https://pipx.pypa.io/>`_ installs Python applications into their
+own isolated environments and exposes their entry points as global
+commands — no virtual environment to activate manually.  Install pipx
+itself once (see the link above), then::
+
+    pipx install imo-vmdb
+
+The ``imo-vmdb`` command is now available globally::
+
+    imo-vmdb --help
+    imo-vmdb initdb -c config.ini
 
 **PostgreSQL and MySQL**
 
-For PostgreSQL or MySQL (see `Database`_ above), install the required driver::
+For PostgreSQL or MySQL (see `Database`_ above), install the required driver.
+
+In a virtual environment::
 
     pip install "imo-vmdb[pgsql]"   # PostgreSQL
     pip install "imo-vmdb[mysql]"   # MySQL
+
+With pipx::
+
+    pipx install "imo-vmdb[pgsql]"   # PostgreSQL
+    pipx install "imo-vmdb[mysql]"   # MySQL
 
 Configuration file
 ******************
