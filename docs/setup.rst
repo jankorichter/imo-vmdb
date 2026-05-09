@@ -198,7 +198,44 @@ itself once (see the link above), then::
 The ``imo-vmdb`` command is now available globally::
 
     imo-vmdb --help
-    imo-vmdb initdb -c config.ini
+
+Quick start with SQLite
+***********************
+
+For SQLite, no configuration file is required.  Point *imo-vmdb* at a
+file path via the ``IMO_VMDB_DATABASE_DATABASE`` environment variable —
+the database file is created on first use.  Set the variable once for
+the current shell session, then run the commands.
+
+macOS / Linux (bash, zsh)::
+
+    export IMO_VMDB_DATABASE_DATABASE=/path/to/vmdb.db
+
+    imo-vmdb initdb
+    imo-vmdb import_csv observations-2024.csv
+    imo-vmdb normalize
+    imo-vmdb web_server   # REST API at /api/v1; Web UI optional via --enable-webui
+
+Windows PowerShell::
+
+    $env:IMO_VMDB_DATABASE_DATABASE = "C:\Users\YourName\vmdb.db"
+
+    imo-vmdb initdb
+    imo-vmdb import_csv observations-2024.csv
+    imo-vmdb normalize
+    imo-vmdb web_server
+
+Windows Command Prompt (``cmd.exe``)::
+
+    set IMO_VMDB_DATABASE_DATABASE=C:\Users\YourName\vmdb.db
+
+    imo-vmdb initdb
+    imo-vmdb import_csv observations-2024.csv
+    imo-vmdb normalize
+    imo-vmdb web_server
+
+For the full list of supported variables see
+`All Environment Variables`_ above.
 
 **PostgreSQL and MySQL**
 
@@ -214,13 +251,25 @@ With pipx::
     pipx install "imo-vmdb[pgsql]"   # PostgreSQL
     pipx install "imo-vmdb[mysql]"   # MySQL
 
+PostgreSQL and MySQL need more parameters than fit comfortably on a
+command line.  Use a configuration file (see below) and pass it with
+``-c config.ini``.
+
 Configuration file
 ******************
 
-*imo-vmdb* reads database and logging settings from an INI file passed with
-``-c config.ini``.
+A configuration file is the recommended way to manage **PostgreSQL** or
+**MySQL** connections, multi-section logging, or any setup more complex
+than a single SQLite path.  *imo-vmdb* reads database and logging
+settings from an INI file passed with ``-c config.ini``::
 
-Minimal SQLite configuration::
+    imo-vmdb initdb -c config.ini
+
+Settings from the file take precedence over environment variables, and
+both can be combined.
+
+Minimal SQLite configuration (alternative to the environment variable
+shown above)::
 
     [database]
     database = /path/to/database/file.db

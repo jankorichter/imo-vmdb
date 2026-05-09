@@ -24,6 +24,9 @@ paths:
         All filter parameters are optional and combined with AND.
         Multiple values for `shower`, `session_id`, and `rate_id` are
         combined with OR.
+
+        Always returns the unpaginated total count in the `X-Total-Count`
+        response header.  Use `limit=0` to obtain just the count.
       parameters:
         - $ref: '#/components/parameters/shower'
         - $ref: '#/components/parameters/period_start'
@@ -53,15 +56,51 @@ paths:
           style: form
           explode: true
         - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: order_by
+          in: query
+          description: Sort column.
+          schema:
+            type: string
+            enum: [id, period_start, period_end, sl_start, lim_mag]
+        - $ref: '#/components/parameters/order'
+        - $ref: '#/components/parameters/fields'
       responses:
         "200":
           description: Successful response.
+          headers:
+            X-Total-Count:
+              $ref: '#/components/headers/XTotalCount'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RatesResponse'
         "400":
           $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /rates/{id}:
+    get:
+      summary: Single rate observation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateObservation'
+        "404":
+          $ref: '#/components/responses/NotFound'
         "500":
           $ref: '#/components/responses/ServerError'
         "503":
@@ -75,6 +114,9 @@ paths:
         All filter parameters are optional and combined with AND.
         Multiple values for `shower`, `session_id`, and `magn_id` are
         combined with OR.
+
+        Always returns the unpaginated total count in the `X-Total-Count`
+        response header.  Use `limit=0` to obtain just the count.
       parameters:
         - $ref: '#/components/parameters/shower'
         - $ref: '#/components/parameters/period_start'
@@ -94,15 +136,125 @@ paths:
           style: form
           explode: true
         - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: order_by
+          in: query
+          description: Sort column.
+          schema:
+            type: string
+            enum: [id, period_start, period_end, sl_start, lim_mag]
+        - $ref: '#/components/parameters/order'
+        - $ref: '#/components/parameters/fields'
       responses:
         "200":
           description: Successful response.
+          headers:
+            X-Total-Count:
+              $ref: '#/components/headers/XTotalCount'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MagnitudesResponse'
         "400":
           $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /magnitudes/{id}:
+    get:
+      summary: Single magnitude observation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MagnitudeObservation'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /sessions:
+    get:
+      summary: Observation sessions
+      description: >
+        Returns observation sessions, optionally restricted to particular
+        observers or to sessions that have at least one rate or magnitude
+        observation in a given period.
+      parameters:
+        - name: observer_id
+          in: query
+          description: Filter by observer IDs (repeatable).
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/period_start'
+        - $ref: '#/components/parameters/period_end'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: order_by
+          in: query
+          description: Sort column.
+          schema:
+            type: string
+            enum: [id, country, observer_id]
+        - $ref: '#/components/parameters/order'
+      responses:
+        "200":
+          description: Successful response.
+          headers:
+            X-Total-Count:
+              $ref: '#/components/headers/XTotalCount'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /sessions/{id}:
+    get:
+      summary: Single observation session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        "404":
+          $ref: '#/components/responses/NotFound'
         "500":
           $ref: '#/components/responses/ServerError'
         "503":
@@ -126,9 +278,187 @@ paths:
         "503":
           $ref: '#/components/responses/NoDB'
 
+  /showers/active:
+    get:
+      summary: Showers active on a given date
+      description: >
+        Returns all showers whose activity period covers the given calendar
+        date (year is ignored, year-wrapping showers handled correctly).
+      parameters:
+        - name: date
+          in: query
+          description: ISO date `YYYY-MM-DD`.  Defaults to today (UTC).
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shower'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /showers/{iau_code}:
+    get:
+      summary: Single meteor shower
+      parameters:
+        - name: iau_code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shower'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /showers/{iau_code}/radiants:
+    get:
+      summary: Radiant positions for a shower
+      description: >
+        Returns all radiant entries for the given shower, ordered by
+        `(month, day)`.  Empty array if the shower has no radiants.
+      parameters:
+        - name: iau_code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Radiant'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /stats/meta:
+    get:
+      summary: Database scope summary
+      description: >
+        Returns the total number of sessions, rates and magnitudes plus the
+        covered date range.  Useful for clients to discover what's in the
+        database before issuing more specific queries.
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsMeta'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /stats/by-shower:
+    get:
+      summary: Per-shower aggregate counts
+      parameters:
+        - $ref: '#/components/parameters/period_start'
+        - $ref: '#/components/parameters/period_end'
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShowerStat'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /stats/by-country:
+    get:
+      summary: Per-country aggregate counts
+      parameters:
+        - $ref: '#/components/parameters/period_start'
+        - $ref: '#/components/parameters/period_end'
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CountryStat'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /stats/by-year:
+    get:
+      summary: Per-year aggregate counts
+      parameters:
+        - $ref: '#/components/parameters/period_start'
+        - $ref: '#/components/parameters/period_end'
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/YearStat'
+        "500":
+          $ref: '#/components/responses/ServerError'
+        "503":
+          $ref: '#/components/responses/NoDB'
+
+  /health:
+    get:
+      summary: Liveness/readiness probe
+      description: >
+        Returns 200 with `{"status": "ok", "database": "ok"}` when the
+        database is reachable; 503 with `{"status": "degraded", "database": <reason>}`
+        otherwise.  Suitable for load balancers and Kubernetes probes.
+      responses:
+        "200":
+          description: Database reachable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        "503":
+          description: Database unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
   /openapi.yaml:
     get:
-      summary: OpenAPI specification
+      summary: OpenAPI specification (YAML)
       description: Returns this OpenAPI 3.1 specification as YAML.
       responses:
         "200":
@@ -137,6 +467,18 @@ paths:
             application/yaml:
               schema:
                 type: string
+
+  /openapi.json:
+    get:
+      summary: OpenAPI specification (JSON)
+      description: Returns this OpenAPI 3.1 specification as JSON.
+      responses:
+        "200":
+          description: OpenAPI JSON document.
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
 
@@ -234,6 +576,44 @@ components:
       schema:
         type: string
         example: sessions,magnitudes
+
+    limit:
+      name: limit
+      in: query
+      description: >
+        Maximum number of rows to return.  Use `limit=0` to obtain only the
+        total count via the `X-Total-Count` header.  Without `limit`, all
+        matching rows are returned (backwards-compatible behaviour).
+      schema:
+        type: integer
+        minimum: 0
+
+    offset:
+      name: offset
+      in: query
+      description: Number of leading rows to skip.
+      schema:
+        type: integer
+        minimum: 0
+
+    order:
+      name: order
+      in: query
+      description: Sort direction.
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+
+    fields:
+      name: fields
+      in: query
+      description: >
+        Comma-separated list of field names to include in the response.
+        Unknown field names result in HTTP 400.
+      schema:
+        type: string
+        example: id,shower,period_start,freq
 
   schemas:
 
@@ -461,6 +841,88 @@ components:
         error:
           type: string
 
+    Health:
+      type: object
+      required: [status, database]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        database:
+          type: string
+          description: '"ok" when reachable, otherwise a short reason string.'
+
+    Radiant:
+      type: object
+      properties:
+        shower:
+          type: string
+          description: IAU shower code.
+        month:
+          type: integer
+        day:
+          type: integer
+        ra:
+          type: number
+          description: Right ascension of the radiant (degrees).
+        dec:
+          type: number
+          description: Declination of the radiant (degrees).
+
+    StatsMeta:
+      type: object
+      properties:
+        sessions:
+          type: integer
+        rates:
+          type: integer
+        magnitudes:
+          type: integer
+        period_start:
+          type: ["string", "null"]
+        period_end:
+          type: ["string", "null"]
+
+    ShowerStat:
+      type: object
+      properties:
+        shower:
+          type: ["string", "null"]
+          description: IAU shower code, or null for sporadics.
+        rates:
+          type: integer
+        magnitudes:
+          type: integer
+
+    CountryStat:
+      type: object
+      properties:
+        country:
+          type: string
+        sessions:
+          type: integer
+        rates:
+          type: integer
+        magnitudes:
+          type: integer
+
+    YearStat:
+      type: object
+      properties:
+        year:
+          type: integer
+        rates:
+          type: integer
+        magnitudes:
+          type: integer
+
+  headers:
+
+    XTotalCount:
+      description: Total number of rows matching the query, ignoring pagination.
+      schema:
+        type: integer
+
   responses:
 
     BadRequest:
@@ -479,6 +941,13 @@ components:
 
     NoDB:
       description: No database configured.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found.
       content:
         application/json:
           schema:

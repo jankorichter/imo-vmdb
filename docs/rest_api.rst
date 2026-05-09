@@ -31,19 +31,95 @@ Endpoints
      - Description
    * - ``/rates``
      - GET
-     - Rate observations
+     - Rate observations (with pagination, sorting, field selection)
+   * - ``/rates/{id}``
+     - GET
+     - Single rate observation
    * - ``/magnitudes``
      - GET
-     - Magnitude observations
+     - Magnitude observations (with pagination, sorting, field selection)
+   * - ``/magnitudes/{id}``
+     - GET
+     - Single magnitude observation
+   * - ``/sessions``
+     - GET
+     - Observation sessions
+   * - ``/sessions/{id}``
+     - GET
+     - Single observation session
    * - ``/showers``
      - GET
      - Meteor shower reference data
+   * - ``/showers/{iau_code}``
+     - GET
+     - Single shower
+   * - ``/showers/{iau_code}/radiants``
+     - GET
+     - Radiant positions for a shower (sorted by month/day)
+   * - ``/showers/active``
+     - GET
+     - Showers active on a given date (default: today UTC)
+   * - ``/stats/meta``
+     - GET
+     - Database scope summary (counts, covered date range)
+   * - ``/stats/by-shower``
+     - GET
+     - Per-shower aggregate counts
+   * - ``/stats/by-country``
+     - GET
+     - Per-country aggregate counts
+   * - ``/stats/by-year``
+     - GET
+     - Per-year aggregate counts
+   * - ``/health``
+     - GET
+     - Liveness/readiness probe; returns ``200 OK`` when the database is
+       reachable, ``503`` otherwise. Suitable for load balancers and
+       Kubernetes probes.
    * - ``/openapi.yaml``
      - GET
-     - Full OpenAPI 3.1 specification
+     - Full OpenAPI 3.1 specification (YAML)
+   * - ``/openapi.json``
+     - GET
+     - Full OpenAPI 3.1 specification (JSON)
 
 All filter parameters are optional.
 An unfiltered request returns *all* records; combine parameters as needed.
+
+Pagination and totals
+---------------------
+
+The list endpoints (``/rates``, ``/magnitudes``, ``/sessions``) accept
+optional ``limit`` and ``offset`` query parameters and **always** return
+the unpaginated total count in the ``X-Total-Count`` response header::
+
+    /api/v1/rates?shower=PER&limit=50&offset=100
+
+To obtain only the count without any rows, use ``limit=0``::
+
+    /api/v1/rates?shower=PER&limit=0
+
+The response will have an empty ``observations`` array; the actual count
+is in the ``X-Total-Count`` header.
+
+Sorting
+-------
+
+The list endpoints accept ``order_by`` (one of ``id``, ``period_start``,
+``period_end``, ``sl_start``, ``lim_mag``) and ``order`` (``asc`` or
+``desc``)::
+
+    /api/v1/rates?order_by=period_start&order=desc
+
+Field selection
+---------------
+
+Use ``fields`` with a comma-separated list to restrict the response
+shape::
+
+    /api/v1/rates?fields=id,shower,period_start,freq
+
+Unknown field names result in HTTP 400.
 
 Sporadic meteors
 ----------------

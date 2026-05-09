@@ -66,6 +66,21 @@ class DBAdapter:
         """Close the database connection."""
         self.conn.close()
 
+    def ping(self) -> None:
+        """Verify that the database accepts a trivial query.
+
+        Issues a ``SELECT 1`` and discards the result.  Intended for
+        liveness/readiness checks (e.g. ``/health`` endpoints).
+
+        :raises DBException: If the underlying driver raises any error.
+        """
+        try:
+            cur = self.cursor()
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        except Exception as exc:
+            raise DBException(str(exc))
+
     def convert_stmt(self, stmt: str) -> str:
         """Convert a SQL statement to the active backend's dialect.
 
@@ -82,6 +97,21 @@ class DBAdapter:
             return re.sub("%\\(([^)]*)\\)s", ":\\1", stmt)
 
         return stmt
+
+    def year_expr(self, col: str) -> str:
+        """Return a SQL fragment that extracts the year from a timestamp column.
+
+        Cross-dialect helper used by aggregate queries that need to group
+        observations by year.  Result type is integer.
+
+        :param col: SQL column reference (e.g. ``"r.period_start"``).
+        :return: Dialect-specific SQL expression yielding an integer year.
+        """
+        if "sqlite3" == self.db_module:
+            return f"CAST(strftime('%Y', {col}) AS INTEGER)"
+        if self.db_module.startswith("psycopg"):
+            return f"EXTRACT(YEAR FROM {col})::int"
+        return f"YEAR({col})"
 
 
 def create_tables(db_conn: "DBAdapter") -> None:

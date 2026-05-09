@@ -45,10 +45,32 @@ Operations
 ----------
 
 .. automodule:: imo_vmdb
-   :members: cleanup, initdb, normalize, export_table,
-             query_showers, query_rates, query_magnitudes
+   :members: cleanup, initdb, normalize, export_table
 
 .. autoclass:: imo_vmdb.CSVImporter
+   :members:
+
+Service classes
+---------------
+
+Each service class wraps a :class:`~imo_vmdb.DBAdapter` connection and
+exposes the queries available for one entity.  The ``query`` method
+returns the matching list (with optional pagination/total), ``by_id`` /
+``by_code`` return a single record (or ``None``).
+
+.. autoclass:: imo_vmdb.RateService
+   :members:
+
+.. autoclass:: imo_vmdb.MagnitudeService
+   :members:
+
+.. autoclass:: imo_vmdb.SessionService
+   :members:
+
+.. autoclass:: imo_vmdb.ShowerService
+   :members:
+
+.. autoclass:: imo_vmdb.StatsService
    :members:
 
 Filter types
@@ -58,6 +80,9 @@ Filter types
    :members:
 
 .. autoclass:: imo_vmdb.MagnitudeFilter
+   :members:
+
+.. autoclass:: imo_vmdb.SessionFilter
    :members:
 
 Result types
@@ -78,10 +103,28 @@ Result types
 .. autoclass:: imo_vmdb.MagnitudeDetail
    :members:
 
+.. autoclass:: imo_vmdb.Radiant
+   :members:
+
 .. autoclass:: imo_vmdb.Rates
    :members:
 
 .. autoclass:: imo_vmdb.Magnitudes
+   :members:
+
+.. autoclass:: imo_vmdb.Sessions
+   :members:
+
+.. autoclass:: imo_vmdb.StatsMeta
+   :members:
+
+.. autoclass:: imo_vmdb.ShowerStat
+   :members:
+
+.. autoclass:: imo_vmdb.CountryStat
+   :members:
+
+.. autoclass:: imo_vmdb.YearStat
    :members:
 
 WSGI deployment

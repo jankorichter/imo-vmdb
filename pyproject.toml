@@ -31,6 +31,7 @@ include = [
 python = "^3.10"
 astropy = ">=6.0"
 flask = "^3.0"
+PyYAML = ">=6.0"
 psycopg2 = { version = "^2.9", optional = true }
 pymysql = { version = "^1.0", optional = true }
 gunicorn = { version = ">=22.0", optional = true }
@@ -49,6 +50,7 @@ imo-vmdb = "imo_vmdb.__main__:main"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
 ruff = "^0.5.3"
+openapi-spec-validator = "^0.8.5"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
