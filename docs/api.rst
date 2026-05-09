@@ -83,3 +83,33 @@ Result types
 
 .. autoclass:: imo_vmdb.Magnitudes
    :members:
+
+WSGI deployment
+---------------
+
+The web UI and REST API can be hosted under any WSGI server using the
+public app factory ``imo_vmdb.httpd.wsgi_app``.  Configuration is read
+from the ``IMO_VMDB_CONFIG`` environment variable (path to an INI file)
+or directly from ``IMO_VMDB_*`` variables (see :ref:`setup`).
+
+.. autofunction:: imo_vmdb.httpd.wsgi_app
+
+Example using Gunicorn (install with ``pip install "imo-vmdb[web]"``):
+
+.. code-block:: bash
+
+    # With a config file:
+    IMO_VMDB_CONFIG=config.ini \
+        gunicorn --workers 1 --threads 4 \
+        --bind 127.0.0.1:8000 "imo_vmdb.httpd:wsgi_app()"
+
+    # Without a config file:
+    IMO_VMDB_DATABASE_DATABASE=./vmdb.db \
+        gunicorn --workers 1 --threads 4 \
+        --bind 127.0.0.1:8000 "imo_vmdb.httpd:wsgi_app()"
+
+.. warning::
+
+   Always use ``--workers 1``.  The job manager stores job state in-process;
+   multiple workers would make jobs invisible across processes, breaking status
+   polling and log streaming.

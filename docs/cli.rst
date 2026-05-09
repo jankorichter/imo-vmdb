@@ -141,6 +141,17 @@ To make the server reachable from other machines on the network::
    The web server is intended for local or trusted-network use only.
    It is not hardened for public internet exposure.
 
+   When the server starts, Flask prints the following message:
+
+   .. code-block:: text
+
+      WARNING: This is a development server. Do not use it in a production
+      deployment. Use a production WSGI server instead.
+
+   This is expected behaviour.  The warning refers to deployments on a public
+   server; it does not apply to local use on your own computer.  You can safely
+   ignore it.
+
 See :ref:`webui` for a description of the interface.
 
 .. _csv-export:

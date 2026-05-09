@@ -8,9 +8,9 @@ database connection, or the :ref:`Python API <api>` (``imo_vmdb``, ``imo_vmdb.se
 
 The tool can be used in two ways:
 
-- **Docker** (recommended for most users): run the web-based control panel
+- **Docker**: run the web-based control panel
   without any local Python installation — see :ref:`setup`.
-- **Python package**: use the command-line interface directly via Poetry —
+- **Python package**: install via pip and use the command-line interface —
   see :ref:`setup`.
 
 .. toctree::

@@ -33,6 +33,33 @@ def create_app(config: RawConfigParser, upload_dir: str) -> Flask:
     return app
 
 
+def wsgi_app():
+    """WSGI app factory for Gunicorn ``--factory`` mode.
+
+    Configuration is read from the ``IMO_VMDB_CONFIG`` environment variable
+    (path to an INI file) or from ``IMO_VMDB_DATABASE_*`` etc. directly.
+    Host and port are controlled by Gunicorn's ``--bind`` flag.
+
+    Example::
+
+        gunicorn --workers 1 --threads 4 "imo_vmdb.httpd:wsgi_app()"
+
+    .. warning::
+
+        Always use ``--workers 1``.  The :class:`~imo_vmdb.webui.jobs.JobManager`
+        stores job state in-process; multiple workers would make jobs invisible
+        across processes, breaking status polling and log streaming.
+    """
+    import argparse
+
+    upload_dir = os.environ.get("IMO_VMDB_WEBUI_UPLOAD_DIR", tempfile.gettempdir())
+    config = config_factory(
+        argparse.Namespace(config_file=None), argparse.ArgumentParser()
+    )
+    os.makedirs(upload_dir, exist_ok=True)
+    return create_app(config, upload_dir)
+
+
 def main(args=None):
     """Parse CLI arguments and start the Flask development server.
 

@@ -55,6 +55,19 @@ IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db poetry run python -m imo_vmdb web_serv
 
 Opens the control panel at `http://localhost:8000`; the REST API is available at `http://localhost:8000/api/v1`.
 
+**Test the production WSGI deployment:**
+
+The production setup uses Gunicorn with `imo_vmdb.httpd:wsgi_app`. To verify locally:
+
+```bash
+poetry install --extras web
+IMO_VMDB_DATABASE_DATABASE=./data/vmdb.db \
+    poetry run gunicorn --workers 1 --threads 4 \
+    --bind 127.0.0.1:8000 "imo_vmdb.httpd:wsgi_app()"
+```
+
+Always use `--workers 1` — see `docs/api.rst` for details.
+
 **Run the linter:**
 
 ```bash

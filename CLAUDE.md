@@ -32,6 +32,18 @@ Raw CSV data is stored in `imported_*` tables untouched. The `normalize` command
 | HTTP server | `imo_vmdb/httpd.py` | Flask app factory + `main()` entry point |
 | Public Python API | `imo_vmdb/__init__.py` | `__all__` exports — this is the stable API surface |
 
+## Audiences
+
+The project documentation serves three distinct roles. Keep their docs separate.
+
+| Role | Tools | Docs live in |
+|---|---|---|
+| **User** — end-user of the software | `python -m imo_vmdb`, Docker image `ghcr.io/jankorichter/imo-vmdb` | `docs/` |
+| **Developer** — develops this software itself | `make`, `poetry`, `ruff`, `pytest`, `docker compose` | `README.md`, `CLAUDE.md` |
+| **Programmer** — uses the public Python API and REST API | `pip install imo-vmdb`, Gunicorn + `imo_vmdb.httpd:wsgi_app` | `docs/` (especially `api.rst`, `rest_api.rst`) |
+
+**Hard rule**: developer-only tools (`poetry`, `make`, `ruff`, `pytest`, `docker compose`, source-tree git workflows) must not appear anywhere under `docs/`. Users install via pip or Docker; programmers via pip. Only README.md and CLAUDE.md describe the developer setup.
+
 ## Common Commands
 
 ```bash

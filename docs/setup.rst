@@ -74,19 +74,6 @@ Starting the web UI::
 Replace ``/your/local/data`` with your data folder path.
 Open ``http://localhost:8000`` in your browser.  Press ``Ctrl+C`` to stop.
 
-.. note::
-
-   When the container starts, Flask prints the following message:
-
-   .. code-block:: text
-
-      WARNING: This is a development server. Do not use it in a production
-      deployment. Use a production WSGI server instead.
-
-   This is expected behaviour.  The warning refers to deployments on a
-   public server; it does not apply to local use on your own computer.
-   You can safely ignore it.
-
 Running individual commands::
 
     # Initialize the database
@@ -142,6 +129,9 @@ All Environment Variables
    * - ``IMO_VMDB_WEBUI_PORT``
      - ``[webui] port``
      - ``8000``
+   * - ``IMO_VMDB_WEBUI_THREADS``
+     - *(Gunicorn only)*
+     - ``4``
 
 Environment variables work with any *imo-vmdb* installation — not just Docker.
 
@@ -192,9 +182,6 @@ A short help text listing the available commands should appear.
 .. note::
    The rest of this documentation assumes *imo-vmdb* is either installed
    system-wide or that the virtual environment is already activated.
-
-For work with the source code or running from a local clone, see the
-``README.md`` in the project root for setup instructions using Poetry.
 
 **PostgreSQL and MySQL**
 
