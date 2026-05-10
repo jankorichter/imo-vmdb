@@ -22,7 +22,7 @@ copyright = "2021-2026, Janko Richter"
 author = "Janko Richter"
 
 # The full version, including alpha/beta/rc tags
-release = "1.5.2"
+release = "1.6.0"
 
 
 # -- General configuration ---------------------------------------------------

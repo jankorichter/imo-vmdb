@@ -1,5 +1,90 @@
 # Changelog
 
+## [1.6.0] — 2026-05-10
+
+### For users
+
+#### Changed
+
+- **`imo-vmdb` console script** — installs as a single entry point so the
+  CLI can be invoked as `imo-vmdb <command>` instead of
+  `python -m imo_vmdb <command>`. Both forms continue to work.
+- **pipx installation** — `pipx install imo-vmdb` is now supported as a
+  global install path alongside `pip install imo-vmdb`.
+- **Docker image** — now serves the application via Gunicorn
+  (`imo_vmdb.httpd:wsgi_app`) instead of the Flask development server, so
+  the published image at `ghcr.io/jankorichter/imo-vmdb` is production-ready
+  out of the box.
+- **BREAKING:** `web_server` no longer starts the Web UI by default — only
+  the REST API is served. Pass `--enable-webui`, set
+  `IMO_VMDB_WEBSERVER_ENABLE_WEBUI=true`, or add `enable_webui = true`
+  under the `[webserver]` section to restore the previous behaviour.
+- **BREAKING:** Configuration section renamed from `[webui]` to
+  `[webserver]`. Affects `port`, `host`, `upload_dir`, and the new
+  `enable_webui` key.
+- **BREAKING:** Environment variables renamed
+  `IMO_VMDB_WEBUI_*` → `IMO_VMDB_WEBSERVER_*`
+  (`PORT`, `HOST`, `UPLOAD_DIR`, plus the new `ENABLE_WEBUI` and `THREADS`).
+
+#### Fixed
+
+- **MagnitudeNormalizer** — database write errors during normalization now
+  discard the offending record instead of aborting the run, mirroring
+  `RateNormalizer`'s behaviour.
+
+#### Documentation
+
+- **CLI** — `import_csv`'s `--permissive` and `--repair` modes are now
+  fully described, including which validation steps each mode relaxes.
+- ReadTheDocs default version pinned to `stable`
+  (<https://imo-vmdb.readthedocs.io/en/stable/>).
+
+### For programmers
+
+#### Python API — Added
+
+- **Service classes with typed results** — `RateService`,
+  `MagnitudeService`, `SessionService`, `ShowerService`, `StatsService`,
+  each exposing a `.query(...)` method returning frozen dataclasses
+  (`Rates`, `Magnitudes`, `Sessions`, `Shower`, `ShowerStat`,
+  `CountryStat`, `YearStat`, `StatsMeta`, …) and accepting filter
+  dataclasses (`RateFilter`, `MagnitudeFilter`, `SessionFilter`).
+- **`DBAdapter`, `DBException`** are now part of the public API
+  (`from imo_vmdb import DBAdapter, DBException`), so callers no longer
+  need to reach into `imo_vmdb.db`.
+- **`DBAdapter.ping()`** — issues `SELECT 1` for liveness/readiness
+  checks; raises `DBException` on driver errors. Used by `/api/v1/health`.
+- **`imo_vmdb.httpd.wsgi_app`** — public WSGI factory for hosting the
+  Web UI and REST API behind Gunicorn or any other WSGI server.
+- **Type hints** added throughout the public API surface.
+
+#### Python API — BREAKING
+
+- The free functions `query_showers`, `query_rates`, and `query_magnitudes`
+  have been removed. Use the corresponding `*Service.query(...)` methods
+  instead. Migration:
+  - `query_rates(db, ...)` → `RateService(db).query(RateFilter(...))`
+  - `query_magnitudes(db, ...)` → `MagnitudeService(db).query(MagnitudeFilter(...))`
+  - `query_showers(db)` → `ShowerService(db).query()`
+
+#### REST API (`/api/v1/`) — Added
+
+- Detail endpoints by ID: `/rates/<id>`, `/magnitudes/<id>`,
+  `/sessions/<id>`, `/showers/<iau_code>`, `/showers/<iau_code>/radiants`.
+- New collections: `/sessions`, `/showers/active`.
+- Statistics: `/stats/meta`, `/stats/by-shower`, `/stats/by-country`,
+  `/stats/by-year`.
+- Operational: `/health` (liveness/readiness), `/openapi.json`
+  (alongside the existing `/openapi.yaml`).
+
+### For developers
+
+- **Ruff** is now the project's linter and formatter
+  (`make lint`, `make review`); CI runs `ruff check` and
+  `ruff format --check` on every push.
+- Source-code docstrings added across the package; type hints added
+  at service boundaries.
+
 ## [1.5.2] — 2026-05-02
 
 ### Fixed
