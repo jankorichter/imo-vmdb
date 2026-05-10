@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1] — 2026-05-10
+
+### Fixed
+
+- **`/api/v1/openapi.{yaml,json}`** — no longer returns `404` in installed
+  environments (pipx, pip, Docker); the spec now ships as package data.
+
 ## [1.7.0] — 2026-05-10
 
 #### Added

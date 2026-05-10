@@ -41,8 +41,8 @@ def _serialize_filtered(obj, fields: set[str] | None):
     return {k: raw[k] for k in fields if k in raw}
 
 
-_OPENAPI_FILE = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "docs", "openapi.yaml")
+_OPENAPI_FILE = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "data", "openapi.yaml"
 )
 
 

@@ -88,14 +88,14 @@ poetry run pytest
 
 ## Documentation (for doc authors)
 
-Sources are in `docs/*.rst` and `docs/openapi.yaml`. The built HTML is embedded in the Python package under `imo_vmdb/built_docs/`.
+Sources are in `docs/*.rst`. The built HTML is embedded in the Python package under `imo_vmdb/built_docs/`.
 
 ```bash
 poetry install --extras docs
 poetry run sphinx-build -b html docs imo_vmdb/built_docs
 ```
 
-`docs/openapi.yaml` is the authoritative source for the REST API contract.
+`imo_vmdb/data/openapi.yaml` is the authoritative source for the REST API contract. It is shipped as package data, served live at `/api/v1/openapi.yaml`, and referenced from `docs/rest_api.rst` via a Sphinx `:download:` directive.
 
 ## Key Design Patterns
 

@@ -11,7 +11,7 @@ def main(command_args: list[str]) -> None:
 
     :param command_args: CLI argument list (typically ``sys.argv[1:]``).
     """
-    parser = OptionParser(usage="import_csv [options]")
+    parser = OptionParser(usage="import_csv [options] <files ...>")
     parser.add_option(
         "-c", action="store", dest="config_file", help="path to config file"
     )

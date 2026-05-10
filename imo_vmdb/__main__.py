@@ -18,7 +18,7 @@ Valid commands are:
     cleanup     ... Removes data that are no longer needed.
     import_csv  ... Imports CSV files.
     normalize   ... Normalize and analyze meteor observations.
-    export      ... Export data as CSV.
+    export      ... Export data as CSV or SQLite database.
     web_server  ... Start the web server (Web UI and REST API).""")
 
 

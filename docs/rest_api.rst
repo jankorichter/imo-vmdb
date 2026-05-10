@@ -174,7 +174,7 @@ API specification
 
 The complete endpoint and schema reference is available as an
 `OpenAPI 3.1 <https://spec.openapis.org/oas/v3.1.0>`_ document:
-:download:`openapi.yaml`.
+:download:`openapi.yaml <../imo_vmdb/data/openapi.yaml>`.
 
 The live server also serves the same file at ``/api/v1/openapi.yaml``.
 Open either in any OpenAPI-compatible tool such as

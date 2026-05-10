@@ -19,7 +19,7 @@ import yaml
 from openapi_spec_validator import validate
 
 _BASE = "/api/v1"
-_OPENAPI_FILE = Path(__file__).parent.parent / "docs" / "openapi.yaml"
+_OPENAPI_FILE = Path(__file__).parent.parent / "imo_vmdb" / "data" / "openapi.yaml"
 
 
 @pytest.fixture(scope="session")
@@ -59,7 +59,7 @@ class TestOpenApiJson:
 
 
 class TestOpenApiSpecValidity:
-    """Validates ``docs/openapi.yaml`` against the OpenAPI 3.1 specification.
+    """Validates ``imo_vmdb/data/openapi.yaml`` against the OpenAPI 3.1 specification.
 
     Catches: invalid ``$ref`` targets, missing required keys, wrong types,
     structural mistakes a hand-edit could introduce.
