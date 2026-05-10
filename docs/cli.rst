@@ -164,17 +164,18 @@ See :ref:`webui` for a description of the interface.
 export
 ------
 
-Exports a table as a semicolon-delimited CSV file::
+Exports a single table as a semicolon-delimited CSV file or the entire
+database as a SQLite file::
 
-    imo-vmdb export <table> [-c config.ini] [-o output.csv]
+    imo-vmdb export <target> [-c config.ini] [-o output_file]
 
-Available tables:
+Available CSV targets (one table per call):
 
 .. list-table::
    :header-rows: 1
    :widths: 25 75
 
-   * - Table
+   * - Target
      - Description
    * - ``shower``
      - Meteor shower data from the database
@@ -191,7 +192,7 @@ Available tables:
    * - ``rate_magnitude``
      - Rate-to-magnitude cross-reference
 
-Without ``-o``, output goes to stdout.
+For CSV targets, output goes to stdout when ``-o`` is omitted.
 
 The ``--reimport`` flag is available for ``shower`` and ``radiant``.  It
 exports the original embedded reference files in the exact format required for
@@ -199,7 +200,23 @@ re-import with ``import_csv``::
 
     imo-vmdb export shower --reimport -o showers_edited.csv
 
-Without ``--reimport``, all tables — including ``shower`` and ``radiant`` —
-are exported directly from the database using the field names documented in
-:ref:`fields`.
+Without ``--reimport``, all CSV targets — including ``shower`` and
+``radiant`` — are exported directly from the database using the field names
+documented in :ref:`fields`.
 
+.. _db-export:
+
+Exporting the whole database
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The special target ``db`` writes the entire database (normalized
+observations and reference data, but not the raw ``imported_*`` tables)
+into a single SQLite file::
+
+    imo-vmdb export db -o snapshot.sqlite
+
+The resulting file uses the same schema as a regular imo-vmdb database.
+The recipient can use it directly as their own imo-vmdb database.
+
+When ``db`` is the target, ``-o`` is required and ``--reimport`` is not
+supported.

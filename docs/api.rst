@@ -45,7 +45,29 @@ Operations
 ----------
 
 .. automodule:: imo_vmdb
-   :members: cleanup, initdb, normalize, export_table
+   :members: cleanup, initdb, normalize, export_table, export_db
+
+Exporting a whole database
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`~imo_vmdb.export_db` writes the normalized observations and
+reference data of a source database into an empty SQLite destination,
+using the same schema as a regular imo-vmdb database.  The resulting
+file can be shared and re-used as the input of another imo-vmdb
+installation.  The raw ``imported_*`` tables are intentionally
+excluded.
+
+.. code-block:: python
+
+   import sqlite3
+   import imo_vmdb
+
+   src = imo_vmdb.DBAdapter({"database": "/path/to/vmdb.db"})
+
+   # Export to a portable SQLite file:
+   dst = sqlite3.connect("/tmp/snapshot.sqlite")
+   imo_vmdb.export_db(src, dst)
+   dst.close()
 
 .. autoclass:: imo_vmdb.CSVImporter
    :members:

@@ -79,7 +79,8 @@ Downloads
 ---------
 
 A Downloads section below the action cards provides direct links to export
-all tables as CSV files.
+all tables as CSV files, plus an *Export DB* link that downloads the entire
+database as a single SQLite file (see :ref:`download`).
 
 Enabling *Export for re-import* changes the Showers and Radiants download
 links to export the original reference file format.  These files can be

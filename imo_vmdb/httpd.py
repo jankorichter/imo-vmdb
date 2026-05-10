@@ -1,10 +1,12 @@
 import argparse
 import os
+import sqlite3
 import tempfile
 from configparser import RawConfigParser
 
-from flask import Flask
+from flask import Flask, jsonify, send_file
 
+from imo_vmdb import DBAdapter, DBException, export_db
 from imo_vmdb.command import config_factory
 from imo_vmdb.restapi import api_bp
 
@@ -41,7 +43,52 @@ def create_app(
         app.register_blueprint(bp)
 
     app.register_blueprint(api_bp, url_prefix="/api/v1")
+    _register_download_routes(app)
     return app
+
+
+def _register_download_routes(app: Flask) -> None:
+    """Register binary download routes that live outside ``/api/v1``.
+
+    These routes are always available when a database is configured —
+    independent of whether the Web UI is enabled — so that programmers
+    can fetch downloads directly via HTTP.
+    """
+
+    @app.route("/download/db")
+    def download_db():
+        config = app.config["IMO_CONFIG"]
+        if not config.has_section("database"):
+            return jsonify({"error": "No database configured"}), 503
+
+        try:
+            src = DBAdapter(dict(config["database"]))
+        except DBException as exc:
+            return jsonify({"error": f"Database error: {exc}"}), 503
+
+        fd, tmp_path = tempfile.mkstemp(suffix=".sqlite", prefix="imo_vmdb_export_")
+        os.close(fd)
+        try:
+            dst_conn = sqlite3.connect(tmp_path)
+            try:
+                export_db(src, dst_conn)
+            finally:
+                dst_conn.close()
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise
+        finally:
+            src.close()
+
+        response = send_file(
+            tmp_path,
+            mimetype="application/vnd.sqlite3",
+            as_attachment=True,
+            download_name="imo_vmdb.sqlite",
+        )
+        response.call_on_close(lambda: os.path.exists(tmp_path) and os.unlink(tmp_path))
+        return response
 
 
 def wsgi_app():

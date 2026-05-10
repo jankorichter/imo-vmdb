@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.7.0] — 2026-05-10
+
+#### Added
+
+- **SQLite database export** — share or back up a complete imo-vmdb
+  database as a single SQLite file that uses the same schema as a
+  regular install and can be opened directly with imo-vmdb. Available
+  via the new CLI target `imo-vmdb export db -o snapshot.sqlite`, the
+  *Export DB* button in the Web UI, and the HTTP endpoint
+  `/download/db` (served regardless of whether the Web UI is enabled).
+  The raw `imported_*` tables are intentionally excluded.
+
+- **`imo_vmdb.export_db(src_db_conn, dst_conn)`** — copies a database
+  into an externally-owned `sqlite3.Connection` (file-backed or
+  `:memory:`). Schema and lifecycle of the destination are controlled
+  by the caller.
+
 ## [1.6.0] — 2026-05-10
 
 ### For users

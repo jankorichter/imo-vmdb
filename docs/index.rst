@@ -22,11 +22,12 @@ The tool can be used in two ways:
    cli
    webui
    rest_api
+   download
 
 .. toctree::
    :maxdepth: 1
    :caption: Reference:
 
+   api
    csv
    fields
-   api

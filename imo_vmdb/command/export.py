@@ -1,9 +1,10 @@
 import csv
+import sqlite3
 import sys
 from optparse import OptionParser, Values
 from typing import IO
 
-from imo_vmdb import DBAdapter, DBException, export_table
+from imo_vmdb import DBAdapter, DBException, export_db, export_table
 from imo_vmdb.command import config_factory
 
 REIMPORT_TABLES = {"shower", "radiant"}
@@ -18,16 +19,31 @@ DB_TABLES = {
     "rate_magnitude": "rate_magnitude",
 }
 
-ALL_TABLES = list(DB_TABLES)
+DB_TARGET = "db"
+
+ALL_TARGETS = list(DB_TABLES) + [DB_TARGET]
 
 
 def main(command_args: list[str]) -> None:
-    """Parse arguments and run the CSV export command.
+    """Parse arguments and run the export command.
+
+    Supports two output modes:
+
+    * ``<table>`` — export a single table as semicolon-delimited CSV
+      (to ``-o`` or stdout).
+    * ``db`` — export the whole database as a SQLite file (``-o`` required).
 
     :param command_args: CLI argument list (typically ``sys.argv[1:]``).
     """
     parser = OptionParser(
-        usage="export <table> [options]\n\nTables: " + ", ".join(ALL_TABLES)
+        usage=(
+            "export <target> [options]\n\n"
+            "Targets:\n"
+            "  " + ", ".join(DB_TABLES) + "\n"
+            "    Export a single table as semicolon-delimited CSV.\n"
+            "  db\n"
+            "    Export the whole database as a SQLite file (-o required)."
+        )
     )
     parser.add_option(
         "-c", action="store", dest="config_file", help="path to config file"
@@ -37,7 +53,7 @@ def main(command_args: list[str]) -> None:
         action="store",
         dest="output_file",
         metavar="FILE",
-        help="output file (default: stdout)",
+        help="output file (default: stdout for CSV; required for db)",
     )
     parser.add_option(
         "--reimport",
@@ -52,13 +68,21 @@ def main(command_args: list[str]) -> None:
         parser.print_help()
         sys.exit(1)
 
-    table = args[0]
-    if table not in ALL_TABLES:
+    target = args[0]
+    if target not in ALL_TARGETS:
         print(
-            f'Unknown table: {table!r}. Valid tables: {", ".join(ALL_TABLES)}',
+            f"Unknown target: {target!r}. Valid targets: {', '.join(ALL_TARGETS)}",
             file=sys.stderr,
         )
         sys.exit(1)
+
+    if target == DB_TARGET:
+        if options.reimport:
+            parser.error("--reimport is not supported with target 'db'")
+        if not options.output_file:
+            parser.error("-o is required when exporting the database (target 'db')")
+        _export_database(options, parser)
+        return
 
     out = (
         open(options.output_file, "w", newline="", encoding="utf-8")
@@ -67,13 +91,13 @@ def main(command_args: list[str]) -> None:
     )
 
     try:
-        _export_db(table, options, parser, out, reimport=options.reimport)
+        _export_table_to_csv(target, options, parser, out, reimport=options.reimport)
     finally:
         if options.output_file:
             out.close()
 
 
-def _export_db(
+def _export_table_to_csv(
     table: str,
     options: Values,
     parser: OptionParser,
@@ -88,10 +112,7 @@ def _export_db(
     :param out: Writable text stream to receive the CSV output.
     :param reimport: If ``True``, export in reimport-compatible format.
     """
-    try:
-        config = config_factory(options, parser)
-    except SystemExit:
-        raise
+    config = config_factory(options, parser)
 
     try:
         db_conn = DBAdapter(dict(config["database"]))
@@ -104,3 +125,31 @@ def _export_db(
     writer = csv.writer(out, delimiter=";")
     writer.writerow(cols)
     writer.writerows(rows)
+
+
+def _export_database(options: Values, parser: OptionParser) -> None:
+    """Export the whole database as a SQLite file at ``options.output_file``.
+
+    :param options: Parsed options object with ``config_file`` and
+        ``output_file`` attributes.
+    :param parser: CLI parser used to print usage on configuration errors.
+    """
+    config = config_factory(options, parser)
+
+    try:
+        src = DBAdapter(dict(config["database"]))
+    except DBException as e:
+        print(f"Database error: {e}", file=sys.stderr)
+        sys.exit(100)
+
+    try:
+        dst_conn = sqlite3.connect(options.output_file)
+        try:
+            export_db(src, dst_conn)
+        finally:
+            dst_conn.close()
+    except DBException as e:
+        print(f"Database error: {e}", file=sys.stderr)
+        sys.exit(100)
+    finally:
+        src.close()

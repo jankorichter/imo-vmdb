@@ -145,3 +145,25 @@ class TestWebuiDisabled:
     def test_rest_api_still_works(self, api_only_client):
         r = api_only_client.get("/api/v1/showers")
         assert r.status_code == 200
+
+    def test_download_db_available_without_webui(self, api_only_client):
+        r = api_only_client.get("/download/db")
+        assert r.status_code == 200
+        assert r.data[:16] == b"SQLite format 3\x00"
+
+
+class TestDownloadDb:
+    def test_returns_sqlite_file(self, obs_client):
+        r = obs_client.get("/download/db")
+        assert r.status_code == 200
+        assert r.headers.get("Content-Disposition", "").startswith("attachment")
+        assert "imo_vmdb.sqlite" in r.headers.get("Content-Disposition", "")
+        assert r.data[:16] == b"SQLite format 3\x00"
+
+    def test_index_links_to_download_db(self, client):
+        r = client.get("/")
+        assert b'href="/download/db"' in r.data
+
+    def test_without_db_returns_503(self, no_db_client):
+        r = no_db_client.get("/download/db")
+        assert r.status_code == 503

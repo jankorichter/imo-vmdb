@@ -8,7 +8,13 @@ from imo_vmdb.csv_import.radiant import RadiantParser
 from imo_vmdb.csv_import.rate import RateParser
 from imo_vmdb.csv_import.session import SessionParser
 from imo_vmdb.csv_import.shower import ShowerParser
-from imo_vmdb.db import DBAdapter, DBException, create_tables
+from imo_vmdb.db import (
+    DBAdapter,
+    DBException,
+    create_tables,
+    export_db,
+    export_table,
+)
 from imo_vmdb.model.radiant import Storage as RadiantStorage
 from imo_vmdb.model.shower import Storage as ShowerStorage
 from imo_vmdb.model.sky import Sky
@@ -66,130 +72,11 @@ __all__ = [
     "StatsService",
     "YearStat",
     "cleanup",
+    "export_db",
     "export_table",
     "initdb",
     "normalize",
 ]
-
-_MONTH_NAMES = {
-    1: "Jan",
-    2: "Feb",
-    3: "Mar",
-    4: "Apr",
-    5: "May",
-    6: "Jun",
-    7: "Jul",
-    8: "Aug",
-    9: "Sep",
-    10: "Oct",
-    11: "Nov",
-    12: "Dec",
-}
-
-_VALID_TABLES = frozenset(
-    {
-        "shower",
-        "radiant",
-        "obs_session",
-        "imported_session",
-        "imported_rate",
-        "imported_magnitude",
-        "rate",
-        "magnitude",
-        "rate_magnitude",
-        "magnitude_detail",
-    }
-)
-
-
-def _format_date(month: int | None, day: int | None) -> str:
-    """Format a month/day pair as an abbreviated month name and day number.
-
-    :param month: Month as an integer (1–12), or ``None``.
-    :param day: Day as an integer, or ``None``.
-    :return: Formatted string such as ``'Aug 12'``, or an empty string if
-        either value is ``None``.
-    """
-    if month is None or day is None:
-        return ""
-    return f"{_MONTH_NAMES[month]} {day}"
-
-
-def export_table(
-    db_conn: DBAdapter, table: str, reimport: bool = False
-) -> tuple[list[str], list[tuple]]:
-    """Export all rows from a database table.
-
-    When *reimport* is ``True`` and *table* is ``'shower'``, the result uses
-    column names and date formats that are compatible with :class:`CSVImporter`,
-    so the exported CSV can be imported again without modification.  For all
-    other tables *reimport* has no effect.
-
-    :param db_conn: An open database connection implementing DB-API 2.0.
-    :param table: Name of the table to export.  Must be one of the known
-        tables: ``shower``, ``radiant``, ``obs_session``, ``imported_session``,
-        ``imported_rate``, ``imported_magnitude``, ``rate``, ``magnitude``,
-        ``rate_magnitude``, ``magnitude_detail``.
-    :param reimport: If ``True``, export in re-import-compatible format where applicable.
-    :return: Tuple of ``(column_names, rows)``.
-    :raises ValueError: If *table* is not a known table name.
-    """
-    if table not in _VALID_TABLES:
-        raise ValueError(f"Unknown table: {table!r}")
-    if reimport and table == "shower":
-        return _export_shower_reimport(db_conn)
-    cur = db_conn.cursor()
-    cur.execute(f"SELECT * FROM {table}")
-    cols = [d[0] for d in cur.description]
-    rows = cur.fetchall()
-    return cols, rows
-
-
-def _export_shower_reimport(db_conn: DBAdapter) -> tuple[list[str], list[tuple]]:
-    """Export the ``shower`` table in a format compatible with :class:`CSVImporter`.
-
-    Converts start/end/peak month–day pairs into ``'Mon DD'`` strings and
-    renames the ``dec`` column to ``de`` to match the import CSV schema.
-
-    :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
-    :return: Tuple ``(column_names, rows)`` ready for CSV serialisation.
-    """
-    cur = db_conn.cursor()
-    cur.execute(
-        "SELECT id, iau_code, name, start_month, start_day, end_month, end_day,"
-        ' peak_month, peak_day, ra, "dec", v, r, zhr FROM shower ORDER BY id'
-    )
-    raw_rows = cur.fetchall()
-    cols = [
-        "id",
-        "iau_code",
-        "name",
-        "start",
-        "end",
-        "peak",
-        "ra",
-        "de",
-        "v",
-        "r",
-        "zhr",
-    ]
-    rows = [
-        (
-            id_,
-            iau_code,
-            name,
-            _format_date(start_m, start_d),
-            _format_date(end_m, end_d),
-            _format_date(peak_m, peak_d),
-            ra,
-            dec,
-            v,
-            r,
-            zhr,
-        )
-        for id_, iau_code, name, start_m, start_d, end_m, end_d, peak_m, peak_d, ra, dec, v, r, zhr in raw_rows
-    ]
-    return cols, rows
 
 
 class CSVFileException(Exception):
