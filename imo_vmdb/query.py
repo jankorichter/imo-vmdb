@@ -512,7 +512,7 @@ def _fetch_sessions(db_conn, session_ids) -> list[Session]:
         WHERE id IN ({phs})
     """
     cur = db_conn.cursor()
-    cur.execute(db_conn.convert_stmt(stmt), params)
+    cur.execute(db_conn._convert_stmt(stmt), params)
     return [Session(**d) for d in _rows_to_dicts(cur)]
 
 
@@ -526,7 +526,7 @@ def _fetch_magnitude_details(db_conn, magn_ids) -> list[MagnitudeDetail]:
         ORDER BY id, magn DESC
     """
     cur = db_conn.cursor()
-    cur.execute(db_conn.convert_stmt(stmt), params)
+    cur.execute(db_conn._convert_stmt(stmt), params)
     return [MagnitudeDetail(**d) for d in _rows_to_dicts(cur)]
 
 
@@ -583,7 +583,7 @@ class RateService:
         """
         cur = self._db.cursor()
         cur.execute(
-            self._db.convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
+            self._db._convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
             params,
         )
         observations = [Rate(**d) for d in _rows_to_dicts(cur)]
@@ -592,7 +592,7 @@ class RateService:
 
         if paginated or f.with_total:
             cur.execute(
-                self._db.convert_stmt(f"SELECT COUNT(*) FROM rate r {where}"),
+                self._db._convert_stmt(f"SELECT COUNT(*) FROM rate r {where}"),
                 params,
             )
             result.total = int(cur.fetchone()[0])
@@ -654,7 +654,7 @@ class MagnitudeService:
         """
         cur = self._db.cursor()
         cur.execute(
-            self._db.convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
+            self._db._convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
             params,
         )
         observations = [Magnitude(**d) for d in _rows_to_dicts(cur)]
@@ -663,7 +663,7 @@ class MagnitudeService:
 
         if paginated or f.with_total:
             cur.execute(
-                self._db.convert_stmt(f"SELECT COUNT(*) FROM magnitude m {where}"),
+                self._db._convert_stmt(f"SELECT COUNT(*) FROM magnitude m {where}"),
                 params,
             )
             result.total = int(cur.fetchone()[0])
@@ -718,7 +718,7 @@ class SessionService:
         """
         cur = self._db.cursor()
         cur.execute(
-            self._db.convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
+            self._db._convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
             params,
         )
         observations = [Session(**d) for d in _rows_to_dicts(cur)]
@@ -726,7 +726,7 @@ class SessionService:
 
         if paginated or f.with_total:
             cur.execute(
-                self._db.convert_stmt(f"SELECT COUNT(*) FROM obs_session s {where}"),
+                self._db._convert_stmt(f"SELECT COUNT(*) FROM obs_session s {where}"),
                 params,
             )
             result.total = int(cur.fetchone()[0])
@@ -769,7 +769,7 @@ class ShowerService:
             FROM shower
             WHERE iau_code = %(code)s
         """
-        cur.execute(self._db.convert_stmt(stmt), {"code": iau_code})
+        cur.execute(self._db._convert_stmt(stmt), {"code": iau_code})
         rows = _rows_to_dicts(cur)
         return Shower(**rows[0]) if rows else None
 
@@ -795,7 +795,7 @@ class ShowerService:
             WHERE shower = %(code)s
             ORDER BY "month", "day"
         """
-        cur.execute(self._db.convert_stmt(stmt), {"code": iau_code})
+        cur.execute(self._db._convert_stmt(stmt), {"code": iau_code})
         return [Radiant(**d) for d in _rows_to_dicts(cur)]
 
 
@@ -924,7 +924,7 @@ class StatsService:
         where, params = self._period_clause(period_start, period_end)
         stmt = f"SELECT {column}, COUNT(*) FROM {table} {where} GROUP BY {column}"
         cur = self._db.cursor()
-        cur.execute(self._db.convert_stmt(stmt), params)
+        cur.execute(self._db._convert_stmt(stmt), params)
         return {row[0]: int(row[1]) for row in cur.fetchall()}
 
     def _group_count_join(
@@ -948,7 +948,7 @@ class StatsService:
             f"{where} GROUP BY s.country"
         )
         cur = self._db.cursor()
-        cur.execute(self._db.convert_stmt(stmt), params)
+        cur.execute(self._db._convert_stmt(stmt), params)
         return {row[0]: int(row[1]) for row in cur.fetchall()}
 
     def _group_count_year(
@@ -958,8 +958,8 @@ class StatsService:
         period_end: str | None,
     ) -> dict:
         where, params = self._period_clause(period_start, period_end)
-        year_sql = self._db.year_expr("period_start")
+        year_sql = self._db._year_expr("period_start")
         stmt = f"SELECT {year_sql} AS y, COUNT(*) FROM {table} {where} GROUP BY y"
         cur = self._db.cursor()
-        cur.execute(self._db.convert_stmt(stmt), params)
+        cur.execute(self._db._convert_stmt(stmt), params)
         return {int(row[0]): int(row[1]) for row in cur.fetchall()}

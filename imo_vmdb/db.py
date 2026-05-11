@@ -66,7 +66,8 @@ class DBAdapter:
       so no specific driver is a hard dependency of the package.
     * **SQLite initialisation** — enables foreign-key enforcement via
       ``PRAGMA foreign_keys = ON``, which SQLite disables by default.
-    * **Placeholder normalisation** — see :meth:`convert_stmt`.
+    * **Placeholder normalisation** — internally, ``%(name)s``-style named
+      placeholders are rewritten to the active backend's dialect.
 
     The default backend is ``sqlite3``; a different module can be selected via
     the ``module`` key in *config*.
@@ -127,7 +128,7 @@ class DBAdapter:
         except Exception as exc:
             raise DBException(str(exc))
 
-    def convert_stmt(self, stmt: str) -> str:
+    def _convert_stmt(self, stmt: str) -> str:
         """Convert a SQL statement to the active backend's dialect.
 
         SQLite requires ``:name`` placeholders; this method rewrites
@@ -144,7 +145,7 @@ class DBAdapter:
 
         return stmt
 
-    def year_expr(self, col: str) -> str:
+    def _year_expr(self, col: str) -> str:
         """Return a SQL fragment that extracts the year from a timestamp column.
 
         Cross-dialect helper used by aggregate queries that need to group
@@ -175,19 +176,21 @@ def create_tables(db_conn: "DBAdapter") -> None:
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS rate_magnitude"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS magnitude_detail"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS rate"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS magnitude"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS obs_session"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS shower"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS radiant"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS imported_session"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS imported_rate"))
-            cur.execute(db_conn.convert_stmt("DROP TABLE IF EXISTS imported_magnitude"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS rate_magnitude"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS magnitude_detail"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS rate"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS magnitude"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS obs_session"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS shower"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS radiant"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS imported_session"))
+            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS imported_rate"))
+            cur.execute(
+                db_conn._convert_stmt("DROP TABLE IF EXISTS imported_magnitude")
+            )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE obs_session
             (
                 id integer PRIMARY KEY,
@@ -202,7 +205,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE rate (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -233,13 +236,13 @@ def create_tables(db_conn: "DBAdapter") -> None:
             )""")
         )
         cur.execute(
-            db_conn.convert_stmt(
+            db_conn._convert_stmt(
                 "CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)"
             )
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE magnitude (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -259,13 +262,13 @@ def create_tables(db_conn: "DBAdapter") -> None:
             )""")
         )
         cur.execute(
-            db_conn.convert_stmt(
+            db_conn._convert_stmt(
                 "CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)"
             )
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE magnitude_detail (
                 id integer NOT NULL,
                 magn integer NOT NULL,
@@ -278,13 +281,13 @@ def create_tables(db_conn: "DBAdapter") -> None:
             )""")
         )
         cur.execute(
-            db_conn.convert_stmt(
+            db_conn._convert_stmt(
                 "CREATE INDEX fki_magnitude_detail_fk ON magnitude_detail(id)"
             )
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE rate_magnitude (
                 rate_id integer NOT NULL,
                 magn_id integer NOT NULL,
@@ -301,13 +304,13 @@ def create_tables(db_conn: "DBAdapter") -> None:
             )""")
         )
         cur.execute(
-            db_conn.convert_stmt(
+            db_conn._convert_stmt(
                 "CREATE INDEX fki_rate_magnitude_magn_fk ON rate_magnitude(magn_id)"
             )
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE shower (
                 id integer NOT NULL,
                 iau_code varchar(6) NOT NULL,
@@ -329,7 +332,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE radiant
             (
                 shower char(3) NOT NULL,
@@ -342,7 +345,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE imported_session
             (
                 id integer PRIMARY KEY,
@@ -357,7 +360,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE imported_rate
             (
                 id integer NOT NULL,
@@ -377,7 +380,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
             )""")
         )
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE INDEX imported_rate_order_key ON
                 imported_rate(
                     session_id,
@@ -389,7 +392,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
         )
 
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE TABLE imported_magnitude
             (
                 id integer NOT NULL,
@@ -403,7 +406,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
             )""")
         )
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             CREATE INDEX imported_magnitude_order_key ON
                 imported_magnitude(
                     session_id,

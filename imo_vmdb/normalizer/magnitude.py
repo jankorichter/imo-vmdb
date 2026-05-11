@@ -61,8 +61,8 @@ class Record(BaseRecord):
 
         :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
         """
-        cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
-        cls._insert_detail_stmt = db_conn.convert_stmt(cls._insert_detail_stmt)
+        cls._insert_stmt = db_conn._convert_stmt(cls._insert_stmt)
+        cls._insert_detail_stmt = db_conn._convert_stmt(cls._insert_detail_stmt)
 
     def write(self, cur, sky):
         """Compute the mean magnitude and insert rows into ``magnitude`` and ``magnitude_detail``.
@@ -133,7 +133,7 @@ class MagnitudeNormalizer(BaseNormalizer):
         try:
             cur = db_conn.cursor()
             cur.execute(
-                db_conn.convert_stmt("""
+                db_conn._convert_stmt("""
                 SELECT
                     m.id,
                     s.longitude,
@@ -166,7 +166,7 @@ class MagnitudeNormalizer(BaseNormalizer):
             raise DBException(str(e))
 
         prev_record = None
-        delete_stmt = db_conn.convert_stmt("DELETE FROM magnitude WHERE id = %(id)s")
+        delete_stmt = db_conn._convert_stmt("DELETE FROM magnitude WHERE id = %(id)s")
         for _record in cur:
             self.counter_read += 1
 

@@ -41,10 +41,10 @@ class ShowerParser(CsvParser):
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
-        self._delete_stmt = self._db_conn.convert_stmt(
+        self._delete_stmt = self._db_conn._convert_stmt(
             "DELETE FROM shower WHERE iau_code = %(iau_code)s"
         )
-        self._insert_stmt = self._db_conn.convert_stmt("""
+        self._insert_stmt = self._db_conn._convert_stmt("""
             INSERT INTO shower (
                 id,
                 iau_code,
@@ -81,7 +81,7 @@ class ShowerParser(CsvParser):
     def on_start(self, cur):
         if self._do_delete:
             try:
-                cur.execute(self._db_conn.convert_stmt("DELETE FROM shower"))
+                cur.execute(self._db_conn._convert_stmt("DELETE FROM shower"))
             except Exception as e:
                 raise DBException(str(e))
 

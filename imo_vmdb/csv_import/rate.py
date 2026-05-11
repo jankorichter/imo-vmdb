@@ -30,10 +30,10 @@ class RateParser(CsvParser):
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
-        self._delete_stmt = self._db_conn.convert_stmt(
+        self._delete_stmt = self._db_conn._convert_stmt(
             "DELETE FROM imported_rate WHERE id = %(id)s"
         )
-        self._insert_stmt = self._db_conn.convert_stmt("""
+        self._insert_stmt = self._db_conn._convert_stmt("""
             INSERT INTO imported_rate (
                 id,
                 observer_id,
@@ -68,7 +68,7 @@ class RateParser(CsvParser):
     def on_start(self, cur):
         if self._do_delete:
             try:
-                cur.execute(self._db_conn.convert_stmt("DELETE FROM imported_rate"))
+                cur.execute(self._db_conn._convert_stmt("DELETE FROM imported_rate"))
             except Exception as e:
                 raise DBException(str(e))
 

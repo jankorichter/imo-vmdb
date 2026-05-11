@@ -46,7 +46,7 @@ class Record:
 
         :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
         """
-        cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
+        cls._insert_stmt = db_conn._convert_stmt(cls._insert_stmt)
 
     def write(self, cur):
         """Insert this record into ``obs_session`` using *cur*.
@@ -94,7 +94,7 @@ class SessionNormalizer(BaseNormalizer):
         try:
             cur = db_conn.cursor()
             cur.execute(
-                db_conn.convert_stmt("""
+                db_conn._convert_stmt("""
                 SELECT
                     id,
                     latitude,
@@ -117,7 +117,7 @@ class SessionNormalizer(BaseNormalizer):
         except Exception as e:
             raise DBException(str(e))
 
-        delete_stmt = db_conn.convert_stmt("DELETE FROM obs_session WHERE id = %(id)s")
+        delete_stmt = db_conn._convert_stmt("DELETE FROM obs_session WHERE id = %(id)s")
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record, strict=False)))

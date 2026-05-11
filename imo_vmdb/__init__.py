@@ -273,9 +273,9 @@ def cleanup(db_conn: DBAdapter, logger: logging.Logger) -> int:
     """
     logger.info("Starting cleaning up the database.")
     cur = db_conn.cursor()
-    cur.execute(db_conn.convert_stmt("DELETE FROM imported_magnitude"))
-    cur.execute(db_conn.convert_stmt("DELETE FROM imported_rate"))
-    cur.execute(db_conn.convert_stmt("DELETE FROM imported_session"))
+    cur.execute(db_conn._convert_stmt("DELETE FROM imported_magnitude"))
+    cur.execute(db_conn._convert_stmt("DELETE FROM imported_rate"))
+    cur.execute(db_conn._convert_stmt("DELETE FROM imported_session"))
     cur.close()
     logger.info("Cleanup of the database completed.")
 

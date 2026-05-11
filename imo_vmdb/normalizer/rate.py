@@ -82,7 +82,7 @@ class Record(BaseRecord):
 
         :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
         """
-        cls._insert_stmt = db_conn.convert_stmt(cls._insert_stmt)
+        cls._insert_stmt = db_conn._convert_stmt(cls._insert_stmt)
 
     @staticmethod
     def _zenith_coor(alt, v):
@@ -217,7 +217,7 @@ class RateNormalizer(BaseNormalizer):
         try:
             cur = db_conn.cursor()
             cur.execute(
-                db_conn.convert_stmt("""
+                db_conn._convert_stmt("""
                 SELECT
                     r.id,
                     s.longitude,
@@ -255,7 +255,7 @@ class RateNormalizer(BaseNormalizer):
             raise DBException(str(e))
 
         prev_record = None
-        delete_stmt = db_conn.convert_stmt("DELETE FROM rate WHERE id = %(id)s")
+        delete_stmt = db_conn._convert_stmt("DELETE FROM rate WHERE id = %(id)s")
         for _record in cur:
             self.counter_read += 1
             record = Record(dict(zip(column_names, _record, strict=False)))

@@ -142,7 +142,7 @@ def create_rate_magn(db_conn):
         cur = db_conn.cursor()
         # find magnitude-rate-pairs containing each other
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             WITH selection AS (
                 SELECT
                     r.id as rate_id,
@@ -219,10 +219,10 @@ def create_rate_magn(db_conn):
         raise DBException(str(e))
 
     column_names = [desc[0] for desc in cur.description]
-    delete_stmt = db_conn.convert_stmt(
+    delete_stmt = db_conn._convert_stmt(
         "DELETE FROM rate_magnitude WHERE rate_id = %(rate_id)s"
     )
-    insert_stmt = db_conn.convert_stmt("""
+    insert_stmt = db_conn._convert_stmt("""
         INSERT INTO rate_magnitude (
             rate_id,
             magn_id,
@@ -254,9 +254,9 @@ def create_rate_magn(db_conn):
 
     # set limiting magnitude
     try:
-        cur.execute(db_conn.convert_stmt("UPDATE magnitude SET lim_mag = NULL"))
+        cur.execute(db_conn._convert_stmt("UPDATE magnitude SET lim_mag = NULL"))
         cur.execute(
-            db_conn.convert_stmt("""
+            db_conn._convert_stmt("""
             WITH limiting_magnitudes AS (
                 SELECT rm.magn_id, sum(r.t_eff*r.lim_mag)/sum(r.t_eff) as lim_mag
                 FROM rate r
@@ -271,7 +271,7 @@ def create_rate_magn(db_conn):
         raise DBException(str(e))
 
     column_names = [desc[0] for desc in cur.description]
-    update_stmt = db_conn.convert_stmt(
+    update_stmt = db_conn._convert_stmt(
         "UPDATE magnitude SET lim_mag = %(lim_mag)s WHERE id = %(magn_id)s"
     )
     for record in cur:

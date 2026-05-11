@@ -99,7 +99,7 @@ poetry run sphinx-build -b html docs imo_vmdb/built_docs
 
 ## Key Design Patterns
 
-**DB dialect abstraction** — `DBAdapter.convert_stmt()` translates `%(name)s` placeholders to the format expected by each supported SQL database. Always use `%(name)s`-style parameters in SQL; never write dialect-specific SQL directly.
+**DB dialect abstraction** — `DBAdapter._convert_stmt()` (internal, not part of the public API) translates `%(name)s` placeholders to the format expected by each supported SQL database, and `DBAdapter._year_expr()` builds the per-dialect year-extraction expression. Always use `%(name)s`-style parameters in SQL; never write dialect-specific SQL directly.
 
 **CSV parsing** — add a new file type by subclassing `CsvParser` (`imo_vmdb/csv_import/`), declaring `_required_columns`, and implementing `parse_row()`.
 

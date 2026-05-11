@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.2] — 2026-05-11
+
+### Changed
+
+- **`DBAdapter`** — the dialect helpers `convert_stmt()` and `year_expr()`
+  are now private (`_convert_stmt()`, `_year_expr()`) and are no longer part
+  of the public Python API. They were internal SQL placeholder / expression
+  helpers that application code never needed.
+
 ## [1.7.1] — 2026-05-10
 
 ### Fixed
