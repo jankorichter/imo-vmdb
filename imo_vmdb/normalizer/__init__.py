@@ -258,12 +258,12 @@ def create_rate_magn(db_conn):
         cur.execute(
             db_conn._convert_stmt("""
             WITH limiting_magnitudes AS (
-                SELECT rm.magn_id, sum(r.t_eff*r.lim_mag)/sum(r.t_eff) as lim_mag
+                SELECT rm.magn_id, sum(r.freq) as freq, sum(r.freq*r.lim_mag) as lim_mag_sum 
                 FROM rate r
                 INNER JOIN rate_magnitude rm ON rm.rate_id = r.id
                 GROUP BY rm.magn_id
             )
-            SELECT magn_id, round(lim_mag*100)/100.0 as lim_mag
+            SELECT magn_id, freq, lim_mag_sum
             FROM limiting_magnitudes
         """)
         )
@@ -276,13 +276,18 @@ def create_rate_magn(db_conn):
     )
     for record in cur:
         record = dict(zip(column_names, record, strict=False))
-        try:
-            write_cur.execute(
-                update_stmt,
-                {"lim_mag": record["lim_mag"], "magn_id": record["magn_id"]},
-            )
-        except Exception as e:
-            raise DBException(str(e))
+
+        if record["freq"] > 0:
+            lim_mag = record["lim_mag_sum"]/record["freq"]
+            lim_mag = round(lim_mag, 2)
+
+            try:
+                write_cur.execute(
+                    update_stmt,
+                    {"lim_mag": lim_mag, "magn_id": record["magn_id"]},
+                )
+            except Exception as e:
+                raise DBException(str(e))
 
     try:
         write_cur.close()
