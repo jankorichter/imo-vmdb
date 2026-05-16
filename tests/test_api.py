@@ -120,9 +120,9 @@ class TestRateServiceQuery:
 
     def test_lim_magn_min_restricts_results(self, observation_db):
         result = RateService(observation_db).query(RateFilter(lim_magn_min=6.0))
-        lim_mags = [r.lim_mag for r in result.observations]
-        assert all(m >= 6.0 for m in lim_mags)
-        assert len(lim_mags) == 1
+        lim_magns = [r.lim_magn for r in result.observations]
+        assert all(m >= 6.0 for m in lim_magns)
+        assert len(lim_magns) == 1
 
     def test_include_sessions_returns_session_content(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_sessions=True))
@@ -234,7 +234,7 @@ class TestSessionFields:
         result = RateService(observation_db).query(RateFilter(include_sessions=True))
         session = result.sessions[0]
         assert isinstance(session.country, str)
-        assert isinstance(session.city, str)
+        assert isinstance(session.location_name, str)
 
 
 class TestRateFields:
@@ -252,7 +252,7 @@ class TestRateFields:
 
     def test_float_fields(self, observation_db):
         rate = self._rate(observation_db)
-        for field in ("lim_mag", "sl_start", "sl_end"):
+        for field in ("lim_magn", "sl_start", "sl_end"):
             assert isinstance(getattr(rate, field), float), f"{field} should be float"
 
     def test_period_fields_are_str(self, observation_db):
@@ -395,25 +395,25 @@ class TestSessionService:
     def test_query_returns_sessions(self, observation_db):
         result = SessionService(observation_db).query(SessionFilter())
         assert isinstance(result, Sessions)
-        assert len(result.observations) == 1
-        assert result.observations[0].id == 1
+        assert len(result.sessions) == 1
+        assert result.sessions[0].id == 1
 
     def test_query_observer_id_filter(self, observation_db):
         # observation_db's session has no observer_id; filter on a non-existent one.
         result = SessionService(observation_db).query(SessionFilter(observer_ids=[42]))
-        assert result.observations == []
+        assert result.sessions == []
 
     def test_query_period_filter_includes_matching(self, observation_db):
         result = SessionService(observation_db).query(
             SessionFilter(period_start="2023-01-01", period_end="2023-12-31")
         )
-        assert len(result.observations) == 1
+        assert len(result.sessions) == 1
 
     def test_query_period_filter_excludes_outside(self, observation_db):
         result = SessionService(observation_db).query(
             SessionFilter(period_start="2030-01-01", period_end="2030-12-31")
         )
-        assert result.observations == []
+        assert result.sessions == []
 
     def test_query_with_total(self, observation_db):
         result = SessionService(observation_db).query(SessionFilter(with_total=True))
@@ -510,13 +510,13 @@ def _insert_extra_year_data(db_conn):
     """Add a 2024 rate + magnitude for a second observer/country."""
     cur = db_conn.cursor()
     cur.execute(
-        "INSERT INTO obs_session (id, longitude, latitude, elevation, country, city, "
+        "INSERT INTO obs_session (id, longitude, latitude, elevation, country, location_name, "
         "observer_id, observer_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (2, 2.3, 48.8, 35.0, "FR", "Paris", 7, "Marie"),
     )
     cur.execute(
         "INSERT INTO rate (id, shower, period_start, period_end, sl_start, sl_end, "
-        "session_id, freq, lim_mag, t_eff, f, sidereal_time, sun_alt, sun_az, "
+        "session_id, freq, lim_magn, t_eff, f, sidereal_time, sun_alt, sun_az, "
         "moon_alt, moon_az, moon_illum) "
         "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
@@ -541,7 +541,7 @@ def _insert_extra_year_data(db_conn):
     )
     cur.execute(
         "INSERT INTO magnitude (id, shower, period_start, period_end, sl_start, sl_end, "
-        "session_id, freq, mean, lim_mag) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "session_id, freq, mean, lim_magn) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (
             10,
             "PER",

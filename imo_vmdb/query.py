@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from imo_vmdb.db import DBAdapter
 
 RATE_ORDER_FIELDS = frozenset(
-    {"id", "period_start", "period_end", "sl_start", "lim_mag"}
+    {"id", "period_start", "period_end", "sl_start", "lim_magn"}
 )
 MAGNITUDE_ORDER_FIELDS = frozenset(
-    {"id", "period_start", "period_end", "sl_start", "lim_mag"}
+    {"id", "period_start", "period_end", "sl_start", "lim_magn"}
 )
 SESSION_ORDER_FIELDS = frozenset({"id", "country", "observer_id"})
 
@@ -68,7 +68,7 @@ class Session:
     latitude: float
     elevation: float
     country: str
-    city: str
+    location_name: str
     observer_id: int | None
     observer_name: str | None
 
@@ -104,7 +104,7 @@ class Rate:
     sl_end: float
     session_id: int
     freq: int
-    lim_mag: float
+    lim_magn: float
     t_eff: float
     f: float
     sidereal_time: float
@@ -136,7 +136,7 @@ class Magnitude:
     session_id: int
     freq: int
     mean: float
-    lim_mag: float | None
+    lim_magn: float | None
 
 
 @dataclass
@@ -194,7 +194,7 @@ class Magnitudes:
 class Sessions:
     """Return value of :meth:`SessionService.query`."""
 
-    observations: list[Session]
+    sessions: list[Session]
     total: int | None = None
 
 
@@ -390,8 +390,8 @@ def _build_rate_conditions(f: RateFilter):
     for key, col, op, val in [
         ("sl_min", "r.sl_start", ">=", f.sl_min),
         ("sl_max", "r.sl_end", "<=", f.sl_max),
-        ("lim_magn_min", "r.lim_mag", ">=", f.lim_magn_min),
-        ("lim_magn_max", "r.lim_mag", "<=", f.lim_magn_max),
+        ("lim_magn_min", "r.lim_magn", ">=", f.lim_magn_min),
+        ("lim_magn_max", "r.lim_magn", "<=", f.lim_magn_max),
         ("sun_alt_max", "r.sun_alt", "<=", f.sun_alt_max),
         ("moon_alt_max", "r.moon_alt", "<=", f.moon_alt_max),
     ]:
@@ -431,8 +431,8 @@ def _build_magnitude_conditions(f: MagnitudeFilter):
     for key, col, op, val in [
         ("sl_min", "m.sl_start", ">=", f.sl_min),
         ("sl_max", "m.sl_end", "<=", f.sl_max),
-        ("lim_magn_min", "m.lim_mag", ">=", f.lim_magn_min),
-        ("lim_magn_max", "m.lim_mag", "<=", f.lim_magn_max),
+        ("lim_magn_min", "m.lim_magn", ">=", f.lim_magn_min),
+        ("lim_magn_max", "m.lim_magn", "<=", f.lim_magn_max),
     ]:
         if val is not None:
             conditions.append(f"{col} {op} %({key})s")
@@ -506,7 +506,7 @@ def _fetch_sessions(db_conn, session_ids) -> list[Session]:
     phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
     params = {f"sid_{i}": sid for i, sid in enumerate(session_ids)}
     stmt = f"""
-        SELECT id, longitude, latitude, elevation, country, city,
+        SELECT id, longitude, latitude, elevation, country, location_name,
                observer_id, observer_name
         FROM obs_session
         WHERE id IN ({phs})
@@ -575,7 +575,7 @@ class RateService:
         select = """
             SELECT
                 r.id, r.shower, r.period_start, r.period_end, r.sl_start, r.sl_end,
-                r.session_id, r.freq, r.lim_mag, r.t_eff, r.f, r.sidereal_time,
+                r.session_id, r.freq, r.lim_magn, r.t_eff, r.f, r.sidereal_time,
                 r.sun_alt, r.sun_az, r.moon_alt, r.moon_az, r.moon_illum,
                 r.field_alt, r.field_az, r.rad_alt, r.rad_az, rm.magn_id
             FROM rate r
@@ -649,7 +649,7 @@ class MagnitudeService:
         select = """
             SELECT
                 m.id, m.shower, m.period_start, m.period_end, m.sl_start, m.sl_end,
-                m.session_id, m.freq, m.mean, m.lim_mag
+                m.session_id, m.freq, m.mean, m.lim_magn
             FROM magnitude m
         """
         cur = self._db.cursor()
@@ -712,7 +712,7 @@ class SessionService:
         pag_clause = _pagination_clause(f.limit, f.offset)
 
         select = """
-            SELECT s.id, s.longitude, s.latitude, s.elevation, s.country, s.city,
+            SELECT s.id, s.longitude, s.latitude, s.elevation, s.country, s.location_name,
                    s.observer_id, s.observer_name
             FROM obs_session s
         """
@@ -721,8 +721,8 @@ class SessionService:
             self._db._convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
             params,
         )
-        observations = [Session(**d) for d in _rows_to_dicts(cur)]
-        result = Sessions(observations=observations)
+        sessions = [Session(**d) for d in _rows_to_dicts(cur)]
+        result = Sessions(sessions=sessions)
 
         if paginated or f.with_total:
             cur.execute(

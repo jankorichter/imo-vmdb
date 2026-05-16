@@ -37,7 +37,7 @@ Sessions (``obs_session``)
 * ``latitude`` — observer latitude in degrees
 * ``elevation`` — height above mean sea level in km
 * ``country`` — country name
-* ``city`` — name of the observation site
+* ``location_name`` — name of the observation site
 * ``observer_id`` — observer id (*optional*)
 * ``observer_name`` — observer name (*optional*)
 
@@ -56,7 +56,7 @@ has been assigned.
 * ``sl_end`` — solar longitude at period end in degrees
 * ``session_id`` — reference to the session
 * ``freq`` — count of observed meteors
-* ``lim_mag`` — limiting magnitude
+* ``lim_magn`` — limiting magnitude
 * ``t_eff`` — net observed time in hours
 * ``f`` — cloud cover correction factor
 * ``sidereal_time`` — sidereal time in degrees
@@ -86,7 +86,7 @@ where no meteors were observed (``freq`` is always ≥ 1).
 * ``session_id`` — reference to the session
 * ``freq`` — total count of observed meteors
 * ``mean`` — mean magnitude
-* ``lim_mag`` — limiting magnitude (*optional*)
+* ``lim_magn`` — limiting magnitude (*optional*)
 
 Magnitude Details (``magnitude_detail``)
 -----------------------------------------

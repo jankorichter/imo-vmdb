@@ -17,7 +17,7 @@ class Record:
             observer_id,
             observer_name,
             country,
-            city
+            location_name
         ) VALUES (
             %(id)s,
             %(latitude)s,
@@ -26,7 +26,7 @@ class Record:
             %(observer_id)s,
             %(observer_name)s,
             %(country)s,
-            %(city)s
+            %(location_name)s
         )
     """
 
@@ -38,7 +38,7 @@ class Record:
         self.observer_id = record["observer_id"]
         self.observer_name = record["observer_name"]
         self.country = record["country"]
-        self.city = record["city"]
+        self.location_name = record["location_name"]
 
     @classmethod
     def init_stmt(cls, db_conn):
@@ -62,7 +62,7 @@ class Record:
             "observer_id": self.observer_id,
             "observer_name": self.observer_name,
             "country": self.country,
-            "city": self.city,
+            "location_name": self.location_name,
         }
         try:
             cur.execute(self._insert_stmt, rate)
@@ -103,7 +103,7 @@ class SessionNormalizer(BaseNormalizer):
                     observer_id,
                     observer_name,
                     country,
-                    city
+                    location_name
                 FROM imported_session
             """)
             )

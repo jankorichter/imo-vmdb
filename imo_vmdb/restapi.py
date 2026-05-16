@@ -296,7 +296,7 @@ def get_sessions():
     finally:
         db_conn.close()
 
-    body = {"sessions": [_serialize(s) for s in result.observations]}
+    body = {"sessions": [_serialize(s) for s in result.sessions]}
     return _with_total_header(body, result.total)
 
 

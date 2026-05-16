@@ -200,7 +200,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
                 observer_id integer NULL,
                 observer_name TEXT NULL,
                 country TEXT NOT NULL,
-                city TEXT NOT NULL
+                location_name TEXT NOT NULL
             )""")
         )
 
@@ -215,7 +215,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
                 sl_end double precision NOT NULL,
                 session_id integer NOT NULL,
                 freq integer NOT NULL,
-                lim_mag real NOT NULL,
+                lim_magn real NOT NULL,
                 t_eff real NOT NULL,
                 f real NOT NULL,
                 sidereal_time double precision NOT NULL,
@@ -253,7 +253,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
                 session_id integer NOT NULL,
                 freq integer NOT NULL,
                 mean double precision NOT NULL,
-                lim_mag real NULL,
+                lim_magn real NULL,
                 CONSTRAINT magnitude_pkey PRIMARY KEY (id),
                 CONSTRAINT magnitude_session_fk FOREIGN KEY (session_id)
                     REFERENCES obs_session(id) MATCH SIMPLE
@@ -355,7 +355,7 @@ def create_tables(db_conn: "DBAdapter") -> None:
                 latitude real NOT NULL,
                 elevation real NULL,
                 country TEXT NOT NULL,
-                city TEXT NOT NULL
+                location_name TEXT NOT NULL
             )""")
         )
 

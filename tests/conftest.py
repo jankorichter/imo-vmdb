@@ -13,14 +13,14 @@ logger = logging.getLogger("test")
 def _insert_observations(cur):
     """Insert one session, two rate/magnitude pairs and detail rows."""
     cur.execute(
-        "INSERT INTO obs_session (id, longitude, latitude, elevation, country, city) "
+        "INSERT INTO obs_session (id, longitude, latitude, elevation, country, location_name) "
         "VALUES (?, ?, ?, ?, ?, ?)",
         (1, 13.4, 52.5, 50.0, "DE", "Berlin"),
     )
 
     rate_fields = (
         "id, shower, period_start, period_end, sl_start, sl_end, session_id, "
-        "freq, lim_mag, t_eff, f, sidereal_time, sun_alt, sun_az, moon_alt, moon_az, moon_illum"
+        "freq, lim_magn, t_eff, f, sidereal_time, sun_alt, sun_az, moon_alt, moon_az, moon_illum"
     )
     cur.execute(
         f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -67,7 +67,7 @@ def _insert_observations(cur):
         ),
     )
 
-    magn_fields = "id, shower, period_start, period_end, sl_start, sl_end, session_id, freq, mean, lim_mag"
+    magn_fields = "id, shower, period_start, period_end, sl_start, sl_end, session_id, freq, mean, lim_magn"
     cur.execute(
         f"INSERT INTO magnitude ({magn_fields}) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (

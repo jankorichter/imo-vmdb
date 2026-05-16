@@ -106,7 +106,7 @@ Sorting
 -------
 
 The list endpoints accept ``order_by`` (one of ``id``, ``period_start``,
-``period_end``, ``sl_start``, ``lim_mag``) and ``order`` (``asc`` or
+``period_end``, ``sl_start``, ``lim_magn``) and ``order`` (``asc`` or
 ``desc``)::
 
     /api/v1/rates?order_by=period_start&order=desc

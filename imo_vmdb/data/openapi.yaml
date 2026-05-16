@@ -63,7 +63,7 @@ paths:
           description: Sort column.
           schema:
             type: string
-            enum: [id, period_start, period_end, sl_start, lim_mag]
+            enum: [id, period_start, period_end, sl_start, lim_magn]
         - $ref: '#/components/parameters/order'
         - $ref: '#/components/parameters/fields'
       responses:
@@ -143,7 +143,7 @@ paths:
           description: Sort column.
           schema:
             type: string
-            enum: [id, period_start, period_end, sl_start, lim_mag]
+            enum: [id, period_start, period_end, sl_start, lim_magn]
         - $ref: '#/components/parameters/order'
         - $ref: '#/components/parameters/fields'
       responses:
@@ -644,7 +644,7 @@ components:
         freq:
           type: integer
           description: Number of observed meteors.
-        lim_mag:
+        lim_magn:
           type: number
           description: Limiting magnitude.
         t_eff:
@@ -717,7 +717,7 @@ components:
         mean:
           type: number
           description: Mean magnitude.
-        lim_mag:
+        lim_magn:
           type: ["number", "null"]
           description: Limiting magnitude.
 
@@ -738,7 +738,7 @@ components:
           description: Height above mean sea level in km.
         country:
           type: string
-        city:
+        location_name:
           type: string
           description: Name of the observation site.
         observer_id:

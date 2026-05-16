@@ -34,7 +34,7 @@ class SessionParser(CsvParser):
                 latitude,
                 longitude,
                 elevation,
-                city,
+                location_name,
                 country
             ) VALUES (
                 %(id)s,
@@ -43,7 +43,7 @@ class SessionParser(CsvParser):
                 %(latitude)s,
                 %(longitude)s,
                 %(elevation)s,
-                %(city)s,
+                %(location_name)s,
                 %(country)s
             )
         """)
@@ -75,7 +75,7 @@ class SessionParser(CsvParser):
             observer_name = self._parse_observer_name(
                 row["actual observer name"], session_id
             )
-            city = self._parse_text(row["city"], "city", session_id)
+            location_name = self._parse_text(row["city"], "city", session_id)
             country = self._parse_text(row["country"], "country", session_id)
         except ImportException as err:
             self._log_error(str(err))
@@ -88,7 +88,7 @@ class SessionParser(CsvParser):
             "latitude": lat,
             "longitude": long,
             "elevation": elevation,
-            "city": city,
+            "location_name": location_name,
             "country": country,
         }
 

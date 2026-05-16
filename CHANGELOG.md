@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.8.0] — 2026-05-16
+
+### BREAKING
+
+- **DB schema** — columns renamed for clarity and consistency:
+  - `obs_session.city`, `imported_session.city` → `location_name`
+  - `rate.lim_mag`, `magnitude.lim_mag` → `lim_magn`
+
+  Existing databases are not migrated automatically. Run
+  `imo-vmdb initdb` and re-import your CSVs.
+- **Python API** — dataclass fields renamed:
+  - `Session.city` → `Session.location_name`
+  - `Rate.lim_mag`, `Magnitude.lim_mag` → `lim_magn`
+
+  The sortable field name in `RateFilter.order_by` /
+  `MagnitudeFilter.order_by` changes from `"lim_mag"` to `"lim_magn"`.
+- **REST API (`/api/v1/`)** — response field names follow the Python API:
+  - `Session.city` → `Session.location_name`
+  - `Rate.lim_mag`, `Magnitude.lim_mag` → `lim_magn`
+  - `order_by=lim_mag` → `order_by=lim_magn` for `/rates` and `/magnitudes`.
+
+  The `lim_magn_min` / `lim_magn_max` query parameters are unchanged
+  (they already used the new spelling).
+
 ## [1.7.2] — 2026-05-11
 
 ### Changed

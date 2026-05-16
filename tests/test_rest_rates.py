@@ -49,7 +49,7 @@ class TestRatesFilters:
 
     def test_lim_magn_min_restricts_results(self, obs_client):
         data = obs_client.get(f"{_BASE}/rates?lim_magn_min=6.0").get_json()
-        assert all(o["lim_mag"] >= 6.0 for o in data["observations"])
+        assert all(o["lim_magn"] >= 6.0 for o in data["observations"])
         assert len(data["observations"]) == 1
 
     def test_invalid_sl_min_returns_400(self, obs_client):
