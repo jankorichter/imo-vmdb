@@ -56,6 +56,13 @@ class TestRateServiceQuery:
         result = RateService(seeded_db).query(RateFilter())
         assert isinstance(result, Rates)
 
+    def test_rate_exposes_magn_id_and_magn_solo(self, observation_db):
+        result = RateService(observation_db).query(RateFilter())
+        # at least one seeded rate is linked to a magnitude with magn_solo=True
+        linked = [r for r in result.observations if r.magn_id is not None]
+        assert linked, "expected at least one seeded rate to be linked"
+        assert any(r.magn_solo is True for r in linked)
+
     def test_include_sessions_sets_sessions(self, seeded_db):
         result = RateService(seeded_db).query(RateFilter(include_sessions=True))
         assert result.sessions is not None

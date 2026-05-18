@@ -4,6 +4,31 @@
 
 ### BREAKING
 
+- **`rate_magnitude` table dropped; its payload moves onto `rate`.**
+  The 1:1 sidecar was redundant — `magn_id` and the former
+  `rate_magnitude.equals` boolean (renamed to `magn_solo`) become
+  direct columns on `rate`.
+  - Schema: `rate.magn_id INTEGER NULL` (FK → `magnitude(id)`,
+    `ON DELETE SET NULL`) and `rate.magn_solo BOOLEAN NULL`
+    (`true` when this rate is the solo contributor to its magnitude;
+    `false` when the magnitude aggregates this rate with others;
+    `NULL` when `magn_id IS NULL`).
+  - `Rate` dataclass and the REST `RateObservation` schema gain
+    `magn_solo`.  `Rate.magn_id` is unchanged.
+  - Normalizer: `create_rate_magn` now `UPDATE rate SET magn_id = …,
+    magn_solo = …` instead of writing the sidecar.
+  - Query layer: `_RATE_SELECT` reads `rate.magn_id` and
+    `rate.magn_solo` directly.
+  - Export surfaces: `rate_magnitude` is removed from
+    `_EXPORTABLE_DB_TABLES`, so the CLI command, Web UI button, and
+    `export_db()` SQLite snapshot all stop including it.
+    `export_table(db, "rate_magnitude")` raises `ValueError` (the
+    helper now validates against `_EXPORTABLE_DB_TABLES`, so
+    `imported_*` tables are likewise rejected — they were already
+    absent from the CLI surface).
+  - Migration: no automatic migration — run `imo-vmdb initdb` and
+    re-import + re-normalize (same workflow as the 1.8.0 BREAKING
+    schema rename).
 - **Per-class frequencies renamed from `magnitudes` to `magnitude_details`.**
   The old name was misleading — it carried `MagnitudeDetail` rows, not
   magnitude observations.  The name `magnitudes` is now consistently

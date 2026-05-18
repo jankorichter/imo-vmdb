@@ -91,9 +91,12 @@ class Rate:
 
     See :ref:`fields` for field descriptions.
 
-    ``magn_id`` links to the associated :class:`Magnitude` observation via
-    the ``rate_magnitude`` join table, or is ``None`` when no matching
-    magnitude observation exists.
+    ``magn_id`` links to the associated :class:`Magnitude` observation, or
+    is ``None`` when no matching magnitude observation exists.
+    ``magn_solo`` is ``True`` when this rate is the only contributor to its
+    linked magnitude (their periods match exactly), ``False`` when the
+    magnitude observation aggregates this rate together with others over a
+    longer period, and ``None`` when ``magn_id`` is ``None``.
     """
 
     id: int
@@ -118,6 +121,7 @@ class Rate:
     rad_alt: float | None
     rad_az: float | None
     magn_id: int | None
+    magn_solo: bool | None
 
 
 @dataclass
@@ -587,10 +591,20 @@ _RATE_SELECT = """
         r.id, r.shower, r.period_start, r.period_end, r.sl_start, r.sl_end,
         r.session_id, r.freq, r.lim_magn, r.t_eff, r.f, r.sidereal_time,
         r.sun_alt, r.sun_az, r.moon_alt, r.moon_az, r.moon_illum,
-        r.field_alt, r.field_az, r.rad_alt, r.rad_az, rm.magn_id
+        r.field_alt, r.field_az, r.rad_alt, r.rad_az, r.magn_id, r.magn_solo
     FROM rate r
-    LEFT JOIN rate_magnitude rm ON r.id = rm.rate_id
 """
+
+
+def _rate_from_row(d: dict) -> Rate:
+    """Build a :class:`Rate` from a SELECT row, coercing booleans.
+
+    SQLite stores booleans as 0/1 integers; coerce here so callers
+    consistently see ``True``/``False``/``None`` regardless of backend.
+    """
+    if d.get("magn_solo") is not None:
+        d = {**d, "magn_solo": bool(d["magn_solo"])}
+    return Rate(**d)
 
 _MAGNITUDE_SELECT = """
     SELECT
@@ -615,7 +629,7 @@ def _fetch_session_rates(
     where = "WHERE " + " AND ".join(conds)
     cur = db_conn.cursor()
     cur.execute(db_conn._convert_stmt(f"{_RATE_SELECT} {where} ORDER BY r.id"), params)
-    return [Rate(**d) for d in _rows_to_dicts(cur)]
+    return [_rate_from_row(d) for d in _rows_to_dicts(cur)]
 
 
 def _fetch_session_magnitudes(
@@ -718,7 +732,7 @@ class RateService:
             ),
             params,
         )
-        observations = [Rate(**d) for d in _rows_to_dicts(cur)]
+        observations = [_rate_from_row(d) for d in _rows_to_dicts(cur)]
 
         result = Rates(observations=observations)
 

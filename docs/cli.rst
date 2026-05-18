@@ -189,8 +189,6 @@ Available CSV targets (one table per call):
      - Normalised magnitude observations
    * - ``magnitude_detail``
      - Per-magnitude-class frequency counts
-   * - ``rate_magnitude``
-     - Rate-to-magnitude cross-reference
 
 For CSV targets, output goes to stdout when ``-o`` is omitted.
 

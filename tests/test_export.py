@@ -27,6 +27,17 @@ class TestExportTable:
         with pytest.raises(ValueError):
             export_table(seeded_db, "no_such_table")
 
+    def test_rate_magnitude_raises_value_error(self, seeded_db):
+        # 2.0.0: rate_magnitude is no longer a real table and is not
+        # exportable via export_table.
+        with pytest.raises(ValueError):
+            export_table(seeded_db, "rate_magnitude")
+
+    def test_imported_table_raises_value_error(self, seeded_db):
+        # imported_* tables are intentionally excluded from CSV export.
+        with pytest.raises(ValueError):
+            export_table(seeded_db, "imported_rate")
+
 
 class TestExportTableReimport:
     def test_shower_returns_reimport_compatible_columns(self, seeded_db):

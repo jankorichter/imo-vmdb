@@ -85,9 +85,10 @@ class TestExport:
         r = client.get("/export/magnitude_detail")
         assert r.status_code == 200
 
-    def test_rate_magnitude_export_returns_200(self, client):
+    def test_rate_magnitude_export_returns_404(self, client):
+        # rate_magnitude is no longer an exportable table on 2.0.0
         r = client.get("/export/rate_magnitude")
-        assert r.status_code == 200
+        assert r.status_code == 404
 
 
 class TestJobManagement:

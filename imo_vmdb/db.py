@@ -29,22 +29,22 @@ _VALID_TABLES = frozenset(
         "imported_magnitude",
         "rate",
         "magnitude",
-        "rate_magnitude",
         "magnitude_detail",
     }
 )
 
-# Tables copied by ``export_db``, in foreign-key-safe insert order.
-# Excludes ``imported_*`` tables on purpose: an exported database is meant to be
-# shared as a clean snapshot of normalized data.
+# Tables copied by ``export_db`` and exposed as individual CSV exports
+# (CLI, Web UI, and the public ``export_table`` helper).  Excludes
+# ``imported_*`` tables on purpose: an exported database is meant to be
+# shared as a clean snapshot of normalized data.  Order is FK-safe for
+# insert.
 _EXPORTABLE_DB_TABLES = (
     "shower",
     "radiant",
     "obs_session",
-    "rate",
     "magnitude",
+    "rate",
     "magnitude_detail",
-    "rate_magnitude",
 )
 
 _EXPORT_DB_BATCH_SIZE = 1000
@@ -176,7 +176,6 @@ def create_tables(db_conn: "DBAdapter") -> None:
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
-            cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS rate_magnitude"))
             cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS magnitude_detail"))
             cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS rate"))
             cur.execute(db_conn._convert_stmt("DROP TABLE IF EXISTS magnitude"))
@@ -206,6 +205,32 @@ def create_tables(db_conn: "DBAdapter") -> None:
 
         cur.execute(
             db_conn._convert_stmt("""
+            CREATE TABLE magnitude (
+                id integer NOT NULL,
+                shower varchar(6) NULL,
+                period_start timestamp NOT NULL,
+                period_end timestamp NOT NULL,
+                sl_start double precision NOT NULL,
+                sl_end double precision NOT NULL,
+                session_id integer NOT NULL,
+                freq integer NOT NULL,
+                mean double precision NOT NULL,
+                lim_magn real NULL,
+                CONSTRAINT magnitude_pkey PRIMARY KEY (id),
+                CONSTRAINT magnitude_session_fk FOREIGN KEY (session_id)
+                    REFERENCES obs_session(id) MATCH SIMPLE
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
+            )""")
+        )
+        cur.execute(
+            db_conn._convert_stmt(
+                "CREATE INDEX magnitude_period_shower_key ON magnitude(period_start, period_end, shower)"
+            )
+        )
+
+        cur.execute(
+            db_conn._convert_stmt("""
             CREATE TABLE rate (
                 id integer NOT NULL,
                 shower varchar(6) NULL,
@@ -228,11 +253,17 @@ def create_tables(db_conn: "DBAdapter") -> None:
                 field_az double precision NULL,
                 rad_alt double precision NULL,
                 rad_az double precision NULL,
+                magn_id integer NULL,
+                magn_solo boolean NULL,
                 CONSTRAINT rate_pkey PRIMARY KEY (id),
                 CONSTRAINT rate_session_fk FOREIGN KEY (session_id)
                     REFERENCES obs_session(id) MATCH SIMPLE
                     ON UPDATE CASCADE
-                    ON DELETE CASCADE
+                    ON DELETE CASCADE,
+                CONSTRAINT rate_magn_fk FOREIGN KEY (magn_id)
+                    REFERENCES magnitude(id) MATCH SIMPLE
+                    ON UPDATE CASCADE
+                    ON DELETE SET NULL
             )""")
         )
         cur.execute(
@@ -240,31 +271,8 @@ def create_tables(db_conn: "DBAdapter") -> None:
                 "CREATE INDEX rate_period_shower_key ON rate(period_start, period_end, shower)"
             )
         )
-
         cur.execute(
-            db_conn._convert_stmt("""
-            CREATE TABLE magnitude (
-                id integer NOT NULL,
-                shower varchar(6) NULL,
-                period_start timestamp NOT NULL,
-                period_end timestamp NOT NULL,
-                sl_start double precision NOT NULL,
-                sl_end double precision NOT NULL,
-                session_id integer NOT NULL,
-                freq integer NOT NULL,
-                mean double precision NOT NULL,
-                lim_magn real NULL,
-                CONSTRAINT magnitude_pkey PRIMARY KEY (id),
-                CONSTRAINT magnitude_session_fk FOREIGN KEY (session_id)
-                    REFERENCES obs_session(id) MATCH SIMPLE
-                    ON UPDATE CASCADE
-                    ON DELETE CASCADE
-            )""")
-        )
-        cur.execute(
-            db_conn._convert_stmt(
-                "CREATE INDEX magnitude_period_shower_key ON rate(period_start, period_end, shower)"
-            )
+            db_conn._convert_stmt("CREATE INDEX fki_rate_magn_fk ON rate(magn_id)")
         )
 
         cur.execute(
@@ -283,29 +291,6 @@ def create_tables(db_conn: "DBAdapter") -> None:
         cur.execute(
             db_conn._convert_stmt(
                 "CREATE INDEX fki_magnitude_detail_fk ON magnitude_detail(id)"
-            )
-        )
-
-        cur.execute(
-            db_conn._convert_stmt("""
-            CREATE TABLE rate_magnitude (
-                rate_id integer NOT NULL,
-                magn_id integer NOT NULL,
-                "equals" boolean NOT NULL,
-                CONSTRAINT rate_magnitude_pkey PRIMARY KEY (rate_id),
-                CONSTRAINT rate_magnitude_rate_fk FOREIGN KEY (rate_id)
-                    REFERENCES rate (id) MATCH SIMPLE
-                    ON UPDATE CASCADE
-                    ON DELETE CASCADE,
-                CONSTRAINT rate_magnitude_magn_fk FOREIGN KEY (magn_id)
-                    REFERENCES magnitude(id) MATCH SIMPLE
-                    ON UPDATE CASCADE
-                    ON DELETE CASCADE
-            )""")
-        )
-        cur.execute(
-            db_conn._convert_stmt(
-                "CREATE INDEX fki_rate_magnitude_magn_fk ON rate_magnitude(magn_id)"
             )
         )
 
@@ -446,16 +431,19 @@ def export_table(
     other tables *reimport* has no effect.
 
     :param db_conn: An open database connection implementing DB-API 2.0.
-    :param table: Name of the table to export.  Must be one of the known
-        tables: ``shower``, ``radiant``, ``obs_session``, ``imported_session``,
-        ``imported_rate``, ``imported_magnitude``, ``rate``, ``magnitude``,
-        ``rate_magnitude``, ``magnitude_detail``.
+    :param table: Name of the table to export.  Must be one of the
+        exportable normalized tables: ``shower``, ``radiant``,
+        ``obs_session``, ``magnitude``, ``rate``, ``magnitude_detail``.
+        Raw ``imported_*`` tables are intentionally not exportable.
     :param reimport: If ``True``, export in re-import-compatible format where applicable.
     :return: Tuple of ``(column_names, rows)``.
-    :raises ValueError: If *table* is not a known table name.
+    :raises ValueError: If *table* is not an exportable table name.
     """
-    if table not in _VALID_TABLES:
-        raise ValueError(f"Unknown table: {table!r}")
+    if table not in _EXPORTABLE_DB_TABLES:
+        raise ValueError(
+            f"Table {table!r} is not exportable "
+            f"(allowed: {sorted(_EXPORTABLE_DB_TABLES)})"
+        )
     if reimport and table == "shower":
         return _export_shower_reimport(db_conn)
     cur = db_conn.cursor()

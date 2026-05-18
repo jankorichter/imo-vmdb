@@ -13,9 +13,9 @@ Entity Relationships
 
     obs_session (id)
       │
-      ├──< rate (session_id) ──────────────── rate_magnitude (rate_id, magn_id) >──┐
-      │                                                                            │
-      └──< magnitude (session_id) ─────────────────────────────────────────────────┘
+      ├──< rate (session_id, magn_id) ──┐
+      │                                  │
+      └──< magnitude (session_id) <──────┘
                │
                └──< magnitude_detail (id → magnitude.id)
 
@@ -23,11 +23,13 @@ Entity Relationships
     radiant  ···  used during normalization only  (uses IAU code)
 
 ``obs_session`` is the root.  Each session can have many ``rate`` and
-``magnitude`` records.  ``rate_magnitude`` links a rate observation to the
-magnitude observation covering the same period (many-to-one on the magnitude
-side).  ``magnitude_detail`` holds the per-class breakdown for each magnitude
-observation.  ``shower`` and ``radiant`` are lookup tables referenced by IAU
-code, not by foreign key.
+``magnitude`` records.  A rate observation may carry a nullable
+``magn_id`` referencing the magnitude observation that covers the same
+period; a single magnitude observation can be referenced by many rates
+(many-to-one on the magnitude side).  ``magnitude_detail`` holds the
+per-class breakdown for each magnitude observation.  ``shower`` and
+``radiant`` are lookup tables referenced by IAU code, not by foreign
+key.
 
 Sessions (``obs_session``)
 --------------------------
@@ -69,6 +71,11 @@ has been assigned.
 * ``field_az`` — azimuth of the field of view in degrees (*optional*)
 * ``rad_alt`` — radiant altitude in degrees, zenith attraction applied (*optional*)
 * ``rad_az`` — radiant azimuth in degrees (*optional*)
+* ``magn_id`` — reference to the associated magnitude observation (*optional*)
+* ``magn_solo`` — ``true`` if this rate observation is the only contributor to
+  its linked magnitude observation (their periods match exactly); ``false`` if
+  the magnitude observation aggregates this rate together with others over a
+  longer period; absent when ``magn_id`` is unset (*optional*)
 
 Magnitudes (``magnitude``)
 --------------------------
@@ -98,17 +105,6 @@ always > 0 and may be fractional.
 * ``id`` — reference to the magnitude observation
 * ``magn`` — magnitude class
 * ``freq`` — count of observed meteors in this class
-
-Rates and Magnitudes (``rate_magnitude``)
------------------------------------------
-
-Associates rate observations with magnitude observations.  A magnitude
-observation may correspond to multiple rate observations, but not vice versa.
-
-* ``rate_id`` — reference to the rate observation
-* ``magn_id`` — reference to the magnitude observation
-* ``equals`` — ``true`` if the rate observation covers exactly the same period
-  as the magnitude observation
 
 Showers (``shower``)
 --------------------

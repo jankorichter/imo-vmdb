@@ -18,55 +18,6 @@ def _insert_observations(cur):
         (1, 13.4, 52.5, 50.0, "DE", "Berlin"),
     )
 
-    rate_fields = (
-        "id, shower, period_start, period_end, sl_start, sl_end, session_id, "
-        "freq, lim_magn, t_eff, f, sidereal_time, sun_alt, sun_az, moon_alt, moon_az, moon_illum"
-    )
-    cur.execute(
-        f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (
-            1,
-            "PER",
-            "2023-08-12 22:00",
-            "2023-08-12 23:00",
-            139.5,
-            140.5,
-            1,
-            10,
-            6.5,
-            1.0,
-            1.0,
-            180.0,
-            -20.0,
-            270.0,
-            -10.0,
-            90.0,
-            0.1,
-        ),
-    )
-    cur.execute(
-        f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (
-            2,
-            "GEM",
-            "2023-12-14 22:00",
-            "2023-12-14 23:00",
-            260.0,
-            261.0,
-            1,
-            5,
-            5.5,
-            1.0,
-            1.0,
-            200.0,
-            -30.0,
-            280.0,
-            -5.0,
-            95.0,
-            0.2,
-        ),
-    )
-
     magn_fields = "id, shower, period_start, period_end, sl_start, sl_end, session_id, freq, mean, lim_magn"
     cur.execute(
         f"INSERT INTO magnitude ({magn_fields}) VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -99,13 +50,58 @@ def _insert_observations(cur):
         ),
     )
 
-    cur.execute(
-        "INSERT INTO rate_magnitude (rate_id, magn_id, equals) VALUES (?, ?, ?)",
-        (1, 1, 1),
+    rate_fields = (
+        "id, shower, period_start, period_end, sl_start, sl_end, session_id, "
+        "freq, lim_magn, t_eff, f, sidereal_time, sun_alt, sun_az, moon_alt, "
+        "moon_az, moon_illum, magn_id, magn_solo"
     )
     cur.execute(
-        "INSERT INTO rate_magnitude (rate_id, magn_id, equals) VALUES (?, ?, ?)",
-        (2, 2, 1),
+        f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            1,
+            "PER",
+            "2023-08-12 22:00",
+            "2023-08-12 23:00",
+            139.5,
+            140.5,
+            1,
+            10,
+            6.5,
+            1.0,
+            1.0,
+            180.0,
+            -20.0,
+            270.0,
+            -10.0,
+            90.0,
+            0.1,
+            1,
+            1,
+        ),
+    )
+    cur.execute(
+        f"INSERT INTO rate ({rate_fields}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            2,
+            "GEM",
+            "2023-12-14 22:00",
+            "2023-12-14 23:00",
+            260.0,
+            261.0,
+            1,
+            5,
+            5.5,
+            1.0,
+            1.0,
+            200.0,
+            -30.0,
+            280.0,
+            -5.0,
+            95.0,
+            0.2,
+            2,
+            1,
+        ),
     )
 
     cur.execute(

@@ -128,11 +128,15 @@ class BaseNormalizer:
 def create_rate_magn(db_conn):
     """Link rate observations to their corresponding magnitude observations.
 
-    Populates the ``rate_magnitude`` table by matching rate and magnitude
-    records that share the same session and shower and whose time periods are
-    equal or where the magnitude period fully contains the rate period.  Each
-    rate may be linked to at most one magnitude record.  Also computes the
-    effective limiting magnitude for each magnitude record as the
+    Populates ``rate.magn_id`` and ``rate.magn_solo`` by matching rate and
+    magnitude records that share the same session and shower and whose time
+    periods are equal or where the magnitude period fully contains the rate
+    period.  Each rate may be linked to at most one magnitude record.
+    ``magn_solo`` is ``True`` when the rate and magnitude periods match
+    exactly (this rate is the solo contributor to its magnitude) and
+    ``False`` when the magnitude period strictly contains the rate period
+    (the magnitude aggregates this rate together with others).  Also computes
+    the effective limiting magnitude for each magnitude record as the
     t_eff-weighted mean of the linked rate limiting magnitudes.
 
     :param db_conn: Open :class:`~imo_vmdb.db.DBAdapter` connection.
@@ -140,6 +144,10 @@ def create_rate_magn(db_conn):
     """
     try:
         cur = db_conn.cursor()
+        # reset any prior linkage before matching
+        cur.execute(
+            db_conn._convert_stmt("UPDATE rate SET magn_id = NULL, magn_solo = NULL")
+        )
         # find magnitude-rate-pairs containing each other
         cur.execute(
             db_conn._convert_stmt("""
@@ -168,7 +176,7 @@ def create_rate_magn(db_conn):
                     magn_id,
                     rate_n,
                     magn_n,
-                    true as "equals"
+                    true as magn_solo
                 FROM selection
                 WHERE
                    rate_period_start = magn_period_start AND
@@ -179,7 +187,7 @@ def create_rate_magn(db_conn):
                     magn_id,
                     rate_n,
                     magn_n,
-                    false as "equals"
+                    false as magn_solo
                 FROM selection
                 WHERE
                     -- magnitude period contains rate period
@@ -197,7 +205,7 @@ def create_rate_magn(db_conn):
                     magn_id,
                     sum(rate_n) OVER (PARTITION BY magn_id) as rate_n,
                     magn_n,
-                    "equals",
+                    magn_solo,
                     count(magn_id) OVER (PARTITION BY rate_id) as magn_id_count
                 FROM rate_magnitude_rel
             ),
@@ -205,33 +213,25 @@ def create_rate_magn(db_conn):
                 SELECT
                     rate_id,
                     magn_id,
-                    "equals"
+                    magn_solo
                 FROM aggregates
                 WHERE
                     magn_id_count = 1 AND
                     rate_n >= magn_n
             )
 
-            SELECT rate_id, magn_id, "equals" FROM unique_rate_ids
+            SELECT rate_id, magn_id, magn_solo FROM unique_rate_ids
         """)
         )
     except Exception as e:
         raise DBException(str(e))
 
     column_names = [desc[0] for desc in cur.description]
-    delete_stmt = db_conn._convert_stmt(
-        "DELETE FROM rate_magnitude WHERE rate_id = %(rate_id)s"
-    )
-    insert_stmt = db_conn._convert_stmt("""
-        INSERT INTO rate_magnitude (
-            rate_id,
-            magn_id,
-            "equals"
-        ) VALUES (
-            %(rate_id)s,
-            %(magn_id)s,
-            %(equals)s
-        )
+    update_link_stmt = db_conn._convert_stmt("""
+        UPDATE rate
+        SET magn_id = %(magn_id)s,
+            magn_solo = %(magn_solo)s
+        WHERE id = %(rate_id)s
     """)
 
     try:
@@ -241,14 +241,15 @@ def create_rate_magn(db_conn):
 
     for record in cur:
         record = dict(zip(column_names, record, strict=False))
-        magn_rate = {
-            "rate_id": record["rate_id"],
-            "magn_id": record["magn_id"],
-            "equals": record["equals"],
-        }
         try:
-            write_cur.execute(delete_stmt, {"rate_id": record["rate_id"]})
-            write_cur.execute(insert_stmt, magn_rate)
+            write_cur.execute(
+                update_link_stmt,
+                {
+                    "rate_id": record["rate_id"],
+                    "magn_id": record["magn_id"],
+                    "magn_solo": record["magn_solo"],
+                },
+            )
         except Exception as e:
             raise DBException(str(e))
 
@@ -258,10 +259,10 @@ def create_rate_magn(db_conn):
         cur.execute(
             db_conn._convert_stmt("""
             WITH limiting_magnitudes AS (
-                SELECT rm.magn_id, sum(r.freq) as freq, sum(r.freq*r.lim_magn) as lim_magn_sum
+                SELECT r.magn_id, sum(r.freq) as freq, sum(r.freq*r.lim_magn) as lim_magn_sum
                 FROM rate r
-                INNER JOIN rate_magnitude rm ON rm.rate_id = r.id
-                GROUP BY rm.magn_id
+                WHERE r.magn_id IS NOT NULL
+                GROUP BY r.magn_id
             )
             SELECT magn_id, freq, lim_magn_sum
             FROM limiting_magnitudes

@@ -12,7 +12,6 @@ _NORMALIZED_TABLES = (
     "rate",
     "magnitude",
     "magnitude_detail",
-    "rate_magnitude",
     "shower",
     "radiant",
 )

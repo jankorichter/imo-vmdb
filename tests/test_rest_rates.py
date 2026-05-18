@@ -17,6 +17,12 @@ class TestRatesList:
         assert "observations" in data
         assert len(data["observations"]) > 0
 
+    def test_observations_expose_magn_id_and_magn_solo(self, obs_client):
+        data = obs_client.get(f"{_BASE}/rates").get_json()
+        linked = [o for o in data["observations"] if o.get("magn_id") is not None]
+        assert linked, "expected at least one observation linked to a magnitude"
+        assert any(o.get("magn_solo") is True for o in linked)
+
     def test_sessions_absent_by_default(self, obs_client):
         data = obs_client.get(f"{_BASE}/rates").get_json()
         assert "sessions" not in data

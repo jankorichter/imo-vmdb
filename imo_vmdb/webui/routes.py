@@ -297,15 +297,6 @@ def export_rate():
     return _export_table_route("rate", "rate.csv")
 
 
-@bp.route("/export/rate_magnitude")
-def export_rate_magnitude():
-    """Export the rate–magnitude linking table as a CSV download.
-
-    :return: Semicolon-delimited CSV response with the ``rate_magnitude`` table contents.
-    """
-    return _export_table_route("rate_magnitude", "rate_magnitude.csv")
-
-
 @bp.route("/export/magnitude")
 def export_magnitude():
     """Export the magnitude observation table as a CSV download.

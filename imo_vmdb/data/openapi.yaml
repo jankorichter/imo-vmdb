@@ -751,6 +751,14 @@ components:
         magn_id:
           type: ["integer", "null"]
           description: Reference to the associated magnitude observation.
+        magn_solo:
+          type: ["boolean", "null"]
+          description: >
+            `true` when this rate is the only contributor to its linked
+            magnitude observation (their periods match exactly);
+            `false` when the magnitude observation aggregates this rate
+            together with others over a longer period; `null` when
+            `magn_id` is `null`.
 
     MagnitudeObservation:
       type: object

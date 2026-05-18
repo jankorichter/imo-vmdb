@@ -307,3 +307,21 @@ instead::
 
 ``level`` controls verbosity (least to most): ``CRITICAL``, ``ERROR``,
 ``WARNING``, ``INFO``.
+
+Upgrading from earlier versions
+-------------------------------
+
+Some releases introduce incompatible database-schema changes — most recently
+**2.0.0** (``rate_magnitude`` table merged into the ``rate`` table) and
+**1.8.0** (``city`` → ``location_name``, ``lim_mag`` → ``lim_magn``).
+No automatic data migration is performed in either case.
+
+To upgrade, run::
+
+    imo-vmdb initdb         # drops all tables and recreates the new schema
+    imo-vmdb import_csv …   # re-import your CSV sources
+    imo-vmdb normalize      # rebuild the normalized tables
+
+Review the :doc:`changelog <about>` (or ``CHANGELOG.md`` in the source
+distribution) before upgrading, especially the entries flagged
+``BREAKING``.

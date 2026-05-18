@@ -16,7 +16,6 @@ DB_TABLES = {
     "rate": "rate",
     "magnitude": "magnitude",
     "magnitude_detail": "magnitude_detail",
-    "rate_magnitude": "rate_magnitude",
 }
 
 DB_TARGET = "db"
