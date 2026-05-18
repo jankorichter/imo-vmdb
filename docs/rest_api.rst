@@ -144,13 +144,38 @@ The following example requests both Perseids *and* sporadic meteors::
 Related data via ``include``
 ----------------------------
 
-Pass ``include=sessions`` and/or ``include=magnitudes`` to receive session
-and magnitude-detail data alongside observations::
+Pass an ``include`` query parameter to receive related data alongside the
+primary observations.  The supported values depend on the endpoint and are
+consistent in meaning across the API:
 
-    /api/v1/rates?shower=PER&include=sessions,magnitudes
+* ``sessions`` — adds a ``sessions`` array of :ref:`session <fields>` rows.
+* ``rates`` — adds a ``rates`` array of full :ref:`rate <fields>`
+  observations (``/sessions`` only).
+* ``magnitudes`` — adds a ``magnitudes`` array of **full magnitude
+  observations** (``mean``, ``lim_magn``, ...).  Available on ``/rates``
+  (the magnitude observation referenced by each rate's ``magn_id``) and
+  on ``/sessions``.
+* ``magnitude_details`` — adds a ``magnitude_details`` array of
+  ``MagnitudeDetail`` rows (per-magnitude-class frequencies for each
+  magnitude observation).  Available on ``/rates`` and ``/magnitudes``.
 
-The response then contains ``sessions`` and ``magnitudes`` arrays in addition
-to ``observations``.
+Multiple values may be combined comma-separated::
+
+    /api/v1/rates?shower=PER&include=sessions,magnitudes,magnitude_details
+
+The response then contains ``sessions``, ``magnitudes`` and
+``magnitude_details`` arrays in addition to ``observations``.  Unknown
+``include`` values yield ``HTTP 400``.
+
+.. note::
+   On ``/rates``, ``include=magnitude_details`` can be requested with or
+   without ``include=magnitudes``.  Each detail row links back to a rate
+   via ``MagnitudeDetail.id == Rate.magn_id``, so the full magnitude
+   observation is not required to interpret the per-class frequencies.
+
+   ``magnitude_details`` is deliberately **not** exposed on
+   ``/sessions`` — use ``/magnitudes?session_id=…&include=magnitude_details``
+   instead.
 
 Examples
 --------

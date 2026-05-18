@@ -1,5 +1,52 @@
 # Changelog
 
+## [2.0.0] — Unreleased
+
+### BREAKING
+
+- **Per-class frequencies renamed from `magnitudes` to `magnitude_details`.**
+  The old name was misleading — it carried `MagnitudeDetail` rows, not
+  magnitude observations.  The name `magnitudes` is now consistently
+  used for full `Magnitude` observations across the REST API and the
+  Python data classes.
+
+  - REST API:
+    - `/rates?include=magnitudes` → full `MagnitudeObservation` rows.
+      For per-class frequencies, use `?include=magnitude_details`.
+    - `/magnitudes?include=magnitudes` → HTTP 400.  Use
+      `?include=magnitude_details`.
+  - Python API:
+    - `Rates.magnitudes` is now `list[Magnitude] | None`; new
+      `Rates.magnitude_details: list[MagnitudeDetail] | None`.
+    - `Magnitudes.magnitudes` is removed; use
+      `Magnitudes.magnitude_details`.
+    - `RateFilter.include_magnitudes` now toggles the full observations;
+      new `RateFilter.include_magnitude_details` for the old behaviour.
+    - `MagnitudeFilter.include_magnitudes` is removed; use
+      `MagnitudeFilter.include_magnitude_details`.
+
+### Added
+
+- **REST API (`/api/v1/sessions`)** — filter and include parity with
+  `/rates` and `/magnitudes`:
+  - New observation-level filters, resolved via EXISTS on `rate` and
+    `magnitude`: `shower` (repeatable; `SPO` for sporadics), `sl_min`,
+    `sl_max`, `lim_magn_min`, `lim_magn_max`.
+  - New `include` parameter with values `rates` and `magnitudes`.
+    Included observations are restricted by the same filters and to the
+    session IDs in the response page.  Per-class frequencies are
+    intentionally not exposed here — use
+    `/magnitudes?session_id=…&include=magnitude_details`.
+- **Python API** — `SessionFilter` gains `showers`, `sl_min`, `sl_max`,
+  `lim_magn_min`, `lim_magn_max`, `include_rates`, `include_magnitudes`.
+  `Sessions` gains `rates` and `magnitudes` attributes.
+
+### Changed
+
+- **REST API (`/api/v1/rates`)** — `?include=magnitude_details` no longer
+  requires `?include=magnitudes`.  Each detail row's `id` matches
+  `Rate.magn_id`, which is enough to attribute frequencies to rates.
+
 ## [1.8.0] — 2026-05-16
 
 ### BREAKING

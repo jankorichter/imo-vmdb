@@ -24,6 +24,7 @@ class TestRatesList:
     def test_magnitudes_absent_by_default(self, obs_client):
         data = obs_client.get(f"{_BASE}/rates").get_json()
         assert "magnitudes" not in data
+        assert "magnitude_details" not in data
 
     def test_no_db_returns_503(self, no_db_client):
         r = no_db_client.get(f"{_BASE}/rates")
@@ -65,16 +66,53 @@ class TestRatesIncludes:
         assert len(data["sessions"]) > 0
         assert "id" in data["sessions"][0]
 
-    def test_include_magnitudes(self, obs_client):
+    def test_include_magnitudes_returns_full_observations(self, obs_client):
         data = obs_client.get(f"{_BASE}/rates?include=magnitudes").get_json()
         assert "magnitudes" in data
+        assert "magnitude_details" not in data
         assert len(data["magnitudes"]) > 0
-        assert "magn" in data["magnitudes"][0]
+        # full MagnitudeObservation rows have mean and lim_magn, no per-class magn
+        first = data["magnitudes"][0]
+        assert "mean" in first
+        assert "magn" not in first
 
-    def test_include_both(self, obs_client):
-        data = obs_client.get(f"{_BASE}/rates?include=sessions,magnitudes").get_json()
+    def test_include_magnitude_details_returns_frequencies(self, obs_client):
+        data = obs_client.get(
+            f"{_BASE}/rates?include=magnitudes,magnitude_details"
+        ).get_json()
+        assert "magnitude_details" in data
+        assert "magnitudes" in data
+        assert len(data["magnitude_details"]) > 0
+        # detail rows have magn and freq
+        first = data["magnitude_details"][0]
+        assert "magn" in first
+        assert "freq" in first
+
+    def test_include_magnitude_details_standalone(self, obs_client):
+        # magnitude_details may be requested without magnitudes; each detail
+        # row links back to a rate via Rate.magn_id.
+        data = obs_client.get(f"{_BASE}/rates?include=magnitude_details").get_json()
+        assert "magnitude_details" in data
+        assert "magnitudes" not in data
+        assert len(data["magnitude_details"]) > 0
+        detail_ids = {d["id"] for d in data["magnitude_details"]}
+        rate_magn_ids = {
+            o["magn_id"] for o in data["observations"] if o.get("magn_id") is not None
+        }
+        assert detail_ids.issubset(rate_magn_ids)
+
+    def test_include_combined(self, obs_client):
+        data = obs_client.get(
+            f"{_BASE}/rates?include=sessions,magnitudes,magnitude_details"
+        ).get_json()
         assert "sessions" in data
         assert "magnitudes" in data
+        assert "magnitude_details" in data
+
+    def test_unknown_include_returns_400(self, obs_client):
+        r = obs_client.get(f"{_BASE}/rates?include=evil")
+        assert r.status_code == 400
+        assert "error" in r.get_json()
 
 
 class TestRatesPagination:

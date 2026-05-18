@@ -88,10 +88,25 @@ def _dataclass_field_names(cls) -> set[str]:
     return {f.name for f in dataclasses.fields(cls)}
 
 
+_RATES_INCLUDES = frozenset({"sessions", "magnitudes", "magnitude_details"})
+_MAGNITUDES_INCLUDES = frozenset({"sessions", "magnitude_details"})
+_SESSIONS_INCLUDES = frozenset({"rates", "magnitudes"})
+
+
+def _validate_includes(includes: set[str], allowed: frozenset[str]) -> None:
+    unknown = includes - allowed
+    if unknown:
+        raise ValueError(
+            f"Unknown include value(s): {sorted(unknown)} "
+            f"(allowed: {sorted(allowed)})"
+        )
+
+
 def _parse_rate_filter(args) -> RateFilter:
     """Build a :class:`~imo_vmdb.RateFilter` from Flask query parameters."""
     try:
         includes = _parse_includes(args)
+        _validate_includes(includes, _RATES_INCLUDES)
         return RateFilter(
             showers=args.getlist("shower"),
             period_start=args.get("period_start"),
@@ -106,6 +121,7 @@ def _parse_rate_filter(args) -> RateFilter:
             rate_ids=[int(x) for x in args.getlist("rate_id")],
             include_sessions="sessions" in includes,
             include_magnitudes="magnitudes" in includes,
+            include_magnitude_details="magnitude_details" in includes,
             limit=_opt_int(args.get("limit")),
             offset=_opt_int(args.get("offset")),
             order_by=args.get("order_by"),
@@ -120,6 +136,7 @@ def _parse_magnitude_filter(args) -> MagnitudeFilter:
     """Build a :class:`~imo_vmdb.MagnitudeFilter` from Flask query parameters."""
     try:
         includes = _parse_includes(args)
+        _validate_includes(includes, _MAGNITUDES_INCLUDES)
         return MagnitudeFilter(
             showers=args.getlist("shower"),
             period_start=args.get("period_start"),
@@ -131,7 +148,7 @@ def _parse_magnitude_filter(args) -> MagnitudeFilter:
             session_ids=[int(x) for x in args.getlist("session_id")],
             magn_ids=[int(x) for x in args.getlist("magn_id")],
             include_sessions="sessions" in includes,
-            include_magnitudes="magnitudes" in includes,
+            include_magnitude_details="magnitude_details" in includes,
             limit=_opt_int(args.get("limit")),
             offset=_opt_int(args.get("offset")),
             order_by=args.get("order_by"),
@@ -144,10 +161,19 @@ def _parse_magnitude_filter(args) -> MagnitudeFilter:
 
 def _parse_session_filter(args) -> SessionFilter:
     try:
+        includes = _parse_includes(args)
+        _validate_includes(includes, _SESSIONS_INCLUDES)
         return SessionFilter(
             observer_ids=[int(x) for x in args.getlist("observer_id")],
+            showers=args.getlist("shower"),
             period_start=args.get("period_start"),
             period_end=args.get("period_end"),
+            sl_min=_opt_float(args.get("sl_min")),
+            sl_max=_opt_float(args.get("sl_max")),
+            lim_magn_min=_opt_float(args.get("lim_magn_min")),
+            lim_magn_max=_opt_float(args.get("lim_magn_max")),
+            include_rates="rates" in includes,
+            include_magnitudes="magnitudes" in includes,
             limit=_opt_int(args.get("limit")),
             offset=_opt_int(args.get("offset")),
             order_by=args.get("order_by"),
@@ -196,6 +222,8 @@ def get_rates():
         body["sessions"] = [_serialize(s) for s in result.sessions]
     if result.magnitudes is not None:
         body["magnitudes"] = [_serialize(m) for m in result.magnitudes]
+    if result.magnitude_details is not None:
+        body["magnitude_details"] = [_serialize(m) for m in result.magnitude_details]
 
     return _with_total_header(body, result.total)
 
@@ -248,8 +276,8 @@ def get_magnitudes():
     }
     if result.sessions is not None:
         body["sessions"] = [_serialize(s) for s in result.sessions]
-    if result.magnitudes is not None:
-        body["magnitudes"] = [_serialize(m) for m in result.magnitudes]
+    if result.magnitude_details is not None:
+        body["magnitude_details"] = [_serialize(m) for m in result.magnitude_details]
 
     return _with_total_header(body, result.total)
 
@@ -297,6 +325,10 @@ def get_sessions():
         db_conn.close()
 
     body = {"sessions": [_serialize(s) for s in result.sessions]}
+    if result.rates is not None:
+        body["rates"] = [_serialize(r) for r in result.rates]
+    if result.magnitudes is not None:
+        body["magnitudes"] = [_serialize(m) for m in result.magnitudes]
     return _with_total_header(body, result.total)
 
 

@@ -152,41 +152,22 @@ class Radiant:
 
 @dataclass
 class Rates:
-    """Return value of :meth:`RateService.query`.
-
-    Always contains an ``observations`` list of :class:`Rate` instances.
-    ``sessions`` (list of :class:`Session`) is only set when
-    :attr:`RateFilter.include_sessions` is ``True``.
-    ``magnitudes`` (list of :class:`MagnitudeDetail`) is only set when
-    :attr:`RateFilter.include_magnitudes` is ``True``.
-    ``total`` is the unpaginated row count and is only set when
-    :attr:`RateFilter.with_total` is ``True`` (or when ``limit``/``offset``
-    are used).
-    """
+    """Return value of :meth:`RateService.query`."""
 
     observations: list[Rate]
     sessions: list[Session] | None = None
-    magnitudes: list[MagnitudeDetail] | None = None
+    magnitudes: list[Magnitude] | None = None
+    magnitude_details: list[MagnitudeDetail] | None = None
     total: int | None = None
 
 
 @dataclass
 class Magnitudes:
-    """Return value of :meth:`MagnitudeService.query`.
-
-    Always contains an ``observations`` list of :class:`Magnitude` instances.
-    ``sessions`` (list of :class:`Session`) is only set when
-    :attr:`MagnitudeFilter.include_sessions` is ``True``.
-    ``magnitudes`` (list of :class:`MagnitudeDetail`) is only set when
-    :attr:`MagnitudeFilter.include_magnitudes` is ``True``.
-    ``total`` is the unpaginated row count and is only set when
-    :attr:`MagnitudeFilter.with_total` is ``True`` (or when ``limit``/``offset``
-    are used).
-    """
+    """Return value of :meth:`MagnitudeService.query`."""
 
     observations: list[Magnitude]
     sessions: list[Session] | None = None
-    magnitudes: list[MagnitudeDetail] | None = None
+    magnitude_details: list[MagnitudeDetail] | None = None
     total: int | None = None
 
 
@@ -195,6 +176,8 @@ class Sessions:
     """Return value of :meth:`SessionService.query`."""
 
     sessions: list[Session]
+    rates: list[Rate] | None = None
+    magnitudes: list[Magnitude] | None = None
     total: int | None = None
 
 
@@ -258,9 +241,13 @@ class RateFilter:
     :param session_ids: Restrict to specific session IDs.
     :param rate_ids: Restrict to specific rate record IDs.
     :param include_sessions: If ``True``, include a ``sessions`` list in the result.
-    :param include_magnitudes: If ``True``, include a ``magnitudes`` list with the
-        per-class magnitude-distribution detail rows (from ``magnitude_detail``)
-        linked to each rate observation.
+    :param include_magnitudes: If ``True``, include a ``magnitudes`` list with
+        the full :class:`Magnitude` observations referenced by the returned
+        rates via their ``magn_id``.
+    :param include_magnitude_details: If ``True``, include a
+        ``magnitude_details`` list with the per-magnitude-class
+        frequencies (from ``magnitude_detail``) for the magnitude
+        observations referenced by the returned rates.
     """
 
     showers: list[str] = field(default_factory=list)
@@ -276,6 +263,7 @@ class RateFilter:
     rate_ids: list[int] = field(default_factory=list)
     include_sessions: bool = False
     include_magnitudes: bool = False
+    include_magnitude_details: bool = False
     limit: int | None = None
     offset: int | None = None
     order_by: str | None = None
@@ -297,9 +285,10 @@ class MagnitudeFilter:
     :param session_ids: Restrict to specific session IDs.
     :param magn_ids: Restrict to specific magnitude record IDs.
     :param include_sessions: If ``True``, include a ``sessions`` list in the result.
-    :param include_magnitudes: If ``True``, include a ``magnitudes`` list with the
-        per-class magnitude-distribution detail rows (from ``magnitude_detail``)
-        for each magnitude observation.
+    :param include_magnitude_details: If ``True``, include a
+        ``magnitude_details`` list with the per-magnitude-class
+        frequencies (from ``magnitude_detail``) for each magnitude
+        observation.
     """
 
     showers: list[str] = field(default_factory=list)
@@ -312,7 +301,7 @@ class MagnitudeFilter:
     session_ids: list[int] = field(default_factory=list)
     magn_ids: list[int] = field(default_factory=list)
     include_sessions: bool = False
-    include_magnitudes: bool = False
+    include_magnitude_details: bool = False
     limit: int | None = None
     offset: int | None = None
     order_by: str | None = None
@@ -324,11 +313,27 @@ class MagnitudeFilter:
 class SessionFilter:
     """Filter criteria for session queries.
 
+    The observation-level filters (``showers``, ``period_*``, ``sl_*``,
+    ``lim_magn_*``) match sessions that have **at least one** rate or
+    magnitude observation satisfying the criteria.  When an include is
+    requested (``include_rates`` / ``include_magnitudes``), the returned
+    observations are filtered by the same criteria, restricted to the
+    session IDs in the result page.
+
     :param observer_ids: Restrict to specific observer IDs.
+    :param showers: IAU shower codes to include; use ``'SPO'`` for sporadics.
     :param period_start: Include only sessions with at least one rate or
         magnitude observation starting on or after this date.
     :param period_end: Include only sessions with at least one rate or
         magnitude observation ending on or before this date.
+    :param sl_min: Minimum solar longitude (start of period) across rate/magnitude.
+    :param sl_max: Maximum solar longitude (end of period) across rate/magnitude.
+    :param lim_magn_min: Minimum limiting magnitude across rate/magnitude.
+    :param lim_magn_max: Maximum limiting magnitude across rate/magnitude.
+    :param include_rates: If ``True``, include a ``rates`` list of full
+        :class:`Rate` observations in the result.
+    :param include_magnitudes: If ``True``, include a ``magnitudes`` list of
+        full :class:`Magnitude` observations in the result.
     :param limit: Maximum number of sessions to return.
     :param offset: Number of leading sessions to skip.
     :param order_by: Sort column (whitelist: ``id``, ``country``, ``observer_id``).
@@ -337,8 +342,15 @@ class SessionFilter:
     """
 
     observer_ids: list[int] = field(default_factory=list)
+    showers: list[str] = field(default_factory=list)
     period_start: str | None = None
     period_end: str | None = None
+    sl_min: float | None = None
+    sl_max: float | None = None
+    lim_magn_min: float | None = None
+    lim_magn_max: float | None = None
+    include_rates: bool = False
+    include_magnitudes: bool = False
     limit: int | None = None
     offset: int | None = None
     order_by: str | None = None
@@ -453,6 +465,67 @@ def _build_magnitude_conditions(f: MagnitudeFilter):
     return conditions, params
 
 
+def _observation_conditions(f: SessionFilter, alias: str, prefix: str):
+    """Build the observation-level WHERE fragments shared by ``/sessions``
+    filtering and ``include`` fetching.
+
+    *alias* is the SQL alias of the rate or magnitude row in the surrounding
+    query (e.g. ``"x"`` inside an EXISTS subquery, ``"r"`` or ``"m"`` in a
+    direct SELECT).  *prefix* namespaces the placeholder names so the helper
+    can be invoked multiple times within a single statement without
+    collisions.
+    """
+    conditions: list[str] = []
+    params: dict = {}
+
+    if f.period_start:
+        conditions.append(f"{alias}.period_start >= %({prefix}_period_start)s")
+        params[f"{prefix}_period_start"] = f.period_start
+    if f.period_end:
+        conditions.append(f"{alias}.period_end <= %({prefix}_period_end)s")
+        params[f"{prefix}_period_end"] = f.period_end
+    if f.sl_min is not None:
+        conditions.append(f"{alias}.sl_start >= %({prefix}_sl_min)s")
+        params[f"{prefix}_sl_min"] = f.sl_min
+    if f.sl_max is not None:
+        conditions.append(f"{alias}.sl_end <= %({prefix}_sl_max)s")
+        params[f"{prefix}_sl_max"] = f.sl_max
+    if f.lim_magn_min is not None:
+        conditions.append(f"{alias}.lim_magn >= %({prefix}_lim_magn_min)s")
+        params[f"{prefix}_lim_magn_min"] = f.lim_magn_min
+    if f.lim_magn_max is not None:
+        conditions.append(f"{alias}.lim_magn <= %({prefix}_lim_magn_max)s")
+        params[f"{prefix}_lim_magn_max"] = f.lim_magn_max
+
+    if f.showers:
+        normal = [s for s in f.showers if s != "SPO"]
+        include_sporadic = "SPO" in f.showers
+        parts = []
+        if normal:
+            phs = ", ".join(f"%({prefix}_sh_{i})s" for i in range(len(normal)))
+            parts.append(f"{alias}.shower IN ({phs})")
+            for i, s in enumerate(normal):
+                params[f"{prefix}_sh_{i}"] = s
+        if include_sporadic:
+            parts.append(f"{alias}.shower IS NULL")
+        if parts:
+            conditions.append(f"({' OR '.join(parts)})")
+
+    return conditions, params
+
+
+def _has_observation_filter(f: SessionFilter) -> bool:
+    return bool(
+        f.period_start
+        or f.period_end
+        or f.sl_min is not None
+        or f.sl_max is not None
+        or f.lim_magn_min is not None
+        or f.lim_magn_max is not None
+        or f.showers
+    )
+
+
 def _build_session_conditions(f: SessionFilter):
     conditions: list[str] = []
     params: dict = {}
@@ -463,16 +536,9 @@ def _build_session_conditions(f: SessionFilter):
         for i, oid in enumerate(f.observer_ids):
             params[f"obs_{i}"] = oid
 
-    if f.period_start or f.period_end:
-        period_conds = []
-        period_params = {}
-        if f.period_start:
-            period_conds.append("x.period_start >= %(s_period_start)s")
-            period_params["s_period_start"] = f.period_start
-        if f.period_end:
-            period_conds.append("x.period_end <= %(s_period_end)s")
-            period_params["s_period_end"] = f.period_end
-        cond = " AND ".join(period_conds)
+    if _has_observation_filter(f):
+        obs_conds, obs_params = _observation_conditions(f, alias="x", prefix="sessobs")
+        cond = " AND ".join(obs_conds)
         conditions.append(
             "(EXISTS (SELECT 1 FROM rate x WHERE x.session_id = s.id AND "
             + cond
@@ -480,7 +546,7 @@ def _build_session_conditions(f: SessionFilter):
             + cond
             + "))"
         )
-        params.update(period_params)
+        params.update(obs_params)
 
     return conditions, params
 
@@ -516,7 +582,65 @@ def _fetch_sessions(db_conn, session_ids) -> list[Session]:
     return [Session(**d) for d in _rows_to_dicts(cur)]
 
 
+_RATE_SELECT = """
+    SELECT
+        r.id, r.shower, r.period_start, r.period_end, r.sl_start, r.sl_end,
+        r.session_id, r.freq, r.lim_magn, r.t_eff, r.f, r.sidereal_time,
+        r.sun_alt, r.sun_az, r.moon_alt, r.moon_az, r.moon_illum,
+        r.field_alt, r.field_az, r.rad_alt, r.rad_az, rm.magn_id
+    FROM rate r
+    LEFT JOIN rate_magnitude rm ON r.id = rm.rate_id
+"""
+
+_MAGNITUDE_SELECT = """
+    SELECT
+        m.id, m.shower, m.period_start, m.period_end, m.sl_start, m.sl_end,
+        m.session_id, m.freq, m.mean, m.lim_magn
+    FROM magnitude m
+"""
+
+
+def _fetch_session_rates(
+    db_conn, f: SessionFilter, session_ids: list[int]
+) -> list[Rate]:
+    """Fetch rate observations for the given session IDs, applying the same
+    observation-level filters as the outer ``/sessions`` query."""
+    if not session_ids:
+        return []
+    conds, params = _observation_conditions(f, alias="r", prefix="rateobs")
+    phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
+    conds.append(f"r.session_id IN ({phs})")
+    for i, sid in enumerate(session_ids):
+        params[f"sid_{i}"] = sid
+    where = "WHERE " + " AND ".join(conds)
+    cur = db_conn.cursor()
+    cur.execute(db_conn._convert_stmt(f"{_RATE_SELECT} {where} ORDER BY r.id"), params)
+    return [Rate(**d) for d in _rows_to_dicts(cur)]
+
+
+def _fetch_session_magnitudes(
+    db_conn, f: SessionFilter, session_ids: list[int]
+) -> list[Magnitude]:
+    """Fetch magnitude observations for the given session IDs, applying the
+    same observation-level filters as the outer ``/sessions`` query."""
+    if not session_ids:
+        return []
+    conds, params = _observation_conditions(f, alias="m", prefix="magnobs")
+    phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
+    conds.append(f"m.session_id IN ({phs})")
+    for i, sid in enumerate(session_ids):
+        params[f"sid_{i}"] = sid
+    where = "WHERE " + " AND ".join(conds)
+    cur = db_conn.cursor()
+    cur.execute(
+        db_conn._convert_stmt(f"{_MAGNITUDE_SELECT} {where} ORDER BY m.id"), params
+    )
+    return [Magnitude(**d) for d in _rows_to_dicts(cur)]
+
+
 def _fetch_magnitude_details(db_conn, magn_ids) -> list[MagnitudeDetail]:
+    if not magn_ids:
+        return []
     phs = ", ".join(f"%(mid_{i})s" for i in range(len(magn_ids)))
     params = {f"mid_{i}": mid for i, mid in enumerate(magn_ids)}
     stmt = f"""
@@ -528,6 +652,20 @@ def _fetch_magnitude_details(db_conn, magn_ids) -> list[MagnitudeDetail]:
     cur = db_conn.cursor()
     cur.execute(db_conn._convert_stmt(stmt), params)
     return [MagnitudeDetail(**d) for d in _rows_to_dicts(cur)]
+
+
+def _fetch_magnitudes_by_ids(db_conn, magn_ids) -> list[Magnitude]:
+    """Fetch full magnitude observations for the given IDs."""
+    if not magn_ids:
+        return []
+    phs = ", ".join(f"%(mid_{i})s" for i in range(len(magn_ids)))
+    params = {f"mid_{i}": mid for i, mid in enumerate(magn_ids)}
+    where = f"WHERE m.id IN ({phs})"
+    cur = db_conn.cursor()
+    cur.execute(
+        db_conn._convert_stmt(f"{_MAGNITUDE_SELECT} {where} ORDER BY m.id"), params
+    )
+    return [Magnitude(**d) for d in _rows_to_dicts(cur)]
 
 
 def _shower_is_active(s: Shower, month: int, day: int) -> bool:
@@ -558,9 +696,10 @@ class RateService:
         """Return rate observations matching *f*.
 
         :param f: A :class:`RateFilter` specifying filter criteria and includes.
-        :return: A :class:`Rates` instance.  ``sessions`` and ``magnitudes`` are
-            only set when the corresponding flags on *f* are ``True``.  ``total``
-            is set when ``with_total`` is ``True`` or when pagination is in use.
+        :return: A :class:`Rates` instance.  ``sessions``, ``magnitudes`` and
+            ``magnitude_details`` are only set when the corresponding flags on
+            *f* are ``True``.  ``total`` is set when ``with_total`` is ``True``
+            or when pagination is in use.
         """
         conditions, params = _build_rate_conditions(f)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
@@ -572,18 +711,11 @@ class RateService:
         paginated = f.limit is not None or f.offset is not None
         pag_clause = _pagination_clause(f.limit, f.offset)
 
-        select = """
-            SELECT
-                r.id, r.shower, r.period_start, r.period_end, r.sl_start, r.sl_end,
-                r.session_id, r.freq, r.lim_magn, r.t_eff, r.f, r.sidereal_time,
-                r.sun_alt, r.sun_az, r.moon_alt, r.moon_az, r.moon_illum,
-                r.field_alt, r.field_az, r.rad_alt, r.rad_az, rm.magn_id
-            FROM rate r
-            LEFT JOIN rate_magnitude rm ON r.id = rm.rate_id
-        """
         cur = self._db.cursor()
         cur.execute(
-            self._db._convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
+            self._db._convert_stmt(
+                f"{_RATE_SELECT} {where} {order_clause} {pag_clause}"
+            ),
             params,
         )
         observations = [Rate(**d) for d in _rows_to_dicts(cur)]
@@ -605,11 +737,12 @@ class RateService:
                 _fetch_sessions(self._db, session_ids) if session_ids else []
             )
 
-        if f.include_magnitudes:
+        if f.include_magnitudes or f.include_magnitude_details:
             magn_ids = list({r.magn_id for r in observations if r.magn_id is not None})
-            result.magnitudes = (
-                _fetch_magnitude_details(self._db, magn_ids) if magn_ids else []
-            )
+            if f.include_magnitudes:
+                result.magnitudes = _fetch_magnitudes_by_ids(self._db, magn_ids)
+            if f.include_magnitude_details:
+                result.magnitude_details = _fetch_magnitude_details(self._db, magn_ids)
 
         return result
 
@@ -632,9 +765,10 @@ class MagnitudeService:
         """Return magnitude observations matching *f*.
 
         :param f: A :class:`MagnitudeFilter` specifying filter criteria and includes.
-        :return: A :class:`Magnitudes` instance.  ``sessions`` and ``magnitudes``
-            are only set when the corresponding flags on *f* are ``True``.  ``total``
-            is set when ``with_total`` is ``True`` or when pagination is in use.
+        :return: A :class:`Magnitudes` instance.  ``sessions`` and
+            ``magnitude_details`` are only set when the corresponding flags on
+            *f* are ``True``.  ``total`` is set when ``with_total`` is ``True``
+            or when pagination is in use.
         """
         conditions, params = _build_magnitude_conditions(f)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
@@ -646,15 +780,11 @@ class MagnitudeService:
         paginated = f.limit is not None or f.offset is not None
         pag_clause = _pagination_clause(f.limit, f.offset)
 
-        select = """
-            SELECT
-                m.id, m.shower, m.period_start, m.period_end, m.sl_start, m.sl_end,
-                m.session_id, m.freq, m.mean, m.lim_magn
-            FROM magnitude m
-        """
         cur = self._db.cursor()
         cur.execute(
-            self._db._convert_stmt(f"{select} {where} {order_clause} {pag_clause}"),
+            self._db._convert_stmt(
+                f"{_MAGNITUDE_SELECT} {where} {order_clause} {pag_clause}"
+            ),
             params,
         )
         observations = [Magnitude(**d) for d in _rows_to_dicts(cur)]
@@ -676,11 +806,9 @@ class MagnitudeService:
                 _fetch_sessions(self._db, session_ids) if session_ids else []
             )
 
-        if f.include_magnitudes:
+        if f.include_magnitude_details:
             magn_ids = list({r.id for r in observations if r.id is not None})
-            result.magnitudes = (
-                _fetch_magnitude_details(self._db, magn_ids) if magn_ids else []
-            )
+            result.magnitude_details = _fetch_magnitude_details(self._db, magn_ids)
 
         return result
 
@@ -730,6 +858,14 @@ class SessionService:
                 params,
             )
             result.total = int(cur.fetchone()[0])
+
+        if f.include_rates:
+            session_ids = [s.id for s in sessions]
+            result.rates = _fetch_session_rates(self._db, f, session_ids)
+
+        if f.include_magnitudes:
+            session_ids = [s.id for s in sessions]
+            result.magnitudes = _fetch_session_magnitudes(self._db, f, session_ids)
 
         return result
 

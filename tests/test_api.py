@@ -64,6 +64,22 @@ class TestRateServiceQuery:
         result = RateService(seeded_db).query(RateFilter(include_magnitudes=True))
         assert result.magnitudes is not None
 
+    def test_include_magnitude_details_sets_magnitude_details(self, seeded_db):
+        result = RateService(seeded_db).query(
+            RateFilter(include_magnitudes=True, include_magnitude_details=True)
+        )
+        assert result.magnitude_details is not None
+        assert result.magnitudes is not None
+
+    def test_include_magnitude_details_standalone(self, seeded_db):
+        # magnitude_details can be requested without include_magnitudes:
+        # each detail's id matches a Rate.magn_id on the result.
+        result = RateService(seeded_db).query(
+            RateFilter(include_magnitude_details=True)
+        )
+        assert result.magnitudes is None
+        assert result.magnitude_details is not None
+
     def test_shower_filter_does_not_error(self, seeded_db):
         result = RateService(seeded_db).query(RateFilter(showers=["PER"]))
         assert isinstance(result, Rates)
@@ -141,11 +157,11 @@ class TestMagnitudeServiceQuery:
         )
         assert result.sessions is not None
 
-    def test_include_magnitudes_sets_magnitudes(self, seeded_db):
+    def test_include_magnitude_details_sets_magnitude_details(self, seeded_db):
         result = MagnitudeService(seeded_db).query(
-            MagnitudeFilter(include_magnitudes=True)
+            MagnitudeFilter(include_magnitude_details=True)
         )
-        assert result.magnitudes is not None
+        assert result.magnitude_details is not None
 
     def test_shower_filter_does_not_error(self, seeded_db):
         result = MagnitudeService(seeded_db).query(MagnitudeFilter(showers=["PER"]))
@@ -195,10 +211,17 @@ class TestRateShape:
         assert len(result.sessions) > 0
         assert all(isinstance(s, Session) for s in result.sessions)
 
-    def test_magnitude_detail_isinstance(self, observation_db):
+    def test_include_magnitudes_returns_full_observations(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_magnitudes=True))
         assert len(result.magnitudes) > 0
-        assert all(isinstance(d, MagnitudeDetail) for d in result.magnitudes)
+        assert all(isinstance(m, Magnitude) for m in result.magnitudes)
+
+    def test_magnitude_detail_isinstance(self, observation_db):
+        result = RateService(observation_db).query(
+            RateFilter(include_magnitudes=True, include_magnitude_details=True)
+        )
+        assert len(result.magnitude_details) > 0
+        assert all(isinstance(d, MagnitudeDetail) for d in result.magnitude_details)
 
 
 class TestMagnitudeShape:
@@ -216,10 +239,10 @@ class TestMagnitudeShape:
 
     def test_magnitude_detail_isinstance(self, observation_db):
         result = MagnitudeService(observation_db).query(
-            MagnitudeFilter(include_magnitudes=True)
+            MagnitudeFilter(include_magnitude_details=True)
         )
-        assert len(result.magnitudes) > 0
-        assert all(isinstance(d, MagnitudeDetail) for d in result.magnitudes)
+        assert len(result.magnitude_details) > 0
+        assert all(isinstance(d, MagnitudeDetail) for d in result.magnitude_details)
 
 
 class TestSessionFields:
@@ -282,13 +305,17 @@ class TestMagnitudeFields:
 
 class TestMagnitudeDetailFields:
     def test_magn_is_int(self, observation_db):
-        result = RateService(observation_db).query(RateFilter(include_magnitudes=True))
-        detail = result.magnitudes[0]
+        result = RateService(observation_db).query(
+            RateFilter(include_magnitudes=True, include_magnitude_details=True)
+        )
+        detail = result.magnitude_details[0]
         assert isinstance(detail.magn, int)
 
     def test_freq_is_float(self, observation_db):
-        result = RateService(observation_db).query(RateFilter(include_magnitudes=True))
-        detail = result.magnitudes[0]
+        result = RateService(observation_db).query(
+            RateFilter(include_magnitudes=True, include_magnitude_details=True)
+        )
+        detail = result.magnitude_details[0]
         assert isinstance(detail.freq, float)
 
 

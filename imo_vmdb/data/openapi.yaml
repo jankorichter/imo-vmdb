@@ -55,7 +55,7 @@ paths:
               type: integer
           style: form
           explode: true
-        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/rates_include'
         - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/offset'
         - name: order_by
@@ -135,7 +135,7 @@ paths:
               type: integer
           style: form
           explode: true
-        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/magnitudes_include'
         - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/offset'
         - name: order_by
@@ -192,7 +192,16 @@ paths:
       description: >
         Returns observation sessions, optionally restricted to particular
         observers or to sessions that have at least one rate or magnitude
-        observation in a given period.
+        observation matching the given filters.
+
+
+        All observation-level filters (`shower`, `period_*`, `sl_*`,
+        `lim_magn_*`) are evaluated via an EXISTS-join on `rate` and
+        `magnitude`: a session is returned when at least one of its
+        observations satisfies the criteria.  When `include=rates` or
+        `include=magnitudes` is requested, the included observations
+        are restricted by the same filters and to the session IDs in
+        the response page.
       parameters:
         - name: observer_id
           in: query
@@ -203,8 +212,14 @@ paths:
               type: integer
           style: form
           explode: true
+        - $ref: '#/components/parameters/shower'
         - $ref: '#/components/parameters/period_start'
         - $ref: '#/components/parameters/period_end'
+        - $ref: '#/components/parameters/sl_min'
+        - $ref: '#/components/parameters/sl_max'
+        - $ref: '#/components/parameters/lim_magn_min'
+        - $ref: '#/components/parameters/lim_magn_max'
+        - $ref: '#/components/parameters/sessions_include'
         - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/offset'
         - name: order_by
@@ -223,13 +238,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [sessions]
-                properties:
-                  sessions:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Session'
+                $ref: '#/components/schemas/SessionsResponse'
         "400":
           $ref: '#/components/responses/BadRequest'
         "500":
@@ -567,15 +576,71 @@ components:
       style: form
       explode: true
 
-    include:
+    rates_include:
       name: include
       in: query
       description: >
         Comma-separated list of related data to include in the response.
-        Supported values: `sessions`, `magnitudes`.
+        Supported values:
+
+        * `sessions` — adds a `sessions` array of `Session` rows referenced
+          by the returned rate observations.
+
+        * `magnitudes` — adds a `magnitudes` array of full
+          `MagnitudeObservation` rows: the magnitude observation
+          referenced by each rate's `magn_id`.
+
+        * `magnitude_details` — adds a `magnitude_details` array of
+          `MagnitudeDetail` rows (per-magnitude-class frequencies) for
+          the magnitude observations referenced by the returned rates.
+          Can be requested independently of `magnitudes`; each detail
+          row links back via `MagnitudeDetail.id == Rate.magn_id`.
+
+        Unknown values yield HTTP 400.
       schema:
         type: string
-        example: sessions,magnitudes
+        example: sessions,magnitudes,magnitude_details
+
+    magnitudes_include:
+      name: include
+      in: query
+      description: >
+        Comma-separated list of related data to include in the response.
+        Supported values:
+
+        * `sessions` — adds a `sessions` array of `Session` rows referenced
+          by the returned magnitude observations.
+
+        * `magnitude_details` — adds a `magnitude_details` array of
+          `MagnitudeDetail` rows (per-magnitude-class frequencies) for
+          the returned magnitude observations.
+
+        Unknown values yield HTTP 400.
+      schema:
+        type: string
+        example: sessions,magnitude_details
+
+    sessions_include:
+      name: include
+      in: query
+      description: >
+        Comma-separated list of related data to include in the response.
+        Supported values:
+
+        * `rates` — adds a `rates` array of full `RateObservation` rows
+          for the sessions in the response page.
+
+        * `magnitudes` — adds a `magnitudes` array of full
+          `MagnitudeObservation` rows for the sessions in the response
+          page.
+
+        For per-magnitude-class frequencies (`MagnitudeDetail`), use the
+        dedicated `/magnitudes` endpoint with `?session_id=…&include=magnitude_details`.
+
+        Unknown values yield HTTP 400.
+      schema:
+        type: string
+        example: rates,magnitudes
 
     limit:
       name: limit
@@ -811,7 +876,19 @@ components:
             $ref: '#/components/schemas/Session'
         magnitudes:
           type: array
-          description: Present when `include=magnitudes` was requested.
+          description: >
+            Present when `include=magnitudes` was requested.  Contains
+            the full `MagnitudeObservation` rows referenced by the
+            returned rates via their `magn_id`.
+          items:
+            $ref: '#/components/schemas/MagnitudeObservation'
+        magnitude_details:
+          type: array
+          description: >
+            Present when `include=magnitude_details` was requested.
+            Contains `MagnitudeDetail` rows (per-magnitude-class
+            frequencies) for the magnitude observations referenced by
+            the returned rates.
           items:
             $ref: '#/components/schemas/MagnitudeDetail'
 
@@ -828,11 +905,36 @@ components:
           description: Present when `include=sessions` was requested.
           items:
             $ref: '#/components/schemas/Session'
-        magnitudes:
+        magnitude_details:
           type: array
-          description: Present when `include=magnitudes` was requested.
+          description: >
+            Present when `include=magnitude_details` was requested.
+            Contains `MagnitudeDetail` rows (per-magnitude-class
+            frequencies) for the returned magnitude observations.
           items:
             $ref: '#/components/schemas/MagnitudeDetail'
+
+    SessionsResponse:
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        rates:
+          type: array
+          description: Present when `include=rates` was requested.
+          items:
+            $ref: '#/components/schemas/RateObservation'
+        magnitudes:
+          type: array
+          description: >
+            Present when `include=magnitudes` was requested.  Contains
+            full `MagnitudeObservation` rows for the sessions in the
+            response page.
+          items:
+            $ref: '#/components/schemas/MagnitudeObservation'
 
     Error:
       type: object

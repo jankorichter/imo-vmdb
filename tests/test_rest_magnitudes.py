@@ -21,9 +21,9 @@ class TestMagnitudesList:
         data = obs_client.get(f"{_BASE}/magnitudes").get_json()
         assert "sessions" not in data
 
-    def test_magnitudes_absent_by_default(self, obs_client):
+    def test_magnitude_details_absent_by_default(self, obs_client):
         data = obs_client.get(f"{_BASE}/magnitudes").get_json()
-        assert "magnitudes" not in data
+        assert "magnitude_details" not in data
 
     def test_no_db_returns_503(self, no_db_client):
         r = no_db_client.get(f"{_BASE}/magnitudes")
@@ -54,10 +54,24 @@ class TestMagnitudesIncludes:
         assert "sessions" in data
         assert len(data["sessions"]) > 0
 
-    def test_include_magnitudes(self, obs_client):
-        data = obs_client.get(f"{_BASE}/magnitudes?include=magnitudes").get_json()
-        assert "magnitudes" in data
-        assert len(data["magnitudes"]) > 0
+    def test_include_magnitude_details(self, obs_client):
+        data = obs_client.get(
+            f"{_BASE}/magnitudes?include=magnitude_details"
+        ).get_json()
+        assert "magnitude_details" in data
+        assert len(data["magnitude_details"]) > 0
+        first = data["magnitude_details"][0]
+        assert "magn" in first
+        assert "freq" in first
+
+    def test_legacy_include_magnitudes_returns_400(self, obs_client):
+        r = obs_client.get(f"{_BASE}/magnitudes?include=magnitudes")
+        assert r.status_code == 400
+        assert "error" in r.get_json()
+
+    def test_unknown_include_returns_400(self, obs_client):
+        r = obs_client.get(f"{_BASE}/magnitudes?include=evil")
+        assert r.status_code == 400
 
 
 class TestMagnitudesPagination:
