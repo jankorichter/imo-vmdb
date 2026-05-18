@@ -47,6 +47,15 @@
   requires `?include=magnitudes`.  Each detail row's `id` matches
   `Rate.magn_id`, which is enough to attribute frequencies to rates.
 
+### Fixed
+
+- **Security** — bumped transitive `urllib3` to `>= 2.7.0` in
+  `poetry.lock`, addressing two open Dependabot advisories (sensitive
+  headers forwarded across origins in proxied low-level redirects;
+  decompression-bomb safeguards bypassed in parts of the streaming API).
+  `requests`, `idna`, `click`, and `astropy-iers-data` picked up minor
+  refresh bumps in the same resolution pass.
+
 ## [1.8.0] — 2026-05-16
 
 ### BREAKING
