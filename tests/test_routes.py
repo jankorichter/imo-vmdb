@@ -83,6 +83,25 @@ class TestExport:
         r = client.get("/export/rate")
         assert r.status_code == 200
 
+    def test_rate_export_period_columns_use_iso_t(self, obs_client):
+        """CSV-exported `period_start`/`period_end` must use the same
+        strict ISO 8601 (T separator) wire format as the REST API —
+        not Python's default `str(datetime)` which is space-separated."""
+        r = obs_client.get("/export/rate")
+        body = r.get_data(as_text=True)
+        header, *data_rows = body.splitlines()
+        cols = header.split(";")
+        ps_idx = cols.index("period_start")
+        pe_idx = cols.index("period_end")
+        for row in data_rows:
+            cells = row.split(";")
+            assert "T" in cells[ps_idx], f"period_start lacks T: {cells[ps_idx]!r}"
+            assert (
+                " " not in cells[ps_idx]
+            ), f"period_start has space: {cells[ps_idx]!r}"
+            assert "T" in cells[pe_idx], f"period_end lacks T: {cells[pe_idx]!r}"
+            assert " " not in cells[pe_idx], f"period_end has space: {cells[pe_idx]!r}"
+
     def test_magnitude_export_returns_200(self, client):
         r = client.get("/export/magnitude")
         assert r.status_code == 200

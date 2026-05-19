@@ -49,7 +49,8 @@ class TestStatsByShower:
 
     def test_period_filter(self, obs_client):
         data = obs_client.get(
-            f"{_BASE}/stats/by-shower?period_start=2023-08-01&period_end=2023-09-30"
+            f"{_BASE}/stats/by-shower?period_start=2023-08-01T00:00:00"
+            f"&period_end=2023-09-30T23:59:59"
         ).get_json()
         assert {row["shower"] for row in data} == {"PER"}
 
@@ -77,7 +78,8 @@ class TestStatsByYear:
 
     def test_period_filter_excludes_others(self, obs_client):
         data = obs_client.get(
-            f"{_BASE}/stats/by-year?period_start=2030-01-01&period_end=2030-12-31"
+            f"{_BASE}/stats/by-year?period_start=2030-01-01T00:00:00"
+            f"&period_end=2030-12-31T23:59:59"
         ).get_json()
         assert data == []
 

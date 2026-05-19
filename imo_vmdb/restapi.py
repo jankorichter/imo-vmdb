@@ -24,9 +24,23 @@ from imo_vmdb import (
 api_bp = Blueprint("api", __name__)
 
 
+def _jsonable(v):
+    """Coerce dataclass field values to JSON-friendly forms.
+
+    `datetime.datetime` becomes a canonical ISO 8601 string with `T`
+    separator (no timezone marker — IMO data is UTC by convention).
+    Other values pass through unchanged.
+    """
+    if isinstance(v, datetime.datetime):
+        return v.isoformat()
+    return v
+
+
 def _serialize(obj):
     """Convert a dataclass to a JSON-serialisable dict, omitting ``None``-valued keys."""
-    return {k: v for k, v in dataclasses.asdict(obj).items() if v is not None}
+    return {
+        k: _jsonable(v) for k, v in dataclasses.asdict(obj).items() if v is not None
+    }
 
 
 def _serialize_filtered(obj, fields: set[str] | None):
@@ -37,8 +51,8 @@ def _serialize_filtered(obj, fields: set[str] | None):
     """
     raw = dataclasses.asdict(obj)
     if fields is None:
-        return {k: v for k, v in raw.items() if v is not None}
-    return {k: raw[k] for k in fields if k in raw}
+        return {k: _jsonable(v) for k, v in raw.items() if v is not None}
+    return {k: _jsonable(raw[k]) for k in fields if k in raw}
 
 
 _OPENAPI_FILE = os.path.join(
@@ -65,6 +79,25 @@ def _opt_float(val: str | None) -> float | None:
 
 def _opt_int(val: str | None) -> int | None:
     return int(val) if val is not None else None
+
+
+def _opt_dt(val: str | None) -> datetime.datetime | None:
+    """Strict ISO 8601 datetime parser for query parameters.
+
+    Accepts exactly ``YYYY-MM-DDTHH:MM:SS`` and rejects everything else —
+    no space separator, no date-only, no fractional seconds, no
+    timezone marker.  IMO data is UTC by convention; the timezone is
+    implied and must be omitted on the wire.
+
+    :raises ValueError: with the canonical error message on any other
+        input.
+    """
+    if val is None:
+        return None
+    try:
+        return datetime.datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        raise ValueError(f"Invalid datetime: expected YYYY-MM-DDTHH:MM:SS, got {val!r}")
 
 
 def _parse_includes(args) -> set[str]:
@@ -109,8 +142,8 @@ def _parse_rate_filter(args) -> RateFilter:
         _validate_includes(includes, _RATES_INCLUDES)
         return RateFilter(
             showers=args.getlist("shower"),
-            period_start=args.get("period_start"),
-            period_end=args.get("period_end"),
+            period_start=_opt_dt(args.get("period_start")),
+            period_end=_opt_dt(args.get("period_end")),
             sl_min=_opt_float(args.get("sl_min")),
             sl_max=_opt_float(args.get("sl_max")),
             lim_magn_min=_opt_float(args.get("lim_magn_min")),
@@ -139,8 +172,8 @@ def _parse_magnitude_filter(args) -> MagnitudeFilter:
         _validate_includes(includes, _MAGNITUDES_INCLUDES)
         return MagnitudeFilter(
             showers=args.getlist("shower"),
-            period_start=args.get("period_start"),
-            period_end=args.get("period_end"),
+            period_start=_opt_dt(args.get("period_start")),
+            period_end=_opt_dt(args.get("period_end")),
             sl_min=_opt_float(args.get("sl_min")),
             sl_max=_opt_float(args.get("sl_max")),
             lim_magn_min=_opt_float(args.get("lim_magn_min")),
@@ -166,8 +199,8 @@ def _parse_session_filter(args) -> SessionFilter:
         return SessionFilter(
             observer_ids=[int(x) for x in args.getlist("observer_id")],
             showers=args.getlist("shower"),
-            period_start=args.get("period_start"),
-            period_end=args.get("period_end"),
+            period_start=_opt_dt(args.get("period_start")),
+            period_end=_opt_dt(args.get("period_end")),
             sl_min=_opt_float(args.get("sl_min")),
             sl_max=_opt_float(args.get("sl_max")),
             lim_magn_min=_opt_float(args.get("lim_magn_min")),
@@ -451,11 +484,19 @@ def get_stats_meta():
     finally:
         db_conn.close()
 
-    return jsonify(dataclasses.asdict(meta))
+    # _serialize() coerces datetime → ISO 8601 strings (T separator).
+    # `jsonify(dataclasses.asdict(...))` would let Flask's default JSON
+    # encoder emit RFC 822 ("Sat, 12 Aug 2023 22:00:00 GMT") — not
+    # our wire format.  Keep explicit None values for the period
+    # fields so empty-DB responses still document the keys.
+    raw = dataclasses.asdict(meta)
+    return jsonify({k: _jsonable(v) for k, v in raw.items()})
 
 
 def _stats_period_args():
-    return request.args.get("period_start"), request.args.get("period_end")
+    return _opt_dt(request.args.get("period_start")), _opt_dt(
+        request.args.get("period_end")
+    )
 
 
 @api_bp.route("/stats/by-shower")
@@ -464,7 +505,10 @@ def get_stats_by_shower():
     if err:
         return err
 
-    period_start, period_end = _stats_period_args()
+    try:
+        period_start, period_end = _stats_period_args()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     db_conn = _get_db(config)
     try:
         rows = StatsService(db_conn).by_shower(period_start, period_end)
@@ -482,7 +526,10 @@ def get_stats_by_country():
     if err:
         return err
 
-    period_start, period_end = _stats_period_args()
+    try:
+        period_start, period_end = _stats_period_args()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     db_conn = _get_db(config)
     try:
         rows = StatsService(db_conn).by_country(period_start, period_end)
@@ -500,7 +547,10 @@ def get_stats_by_year():
     if err:
         return err
 
-    period_start, period_end = _stats_period_args()
+    try:
+        period_start, period_end = _stats_period_args()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     db_conn = _get_db(config)
     try:
         rows = StatsService(db_conn).by_year(period_start, period_end)

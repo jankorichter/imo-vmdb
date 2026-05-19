@@ -81,8 +81,8 @@ class Record(BaseRecord):
         magn = {
             "id": mid,
             "shower": iau_code,
-            "period_start": self.start.isoformat(sep=" "),
-            "period_end": self.end.isoformat(sep=" "),
+            "period_start": self.start,
+            "period_end": self.end,
             "sl_start": math.degrees(sl_start),
             "sl_end": math.degrees(sl_end),
             "session_id": self.session_id,

@@ -518,20 +518,27 @@ components:
       name: period_start
       in: query
       description: >
-        Lower bound for `period_start` (ISO 8601, e.g. `2015-08-01` or
-        `2015-08-12T20:00:00`).
+        Lower bound for `period_start`.  Strict ISO 8601:
+        `YYYY-MM-DDTHH:MM:SS` (e.g. `2015-08-12T20:00:00`).  IMO data
+        is UTC by convention; no timezone marker is accepted.
+        Space-separator, date-only, trailing `Z` and `±HH:MM` offsets
+        are rejected with HTTP 400.
       schema:
         type: string
         format: date-time
+        example: "2015-08-12T20:00:00"
 
     period_end:
       name: period_end
       in: query
       description: >
-        Upper bound for `period_end` (ISO 8601).
+        Upper bound for `period_end`.  Strict ISO 8601:
+        `YYYY-MM-DDTHH:MM:SS`.  Same rules as `period_start` (no
+        timezone marker, no space separator, no date-only).
       schema:
         type: string
         format: date-time
+        example: "2015-08-31T23:59:59"
 
     sl_min:
       name: sl_min
@@ -693,10 +700,18 @@ components:
           description: IAU shower code, or null for sporadic meteors.
         period_start:
           type: string
-          description: Start of the observation period.
+          format: date-time
+          description: >
+            Start of the observation period in strict ISO 8601 form
+            `YYYY-MM-DDTHH:MM:SS` (UTC, no timezone marker).
+          example: "2015-08-12T22:00:00"
         period_end:
           type: string
-          description: End of the observation period.
+          format: date-time
+          description: >
+            End of the observation period in strict ISO 8601 form
+            `YYYY-MM-DDTHH:MM:SS` (UTC, no timezone marker).
+          example: "2015-08-12T23:00:00"
         sl_start:
           type: number
           description: Solar longitude at period start (degrees).
@@ -771,10 +786,18 @@ components:
           description: IAU shower code, or null for sporadic meteors.
         period_start:
           type: string
-          description: Start of the observation period.
+          format: date-time
+          description: >
+            Start of the observation period in strict ISO 8601 form
+            `YYYY-MM-DDTHH:MM:SS` (UTC, no timezone marker).
+          example: "2015-08-12T22:00:00"
         period_end:
           type: string
-          description: End of the observation period.
+          format: date-time
+          description: >
+            End of the observation period in strict ISO 8601 form
+            `YYYY-MM-DDTHH:MM:SS` (UTC, no timezone marker).
+          example: "2015-08-12T23:00:00"
         sl_start:
           type: number
           description: Solar longitude at period start (degrees).
@@ -993,8 +1016,17 @@ components:
           description: Row count of the normalized `magnitude` table.
         period_start:
           type: ["string", "null"]
+          format: date-time
+          description: >
+            Earliest `period_start` across the normalized `rate` and
+            `magnitude` tables.  Strict ISO 8601 (`YYYY-MM-DDTHH:MM:SS`,
+            UTC, no timezone marker).  `null` when both tables are empty.
         period_end:
           type: ["string", "null"]
+          format: date-time
+          description: >
+            Latest `period_end` across the normalized `rate` and
+            `magnitude` tables.  Same format and rules as `period_start`.
         rate_meteors:
           type: integer
           description: Sum of `freq` across all rows of `rate`.
@@ -1003,12 +1035,15 @@ components:
           description: Sum of `freq` across all rows of `magnitude`.
         rate_period_start:
           type: ["string", "null"]
+          format: date-time
           description: Earliest `period_start` across all rows of `rate`.
         rate_period_end:
           type: ["string", "null"]
+          format: date-time
           description: Latest `period_end` across all rows of `rate`.
         magnitude_period_start:
           type: ["string", "null"]
+          format: date-time
           description: Earliest `period_start` across all rows of `magnitude`.
         magnitude_period_end:
           type: ["string", "null"]

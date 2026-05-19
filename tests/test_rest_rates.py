@@ -64,6 +64,40 @@ class TestRatesFilters:
         assert r.status_code == 400
         assert "error" in r.get_json()
 
+    def test_period_start_accepts_strict_iso_t(self, obs_client):
+        r = obs_client.get(f"{_BASE}/rates?period_start=2023-08-12T00:00:00")
+        assert r.status_code == 200
+
+    def test_period_start_rejects_space_separator(self, obs_client):
+        r = obs_client.get(f"{_BASE}/rates?period_start=2023-08-12 00:00:00")
+        assert r.status_code == 400
+        assert "Invalid datetime" in r.get_json()["error"]
+
+    def test_period_start_rejects_date_only(self, obs_client):
+        r = obs_client.get(f"{_BASE}/rates?period_start=2023-08-12")
+        assert r.status_code == 400
+        assert "Invalid datetime" in r.get_json()["error"]
+
+    def test_period_start_rejects_z_suffix(self, obs_client):
+        r = obs_client.get(f"{_BASE}/rates?period_start=2023-08-12T00:00:00Z")
+        assert r.status_code == 400
+        assert "Invalid datetime" in r.get_json()["error"]
+
+    def test_period_start_rejects_offset(self, obs_client):
+        r = obs_client.get(f"{_BASE}/rates?period_start=2023-08-12T00:00:00%2B02:00")
+        assert r.status_code == 400
+        assert "Invalid datetime" in r.get_json()["error"]
+
+    def test_period_start_output_is_strict_iso_t(self, obs_client):
+        """Wire format: T-separator, no timezone marker, full HH:MM:SS."""
+        data = obs_client.get(f"{_BASE}/rates").get_json()
+        obs = data["observations"][0]
+        assert "T" in obs["period_start"]
+        assert " " not in obs["period_start"]
+        assert "Z" not in obs["period_start"]
+        assert "+" not in obs["period_start"]
+        assert obs["period_start"].count(":") == 2
+
 
 class TestRatesIncludes:
     def test_include_sessions(self, obs_client):

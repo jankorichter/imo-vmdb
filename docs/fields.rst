@@ -14,8 +14,8 @@ Entity Relationships
     obs_session (id)
       │
       ├──< rate (session_id, magn_id) ──┐
-      │                                  │
-      └──< magnitude (session_id) <──────┘
+      │                                 │
+      └──< magnitude (session_id) <─────┘
                │
                └──< magnitude_detail (id → magnitude.id)
 

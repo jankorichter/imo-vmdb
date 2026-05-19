@@ -6,6 +6,7 @@ from typing import IO
 
 from imo_vmdb import DBAdapter, DBException, export_db, export_table
 from imo_vmdb.command import config_factory
+from imo_vmdb.db import iso_format_datetimes
 
 REIMPORT_TABLES = {"shower", "radiant"}
 
@@ -123,7 +124,7 @@ def _export_table_to_csv(
 
     writer = csv.writer(out, delimiter=";")
     writer.writerow(cols)
-    writer.writerows(rows)
+    writer.writerows(iso_format_datetimes(rows))
 
 
 def _export_database(options: Values, parser: OptionParser) -> None:

@@ -1,8 +1,22 @@
+import datetime
 import importlib
 import re
 import sqlite3
 import warnings
 from typing import Any
+
+# Replace the Python 3.12-deprecated default sqlite3 adapter / converter
+# pair for `datetime.datetime` / `"timestamp"` columns.  SQLite has no
+# native datetime type, so we own the TEXT serialization: write ISO 8601
+# with T separator (naive, UTC by IMO convention), read with
+# `fromisoformat()` (accepts both T and space, keeping legacy data
+# readable).  PostgreSQL and MySQL drivers handle datetime natively; this
+# is SQLite-only.
+sqlite3.register_adapter(datetime.datetime, lambda dt: dt.isoformat())
+sqlite3.register_converter(
+    "timestamp",
+    lambda b: datetime.datetime.fromisoformat(b.decode()),
+)
 
 _MONTH_NAMES = {
     1: "Jan",
@@ -90,10 +104,18 @@ class DBAdapter:
     """
 
     def __init__(self, config: dict[str, str]) -> None:
-        self.db_module = config.get("module", "sqlite3")
-        if "module" in config:
-            config.pop("module")
+        # Accept any mapping (including `configparser.SectionProxy`, which
+        # rejects non-string values on Python 3.14+ when we add
+        # `detect_types` below).  Copying also avoids mutating the
+        # caller's configuration object.
+        config = dict(config)
+        self.db_module = config.pop("module", "sqlite3")
         db = importlib.import_module(self.db_module)
+        if "sqlite3" == self.db_module:
+            # PARSE_DECLTYPES triggers the registered "timestamp" converter
+            # so `period_start` / `period_end` reads come back as
+            # `datetime.datetime`, matching the PostgreSQL / MySQL drivers.
+            config.setdefault("detect_types", sqlite3.PARSE_DECLTYPES)
         self.conn = db.connect(**config)
         if "sqlite3" == self.db_module:
             self.conn.execute("PRAGMA foreign_keys = ON")
@@ -418,6 +440,26 @@ def _format_date(month: int | None, day: int | None) -> str:
     if month is None or day is None:
         return ""
     return f"{_MONTH_NAMES[month]} {day}"
+
+
+def iso_format_datetimes(rows):
+    """Coerce ``datetime`` cells to ISO 8601 strings (T separator).
+
+    CSV serialisation (``csv.writer``) falls back to ``str(datetime)``
+    which uses a space separator (``"2015-12-31 02:40:00"``).  The
+    REST API serialises the same values with ``isoformat()``
+    (``"2015-12-31T02:40:00"``).  This helper keeps both wire formats
+    aligned by stringifying any ``datetime`` cell to the same ISO 8601
+    form before CSV writing.  Other cell types pass through unchanged.
+
+    :param rows: Iterable of row tuples / lists.
+    :return: List of tuples with ``datetime`` cells replaced by their
+        ``isoformat()`` strings.
+    """
+    return [
+        tuple(v.isoformat() if isinstance(v, datetime.datetime) else v for v in row)
+        for row in rows
+    ]
 
 
 def export_table(

@@ -22,6 +22,39 @@
 
 ### BREAKING
 
+- **Datetime handling end-to-end; strict ISO 8601 on the REST wire.**
+  `period_start` / `period_end` are `datetime.datetime` from the DB
+  read to the REST serialiser:
+  - SQLite connections opt into `sqlite3.PARSE_DECLTYPES` and the
+    project registers explicit adapter/converter callables for
+    `datetime.datetime` ↔ `"timestamp"` (replacing the Python
+    3.12-deprecated built-ins).  PostgreSQL and MySQL drivers return
+    `datetime` natively.
+  - Normalizer and CSV importer code paths bind raw `datetime`
+    objects to INSERT parameters instead of pre-formatting with
+    `isoformat(sep=" ")`.
+  - `Rate.period_start`, `Rate.period_end`,
+    `Magnitude.period_start`, `Magnitude.period_end`, and every
+    `StatsMeta.*period_*` field are now `datetime.datetime` /
+    `datetime.datetime | None` on the Python API surface.  Filter
+    dataclasses (`RateFilter`, `MagnitudeFilter`, `SessionFilter`)
+    and `StatsService.by_*` method signatures match.
+  - REST API input is strict: `period_start` / `period_end` must be
+    exactly `YYYY-MM-DDTHH:MM:SS` (UTC implied by IMO convention; no
+    timezone marker).  Space separator, date-only, trailing `Z`, and
+    `±HH:MM` offsets are rejected with HTTP 400 and a message
+    `"Invalid datetime: expected YYYY-MM-DDTHH:MM:SS, got '…'"`.
+  - REST API output is strict: every `period_*` field is serialised
+    via `datetime.isoformat()` (`YYYY-MM-DDTHH:MM:SS`, no timezone
+    marker) — regardless of DB dialect.
+  - Legacy databases (1.x, space-separated DB strings) remain
+    readable via the `fromisoformat()`-based converter.  Re-importing
+    under 2.0.0 (which `initdb` requires anyway for the unrelated
+    schema rebuilds) yields ISO-T storage going forward.
+  - Clients that send anything other than the strict T-format
+    (notably older vismeteor releases) need to update — tracked as a
+    separate vismeteor follow-up.
+
 - **`rate_magnitude` table dropped; its payload moves onto `rate`.**
   The 1:1 sidecar was redundant — `magn_id` and the former
   `rate_magnitude.equals` boolean (renamed to `magn_solo`) become

@@ -19,13 +19,15 @@ class TestSessionsList:
 
     def test_period_filter_includes_matching(self, obs_client):
         data = obs_client.get(
-            f"{_BASE}/sessions?period_start=2023-01-01&period_end=2023-12-31"
+            f"{_BASE}/sessions?period_start=2023-01-01T00:00:00"
+            f"&period_end=2023-12-31T23:59:59"
         ).get_json()
         assert len(data["sessions"]) == 1
 
     def test_period_filter_excludes_outside(self, obs_client):
         data = obs_client.get(
-            f"{_BASE}/sessions?period_start=2030-01-01&period_end=2030-12-31"
+            f"{_BASE}/sessions?period_start=2030-01-01T00:00:00"
+            f"&period_end=2030-12-31T23:59:59"
         ).get_json()
         assert data["sessions"] == []
 

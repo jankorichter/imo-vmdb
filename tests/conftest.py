@@ -1,4 +1,5 @@
 import configparser
+import datetime
 import logging
 import tempfile
 
@@ -8,6 +9,13 @@ import imo_vmdb
 from imo_vmdb.db import DBAdapter
 
 logger = logging.getLogger("test")
+
+# Seeded observation timestamps — bound as datetime objects so the
+# registered SQLite adapter writes them in canonical ISO-T form.
+_PER_START = datetime.datetime(2023, 8, 12, 22, 0, 0)
+_PER_END = datetime.datetime(2023, 8, 12, 23, 0, 0)
+_GEM_START = datetime.datetime(2023, 12, 14, 22, 0, 0)
+_GEM_END = datetime.datetime(2023, 12, 14, 23, 0, 0)
 
 
 def _insert_observations(cur):
@@ -21,33 +29,11 @@ def _insert_observations(cur):
     magn_fields = "id, shower, period_start, period_end, sl_start, sl_end, session_id, freq, mean, lim_magn"
     cur.execute(
         f"INSERT INTO magnitude ({magn_fields}) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (
-            1,
-            "PER",
-            "2023-08-12 22:00",
-            "2023-08-12 23:00",
-            139.5,
-            140.5,
-            1,
-            50,
-            3.2,
-            6.5,
-        ),
+        (1, "PER", _PER_START, _PER_END, 139.5, 140.5, 1, 50, 3.2, 6.5),
     )
     cur.execute(
         f"INSERT INTO magnitude ({magn_fields}) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (
-            2,
-            "GEM",
-            "2023-12-14 22:00",
-            "2023-12-14 23:00",
-            260.0,
-            261.0,
-            1,
-            30,
-            2.8,
-            5.5,
-        ),
+        (2, "GEM", _GEM_START, _GEM_END, 260.0, 261.0, 1, 30, 2.8, 5.5),
     )
 
     rate_fields = (
@@ -60,8 +46,8 @@ def _insert_observations(cur):
         (
             1,
             "PER",
-            "2023-08-12 22:00",
-            "2023-08-12 23:00",
+            _PER_START,
+            _PER_END,
             139.5,
             140.5,
             1,
@@ -84,8 +70,8 @@ def _insert_observations(cur):
         (
             2,
             "GEM",
-            "2023-12-14 22:00",
-            "2023-12-14 23:00",
+            _GEM_START,
+            _GEM_END,
             260.0,
             261.0,
             1,

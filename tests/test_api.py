@@ -7,6 +7,7 @@ import pytest
 
 from imo_vmdb import (
     CountryStat,
+    DBAdapter,
     DBException,
     Magnitude,
     MagnitudeDetail,
@@ -285,10 +286,53 @@ class TestRateFields:
         for field in ("lim_magn", "sl_start", "sl_end"):
             assert isinstance(getattr(rate, field), float), f"{field} should be float"
 
-    def test_period_fields_are_str(self, observation_db):
+    def test_period_fields_are_datetime(self, observation_db):
+        import datetime
+
         rate = self._rate(observation_db)
-        assert isinstance(rate.period_start, str)
-        assert isinstance(rate.period_end, str)
+        assert isinstance(rate.period_start, datetime.datetime)
+        assert isinstance(rate.period_end, datetime.datetime)
+
+    def test_legacy_space_format_db_reads_as_datetime(self, observation_db):
+        """A row whose period_* column was written before the 2.0 adapter
+        change still parses back to `datetime` via the registered
+        `fromisoformat()` converter."""
+        import datetime
+
+        cur = observation_db.cursor()
+        # Bypass the registered datetime adapter by binding a plain
+        # space-separated string — this simulates legacy 1.x storage.
+        cur.execute(
+            "INSERT INTO rate (id, shower, period_start, period_end, "
+            "sl_start, sl_end, session_id, freq, lim_magn, t_eff, f, "
+            "sidereal_time, sun_alt, sun_az, moon_alt, moon_az, moon_illum) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                99,
+                "PER",
+                "2015-08-12 22:00:00",
+                "2015-08-12 23:00:00",
+                139.5,
+                140.5,
+                1,
+                7,
+                6.5,
+                1.0,
+                1.0,
+                180.0,
+                -20.0,
+                270.0,
+                -10.0,
+                90.0,
+                0.1,
+            ),
+        )
+        observation_db.commit()
+        rate = (
+            RateService(observation_db).query(RateFilter(rate_ids=[99])).observations[0]
+        )
+        assert isinstance(rate.period_start, datetime.datetime)
+        assert rate.period_start == datetime.datetime(2015, 8, 12, 22, 0, 0)
 
 
 class TestMagnitudeFields:
@@ -604,14 +648,24 @@ class TestStatsService:
         assert meta.magnitude_meteors == 80
 
     def test_meta_period(self, observation_db):
+        import datetime
+
         meta = StatsService(observation_db).meta()
-        assert meta.period_start.startswith("2023-08-12")
-        assert meta.period_end.startswith("2023-12-14")
-        # Per-table ranges line up with the seeded rate/magnitude rows.
-        assert meta.rate_period_start.startswith("2023-08-12")
-        assert meta.rate_period_end.startswith("2023-12-14")
-        assert meta.magnitude_period_start.startswith("2023-08-12")
-        assert meta.magnitude_period_end.startswith("2023-12-14")
+        # Regression: MIN/MAX aggregates on SQLite strip the declared
+        # column type, so PARSE_DECLTYPES does not auto-convert.  meta()
+        # normalises the result so all backends return datetime.
+        assert isinstance(meta.period_start, datetime.datetime)
+        assert isinstance(meta.period_end, datetime.datetime)
+        assert isinstance(meta.rate_period_start, datetime.datetime)
+        assert isinstance(meta.rate_period_end, datetime.datetime)
+        assert isinstance(meta.magnitude_period_start, datetime.datetime)
+        assert isinstance(meta.magnitude_period_end, datetime.datetime)
+        assert meta.period_start == datetime.datetime(2023, 8, 12, 22, 0, 0)
+        assert meta.period_end == datetime.datetime(2023, 12, 14, 23, 0, 0)
+        assert meta.rate_period_start == datetime.datetime(2023, 8, 12, 22, 0, 0)
+        assert meta.rate_period_end == datetime.datetime(2023, 12, 14, 23, 0, 0)
+        assert meta.magnitude_period_start == datetime.datetime(2023, 8, 12, 22, 0, 0)
+        assert meta.magnitude_period_end == datetime.datetime(2023, 12, 14, 23, 0, 0)
 
     def test_meta_empty_db(self, seeded_db):
         meta = StatsService(seeded_db).meta()
@@ -743,3 +797,20 @@ class TestDBAdapterPing:
         seeded_db.close()
         with pytest.raises(DBException):
             seeded_db.ping()
+
+
+class TestDBAdapterInit:
+    def test_accepts_configparser_section(self, tmp_path):
+        """Regression: CLI commands pass ConfigParser SectionProxy
+        objects (string-only mappings).  Adding `detect_types` to that
+        directly fails on Python 3.14+; DBAdapter must copy the config
+        to a plain dict first."""
+        import configparser
+
+        cfg = configparser.ConfigParser()
+        cfg.add_section("database")
+        cfg.set("database", "database", str(tmp_path / "x.db"))
+        # Should not raise — SectionProxy + non-string `detect_types`
+        # would crash on Python 3.14.
+        db = DBAdapter(cfg["database"])
+        db.close()

@@ -102,8 +102,8 @@ class Rate:
 
     id: int
     shower: str | None
-    period_start: str
-    period_end: str
+    period_start: datetime.datetime
+    period_end: datetime.datetime
     sl_start: float
     sl_end: float
     session_id: int
@@ -134,8 +134,8 @@ class Magnitude:
 
     id: int
     shower: str | None
-    period_start: str
-    period_end: str
+    period_start: datetime.datetime
+    period_end: datetime.datetime
     sl_start: float
     sl_end: float
     session_id: int
@@ -201,14 +201,14 @@ class StatsMeta:
     sessions: int
     rates: int
     magnitudes: int
-    period_start: str | None
-    period_end: str | None
+    period_start: datetime.datetime | None
+    period_end: datetime.datetime | None
     rate_meteors: int = 0
     magnitude_meteors: int = 0
-    rate_period_start: str | None = None
-    rate_period_end: str | None = None
-    magnitude_period_start: str | None = None
-    magnitude_period_end: str | None = None
+    rate_period_start: datetime.datetime | None = None
+    rate_period_end: datetime.datetime | None = None
+    magnitude_period_start: datetime.datetime | None = None
+    magnitude_period_end: datetime.datetime | None = None
     imported_sessions: int = 0
     imported_rates: int = 0
     imported_magnitudes: int = 0
@@ -254,8 +254,10 @@ class RateFilter:
     """Filter criteria for rate observation queries.
 
     :param showers: IAU shower codes to include; use ``'SPO'`` for sporadics.
-    :param period_start: Include only observations starting on or after this date (``YYYY-MM-DD``).
-    :param period_end: Include only observations ending on or before this date (``YYYY-MM-DD``).
+    :param period_start: Include only observations starting at or after
+        this :class:`datetime.datetime` (UTC).
+    :param period_end: Include only observations ending at or before
+        this :class:`datetime.datetime` (UTC).
     :param sl_min: Minimum solar longitude (start of period).
     :param sl_max: Maximum solar longitude (end of period).
     :param lim_magn_min: Minimum limiting magnitude.
@@ -275,8 +277,8 @@ class RateFilter:
     """
 
     showers: list[str] = field(default_factory=list)
-    period_start: str | None = None
-    period_end: str | None = None
+    period_start: datetime.datetime | None = None
+    period_end: datetime.datetime | None = None
     sl_min: float | None = None
     sl_max: float | None = None
     lim_magn_min: float | None = None
@@ -300,8 +302,10 @@ class MagnitudeFilter:
     """Filter criteria for magnitude observation queries.
 
     :param showers: IAU shower codes to include; use ``'SPO'`` for sporadics.
-    :param period_start: Include only observations starting on or after this date (``YYYY-MM-DD``).
-    :param period_end: Include only observations ending on or before this date (``YYYY-MM-DD``).
+    :param period_start: Include only observations starting at or after
+        this :class:`datetime.datetime` (UTC).
+    :param period_end: Include only observations ending at or before
+        this :class:`datetime.datetime` (UTC).
     :param sl_min: Minimum solar longitude (start of period).
     :param sl_max: Maximum solar longitude (end of period).
     :param lim_magn_min: Minimum limiting magnitude.
@@ -316,8 +320,8 @@ class MagnitudeFilter:
     """
 
     showers: list[str] = field(default_factory=list)
-    period_start: str | None = None
-    period_end: str | None = None
+    period_start: datetime.datetime | None = None
+    period_end: datetime.datetime | None = None
     sl_min: float | None = None
     sl_max: float | None = None
     lim_magn_min: float | None = None
@@ -347,9 +351,11 @@ class SessionFilter:
     :param observer_ids: Restrict to specific observer IDs.
     :param showers: IAU shower codes to include; use ``'SPO'`` for sporadics.
     :param period_start: Include only sessions with at least one rate or
-        magnitude observation starting on or after this date.
+        magnitude observation starting at or after this
+        :class:`datetime.datetime` (UTC).
     :param period_end: Include only sessions with at least one rate or
-        magnitude observation ending on or before this date.
+        magnitude observation ending at or before this
+        :class:`datetime.datetime` (UTC).
     :param sl_min: Minimum solar longitude (start of period) across rate/magnitude.
     :param sl_max: Maximum solar longitude (end of period) across rate/magnitude.
     :param lim_magn_min: Minimum limiting magnitude across rate/magnitude.
@@ -367,8 +373,8 @@ class SessionFilter:
 
     observer_ids: list[int] = field(default_factory=list)
     showers: list[str] = field(default_factory=list)
-    period_start: str | None = None
-    period_end: str | None = None
+    period_start: datetime.datetime | None = None
+    period_end: datetime.datetime | None = None
     sl_min: float | None = None
     sl_max: float | None = None
     lim_magn_min: float | None = None
@@ -1002,17 +1008,30 @@ class StatsService:
             except Exception:
                 return default
 
+        def _as_dt(v):
+            # SQLite's `PARSE_DECLTYPES` only fires for columns whose
+            # declared type the cursor reports.  `MIN(period_start)` /
+            # `MAX(period_end)` strip that information and the value
+            # arrives as a raw text string.  PostgreSQL and MySQL
+            # drivers preserve it natively.  Normalize so callers
+            # always see `datetime.datetime`.
+            if isinstance(v, str):
+                return datetime.datetime.fromisoformat(v)
+            return v
+
         (sessions,) = _row("SELECT COUNT(*) FROM obs_session", (0,))
         rates_cnt, rate_meteors, r_min, r_max = _row(
             "SELECT COUNT(*), COALESCE(SUM(freq), 0), "
             "MIN(period_start), MAX(period_end) FROM rate",
             (0, 0, None, None),
         )
+        r_min, r_max = _as_dt(r_min), _as_dt(r_max)
         magn_cnt, magn_meteors, m_min, m_max = _row(
             "SELECT COUNT(*), COALESCE(SUM(freq), 0), "
             "MIN(period_start), MAX(period_end) FROM magnitude",
             (0, 0, None, None),
         )
+        m_min, m_max = _as_dt(m_min), _as_dt(m_max)
         (imported_sessions,) = _row("SELECT COUNT(*) FROM imported_session", (0,))
         # imported_rate uses `number` instead of `freq`.
         imp_rates_cnt, imp_rate_meteors = _row(
@@ -1036,14 +1055,14 @@ class StatsService:
             sessions=int(sessions),
             rates=int(rates_cnt),
             magnitudes=int(magn_cnt),
-            period_start=str(min(starts)) if starts else None,
-            period_end=str(max(ends)) if ends else None,
+            period_start=min(starts) if starts else None,
+            period_end=max(ends) if ends else None,
             rate_meteors=int(rate_meteors),
             magnitude_meteors=int(magn_meteors),
-            rate_period_start=str(r_min) if r_min is not None else None,
-            rate_period_end=str(r_max) if r_max is not None else None,
-            magnitude_period_start=str(m_min) if m_min is not None else None,
-            magnitude_period_end=str(m_max) if m_max is not None else None,
+            rate_period_start=r_min,
+            rate_period_end=r_max,
+            magnitude_period_start=m_min,
+            magnitude_period_end=m_max,
             imported_sessions=int(imported_sessions),
             imported_rates=int(imp_rates_cnt),
             imported_magnitudes=int(imp_magn_cnt),
@@ -1052,7 +1071,9 @@ class StatsService:
         )
 
     def by_shower(
-        self, period_start: str | None = None, period_end: str | None = None
+        self,
+        period_start: datetime.datetime | None = None,
+        period_end: datetime.datetime | None = None,
     ) -> list[ShowerStat]:
         """Return per-shower counts of rates and magnitudes."""
         rates = self._group_count("rate", "shower", period_start, period_end)
@@ -1071,7 +1092,9 @@ class StatsService:
         )
 
     def by_country(
-        self, period_start: str | None = None, period_end: str | None = None
+        self,
+        period_start: datetime.datetime | None = None,
+        period_end: datetime.datetime | None = None,
     ) -> list[CountryStat]:
         """Return per-country counts of sessions, rates and magnitudes."""
         cur = self._db.cursor()
@@ -1096,7 +1119,9 @@ class StatsService:
         )
 
     def by_year(
-        self, period_start: str | None = None, period_end: str | None = None
+        self,
+        period_start: datetime.datetime | None = None,
+        period_end: datetime.datetime | None = None,
     ) -> list[YearStat]:
         """Return per-year counts of rates and magnitudes."""
         rates = self._group_count_year("rate", period_start, period_end)
@@ -1117,7 +1142,9 @@ class StatsService:
     # --- private helpers ---
 
     def _period_clause(
-        self, period_start: str | None, period_end: str | None
+        self,
+        period_start: datetime.datetime | None,
+        period_end: datetime.datetime | None,
     ) -> tuple[str, dict]:
         conds = []
         params: dict = {}
@@ -1133,8 +1160,8 @@ class StatsService:
         self,
         table: str,
         column: str,
-        period_start: str | None,
-        period_end: str | None,
+        period_start: datetime.datetime | None,
+        period_end: datetime.datetime | None,
     ) -> dict:
         where, params = self._period_clause(period_start, period_end)
         stmt = f"SELECT {column}, COUNT(*) FROM {table} {where} GROUP BY {column}"
@@ -1145,8 +1172,8 @@ class StatsService:
     def _group_count_join(
         self,
         obs_table: str,
-        period_start: str | None,
-        period_end: str | None,
+        period_start: datetime.datetime | None,
+        period_end: datetime.datetime | None,
     ) -> dict:
         conds = []
         params: dict = {}
@@ -1169,8 +1196,8 @@ class StatsService:
     def _group_count_year(
         self,
         table: str,
-        period_start: str | None,
-        period_end: str | None,
+        period_start: datetime.datetime | None,
+        period_end: datetime.datetime | None,
     ) -> dict:
         where, params = self._period_clause(period_start, period_end)
         year_sql = self._db._year_expr("period_start")

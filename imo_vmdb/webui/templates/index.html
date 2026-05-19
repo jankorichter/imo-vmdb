@@ -133,7 +133,7 @@ async function refreshStats() {
       `${_fmt(s.imported_rates)} rates (${_fmt(s.imported_rate_meteors)} meteors) · ` +
       `${_fmt(s.imported_magnitudes)} magnitudes (${_fmt(s.imported_magnitude_meteors)} meteors)`;
     // Per-table date ranges, inlined into the Normalized row.
-    // period_*_{start,end} arrive as "YYYY-MM-DD HH:MM:SS"; keep only the date.
+    // period_*_{start,end} arrive as "YYYY-MM-DDTHH:MM:SS"; keep only the date.
     const _dates = (ps, pe) =>
       (ps && pe) ? ` · ${ps.slice(0, 10)} — ${pe.slice(0, 10)}` : '';
     const rateDates = _dates(s.rate_period_start, s.rate_period_end);

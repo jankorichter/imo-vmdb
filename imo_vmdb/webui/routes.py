@@ -16,6 +16,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from imo_vmdb import DBAdapter, export_table
+from imo_vmdb.db import iso_format_datetimes
 
 bp = Blueprint("main", __name__)
 
@@ -70,7 +71,7 @@ def _table_to_csv(cols, rows):
     out = io.StringIO()
     writer = csv.writer(out, delimiter=";")
     writer.writerow(cols)
-    writer.writerows(rows)
+    writer.writerows(iso_format_datetimes(rows))
     return out.getvalue()
 
 
