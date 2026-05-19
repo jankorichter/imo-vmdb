@@ -436,6 +436,100 @@ class TestMagnitudesPagination:
         assert result.total is None
 
 
+class TestPaginatedIncludes:
+    """``include_*`` must follow the paginated/filtered subset, not the
+    whole table.  observation_db has two rates (id=1 PER → magn_id=1,
+    id=2 GEM → magn_id=2) with details: magn_id=1 has magn=3 and magn=4,
+    magn_id=2 has magn=2."""
+
+    def test_rates_first_page_include_matches_page(self, observation_db):
+        # limit=1 default order=id ASC → first page is rate id=1 (PER, magn_id=1).
+        result = RateService(observation_db).query(
+            RateFilter(
+                limit=1,
+                include_magnitudes=True,
+                include_magnitude_details=True,
+            )
+        )
+        assert [r.id for r in result.observations] == [1]
+        assert sorted(m.id for m in result.magnitudes) == [1]
+        assert sorted(d.magn for d in result.magnitude_details) == [3, 4]
+
+    def test_rates_second_page_include_matches_page(self, observation_db):
+        # offset=1 → second page is rate id=2 (GEM, magn_id=2).
+        result = RateService(observation_db).query(
+            RateFilter(
+                limit=1,
+                offset=1,
+                include_magnitudes=True,
+                include_magnitude_details=True,
+            )
+        )
+        assert [r.id for r in result.observations] == [2]
+        assert sorted(m.id for m in result.magnitudes) == [2]
+        assert sorted(d.magn for d in result.magnitude_details) == [2]
+
+    def test_magnitudes_paginated_include_matches_page(self, observation_db):
+        # limit=1 → first magnitude (id=1) and its details (magn=3, magn=4).
+        result = MagnitudeService(observation_db).query(
+            MagnitudeFilter(limit=1, include_magnitude_details=True)
+        )
+        assert [m.id for m in result.observations] == [1]
+        assert sorted(d.magn for d in result.magnitude_details) == [3, 4]
+
+    def test_rates_filter_restricts_include(self, observation_db):
+        # showers=["PER"] → only rate id=1 → only PER magnitude + its details.
+        result = RateService(observation_db).query(
+            RateFilter(
+                showers=["PER"],
+                include_magnitudes=True,
+                include_magnitude_details=True,
+            )
+        )
+        assert [r.shower for r in result.observations] == ["PER"]
+        assert [m.shower for m in result.magnitudes] == ["PER"]
+        assert sorted(d.magn for d in result.magnitude_details) == [3, 4]
+
+    def test_rates_empty_filter_returns_empty_includes(self, observation_db):
+        # showers=["LYR"] matches nothing → empty observations + empty include lists.
+        result = RateService(observation_db).query(
+            RateFilter(
+                showers=["LYR"],
+                include_sessions=True,
+                include_magnitudes=True,
+                include_magnitude_details=True,
+            )
+        )
+        assert result.observations == []
+        assert result.sessions == []
+        assert result.magnitudes == []
+        assert result.magnitude_details == []
+
+    def test_magnitudes_empty_filter_returns_empty_includes(self, observation_db):
+        result = MagnitudeService(observation_db).query(
+            MagnitudeFilter(
+                showers=["LYR"],
+                include_sessions=True,
+                include_magnitude_details=True,
+            )
+        )
+        assert result.observations == []
+        assert result.sessions == []
+        assert result.magnitude_details == []
+
+    def test_sessions_empty_filter_returns_empty_includes(self, observation_db):
+        result = SessionService(observation_db).query(
+            SessionFilter(
+                observer_ids=[9999],
+                include_rates=True,
+                include_magnitudes=True,
+            )
+        )
+        assert result.sessions == []
+        assert result.rates == []
+        assert result.magnitudes == []
+
+
 # ---------------------------------------------------------------------------
 # Single-resource lookups: RateService.by_id, MagnitudeService.by_id, SessionService
 # ---------------------------------------------------------------------------

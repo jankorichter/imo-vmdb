@@ -598,17 +598,27 @@ def _pagination_clause(limit: int | None, offset: int | None) -> str:
     return " ".join(parts)
 
 
-def _fetch_sessions(db_conn, session_ids) -> list[Session]:
-    phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
-    params = {f"sid_{i}": sid for i, sid in enumerate(session_ids)}
+def _fetch_sessions(
+    db_conn, page_cte_body: str, page_params: dict, fk_col: str
+) -> list[Session]:
+    """Fetch the sessions referenced by the page-CTE.
+
+    *page_cte_body* is the inner SELECT that defines the ``page`` CTE
+    (i.e. the same WHERE/ORDER BY/LIMIT/OFFSET as the main query that
+    produced the result page).  *fk_col* names the column in the CTE
+    projection that holds the session ID (``session_id`` for rate or
+    magnitude pages).  ``IS NOT NULL`` guards the join in case the
+    column is nullable in the source table — harmless when it isn't.
+    """
     stmt = f"""
-        SELECT id, longitude, latitude, elevation, country, location_name,
-               observer_id, observer_name
-        FROM obs_session
-        WHERE id IN ({phs})
+        WITH page AS ({page_cte_body})
+        SELECT s.id, s.longitude, s.latitude, s.elevation, s.country,
+               s.location_name, s.observer_id, s.observer_name
+        FROM obs_session s
+        WHERE s.id IN (SELECT {fk_col} FROM page WHERE {fk_col} IS NOT NULL)
     """
     cur = db_conn.cursor()
-    cur.execute(db_conn._convert_stmt(stmt), params)
+    cur.execute(db_conn._convert_stmt(stmt), page_params)
     return [Session(**d) for d in _rows_to_dicts(cur)]
 
 
@@ -642,70 +652,75 @@ _MAGNITUDE_SELECT = """
 
 
 def _fetch_session_rates(
-    db_conn, f: SessionFilter, session_ids: list[int]
+    db_conn, f: SessionFilter, page_cte_body: str, page_params: dict
 ) -> list[Rate]:
-    """Fetch rate observations for the given session IDs, applying the same
-    observation-level filters as the outer ``/sessions`` query."""
-    if not session_ids:
-        return []
+    """Fetch rate observations for the sessions in the page-CTE, applying
+    the same observation-level filters as the outer ``/sessions`` query."""
     conds, params = _observation_conditions(f, alias="r", prefix="rateobs")
-    phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
-    conds.append(f"r.session_id IN ({phs})")
-    for i, sid in enumerate(session_ids):
-        params[f"sid_{i}"] = sid
+    params.update(page_params)
+    conds.append("r.session_id IN (SELECT id FROM page)")
     where = "WHERE " + " AND ".join(conds)
+    stmt = f"""
+        WITH page AS ({page_cte_body})
+        {_RATE_SELECT} {where} ORDER BY r.id
+    """
     cur = db_conn.cursor()
-    cur.execute(db_conn._convert_stmt(f"{_RATE_SELECT} {where} ORDER BY r.id"), params)
+    cur.execute(db_conn._convert_stmt(stmt), params)
     return [_rate_from_row(d) for d in _rows_to_dicts(cur)]
 
 
 def _fetch_session_magnitudes(
-    db_conn, f: SessionFilter, session_ids: list[int]
+    db_conn, f: SessionFilter, page_cte_body: str, page_params: dict
 ) -> list[Magnitude]:
-    """Fetch magnitude observations for the given session IDs, applying the
-    same observation-level filters as the outer ``/sessions`` query."""
-    if not session_ids:
-        return []
+    """Fetch magnitude observations for the sessions in the page-CTE,
+    applying the same observation-level filters as the outer ``/sessions``
+    query."""
     conds, params = _observation_conditions(f, alias="m", prefix="magnobs")
-    phs = ", ".join(f"%(sid_{i})s" for i in range(len(session_ids)))
-    conds.append(f"m.session_id IN ({phs})")
-    for i, sid in enumerate(session_ids):
-        params[f"sid_{i}"] = sid
+    params.update(page_params)
+    conds.append("m.session_id IN (SELECT id FROM page)")
     where = "WHERE " + " AND ".join(conds)
-    cur = db_conn.cursor()
-    cur.execute(
-        db_conn._convert_stmt(f"{_MAGNITUDE_SELECT} {where} ORDER BY m.id"), params
-    )
-    return [Magnitude(**d) for d in _rows_to_dicts(cur)]
-
-
-def _fetch_magnitude_details(db_conn, magn_ids) -> list[MagnitudeDetail]:
-    if not magn_ids:
-        return []
-    phs = ", ".join(f"%(mid_{i})s" for i in range(len(magn_ids)))
-    params = {f"mid_{i}": mid for i, mid in enumerate(magn_ids)}
     stmt = f"""
-        SELECT id, magn, freq
-        FROM magnitude_detail
-        WHERE id IN ({phs})
-        ORDER BY id, magn DESC
+        WITH page AS ({page_cte_body})
+        {_MAGNITUDE_SELECT} {where} ORDER BY m.id
     """
     cur = db_conn.cursor()
     cur.execute(db_conn._convert_stmt(stmt), params)
+    return [Magnitude(**d) for d in _rows_to_dicts(cur)]
+
+
+def _fetch_magnitude_details(
+    db_conn, page_cte_body: str, page_params: dict, fk_col: str
+) -> list[MagnitudeDetail]:
+    """Fetch per-class frequencies for the magnitudes referenced by the
+    page-CTE.  *fk_col* is ``magn_id`` when paged over ``rate``, ``id``
+    when paged over ``magnitude``."""
+    stmt = f"""
+        WITH page AS ({page_cte_body})
+        SELECT id, magn, freq
+        FROM magnitude_detail
+        WHERE id IN (SELECT {fk_col} FROM page WHERE {fk_col} IS NOT NULL)
+        ORDER BY id, magn DESC
+    """
+    cur = db_conn.cursor()
+    cur.execute(db_conn._convert_stmt(stmt), page_params)
     return [MagnitudeDetail(**d) for d in _rows_to_dicts(cur)]
 
 
-def _fetch_magnitudes_by_ids(db_conn, magn_ids) -> list[Magnitude]:
-    """Fetch full magnitude observations for the given IDs."""
-    if not magn_ids:
-        return []
-    phs = ", ".join(f"%(mid_{i})s" for i in range(len(magn_ids)))
-    params = {f"mid_{i}": mid for i, mid in enumerate(magn_ids)}
-    where = f"WHERE m.id IN ({phs})"
+def _fetch_magnitudes(
+    db_conn, page_cte_body: str, page_params: dict, fk_col: str
+) -> list[Magnitude]:
+    """Fetch full magnitude observations referenced by the page-CTE.
+
+    *fk_col* is ``magn_id`` (when paged over ``rate``).
+    """
+    stmt = f"""
+        WITH page AS ({page_cte_body})
+        {_MAGNITUDE_SELECT}
+        WHERE m.id IN (SELECT {fk_col} FROM page WHERE {fk_col} IS NOT NULL)
+        ORDER BY m.id
+    """
     cur = db_conn.cursor()
-    cur.execute(
-        db_conn._convert_stmt(f"{_MAGNITUDE_SELECT} {where} ORDER BY m.id"), params
-    )
+    cur.execute(db_conn._convert_stmt(stmt), page_params)
     return [Magnitude(**d) for d in _rows_to_dicts(cur)]
 
 
@@ -770,20 +785,39 @@ class RateService:
             )
             result.total = int(cur.fetchone()[0])
 
-        if f.include_sessions:
-            session_ids = list(
-                {r.session_id for r in observations if r.session_id is not None}
-            )
-            result.sessions = (
-                _fetch_sessions(self._db, session_ids) if session_ids else []
+        if f.include_sessions or f.include_magnitudes or f.include_magnitude_details:
+            if not observations:
+                if f.include_sessions:
+                    result.sessions = []
+                if f.include_magnitudes:
+                    result.magnitudes = []
+                if f.include_magnitude_details:
+                    result.magnitude_details = []
+                return result
+
+            # The page-CTE re-runs the same filter (and ORDER BY / LIMIT /
+            # OFFSET when paginating) so the DB resolves the referenced
+            # session and magnitude IDs itself — no Python ID-list shipped
+            # back to the server.  Sort + pagination are omitted when not
+            # paginating so the planner can skip the sort.
+            page_clause = f"{order_clause} {pag_clause}" if paginated else ""
+            page_cte_body = (
+                f"SELECT r.id, r.session_id, r.magn_id "
+                f"FROM rate r {where} {page_clause}"
             )
 
-        if f.include_magnitudes or f.include_magnitude_details:
-            magn_ids = list({r.magn_id for r in observations if r.magn_id is not None})
+            if f.include_sessions:
+                result.sessions = _fetch_sessions(
+                    self._db, page_cte_body, params, fk_col="session_id"
+                )
             if f.include_magnitudes:
-                result.magnitudes = _fetch_magnitudes_by_ids(self._db, magn_ids)
+                result.magnitudes = _fetch_magnitudes(
+                    self._db, page_cte_body, params, fk_col="magn_id"
+                )
             if f.include_magnitude_details:
-                result.magnitude_details = _fetch_magnitude_details(self._db, magn_ids)
+                result.magnitude_details = _fetch_magnitude_details(
+                    self._db, page_cte_body, params, fk_col="magn_id"
+                )
 
         return result
 
@@ -839,17 +873,27 @@ class MagnitudeService:
             )
             result.total = int(cur.fetchone()[0])
 
-        if f.include_sessions:
-            session_ids = list(
-                {r.session_id for r in observations if r.session_id is not None}
-            )
-            result.sessions = (
-                _fetch_sessions(self._db, session_ids) if session_ids else []
+        if f.include_sessions or f.include_magnitude_details:
+            if not observations:
+                if f.include_sessions:
+                    result.sessions = []
+                if f.include_magnitude_details:
+                    result.magnitude_details = []
+                return result
+
+            page_clause = f"{order_clause} {pag_clause}" if paginated else ""
+            page_cte_body = (
+                f"SELECT m.id, m.session_id FROM magnitude m {where} {page_clause}"
             )
 
-        if f.include_magnitude_details:
-            magn_ids = list({r.id for r in observations if r.id is not None})
-            result.magnitude_details = _fetch_magnitude_details(self._db, magn_ids)
+            if f.include_sessions:
+                result.sessions = _fetch_sessions(
+                    self._db, page_cte_body, params, fk_col="session_id"
+                )
+            if f.include_magnitude_details:
+                result.magnitude_details = _fetch_magnitude_details(
+                    self._db, page_cte_body, params, fk_col="id"
+                )
 
         return result
 
@@ -900,20 +944,42 @@ class SessionService:
             )
             result.total = int(cur.fetchone()[0])
 
-        if f.include_rates:
-            session_ids = [s.id for s in sessions]
-            result.rates = _fetch_session_rates(self._db, f, session_ids)
+        if f.include_rates or f.include_magnitudes:
+            if not sessions:
+                if f.include_rates:
+                    result.rates = []
+                if f.include_magnitudes:
+                    result.magnitudes = []
+                return result
 
-        if f.include_magnitudes:
-            session_ids = [s.id for s in sessions]
-            result.magnitudes = _fetch_session_magnitudes(self._db, f, session_ids)
+            page_clause = f"{order_clause} {pag_clause}" if paginated else ""
+            page_cte_body = f"SELECT s.id FROM obs_session s {where} {page_clause}"
+
+            if f.include_rates:
+                result.rates = _fetch_session_rates(self._db, f, page_cte_body, params)
+            if f.include_magnitudes:
+                result.magnitudes = _fetch_session_magnitudes(
+                    self._db, f, page_cte_body, params
+                )
 
         return result
 
     def by_id(self, session_id: int) -> Session | None:
         """Return a single session by ID, or ``None`` if not found."""
-        sessions = _fetch_sessions(self._db, [session_id])
-        return sessions[0] if sessions else None
+        cur = self._db.cursor()
+        cur.execute(
+            self._db._convert_stmt(
+                """
+                SELECT id, longitude, latitude, elevation, country, location_name,
+                       observer_id, observer_name
+                FROM obs_session
+                WHERE id = %(id)s
+                """
+            ),
+            {"id": session_id},
+        )
+        rows = _rows_to_dicts(cur)
+        return Session(**rows[0]) if rows else None
 
 
 class ShowerService:
