@@ -599,18 +599,92 @@ class TestStatsService:
         assert meta.sessions == 1
         assert meta.rates == 2
         assert meta.magnitudes == 2
+        # Seeded freq values: rates 10+5, magnitudes 50+30.
+        assert meta.rate_meteors == 15
+        assert meta.magnitude_meteors == 80
 
     def test_meta_period(self, observation_db):
         meta = StatsService(observation_db).meta()
         assert meta.period_start.startswith("2023-08-12")
         assert meta.period_end.startswith("2023-12-14")
+        # Per-table ranges line up with the seeded rate/magnitude rows.
+        assert meta.rate_period_start.startswith("2023-08-12")
+        assert meta.rate_period_end.startswith("2023-12-14")
+        assert meta.magnitude_period_start.startswith("2023-08-12")
+        assert meta.magnitude_period_end.startswith("2023-12-14")
 
     def test_meta_empty_db(self, seeded_db):
         meta = StatsService(seeded_db).meta()
         assert meta.rates == 0
         assert meta.magnitudes == 0
+        assert meta.rate_meteors == 0
+        assert meta.magnitude_meteors == 0
+        assert meta.imported_sessions == 0
+        assert meta.imported_rates == 0
+        assert meta.imported_magnitudes == 0
+        assert meta.imported_rate_meteors == 0
+        assert meta.imported_magnitude_meteors == 0
         assert meta.period_start is None
         assert meta.period_end is None
+        assert meta.rate_period_start is None
+        assert meta.rate_period_end is None
+        assert meta.magnitude_period_start is None
+        assert meta.magnitude_period_end is None
+
+    def test_meta_before_initdb_returns_zeros(self, fresh_db):
+        """Calling meta() on a database where the tables don't yet exist
+        must not crash — the Web UI stats panel polls this endpoint at
+        page load, possibly before the user has clicked Init DB."""
+        meta = StatsService(fresh_db).meta()
+        assert meta.sessions == 0
+        assert meta.rates == 0
+        assert meta.magnitudes == 0
+        assert meta.rate_meteors == 0
+        assert meta.magnitude_meteors == 0
+        assert meta.imported_sessions == 0
+        assert meta.imported_rates == 0
+        assert meta.imported_magnitudes == 0
+        assert meta.imported_rate_meteors == 0
+        assert meta.imported_magnitude_meteors == 0
+        assert meta.period_start is None
+        assert meta.period_end is None
+        assert meta.rate_period_start is None
+        assert meta.magnitude_period_start is None
+
+    def test_meta_imported_counts(self, seeded_db):
+        """`imported_*` counts and meteor sums surface correctly,
+        including the JSON-encoded magn payload on imported_magnitude."""
+        cur = seeded_db.cursor()
+        cur.execute(
+            "INSERT INTO imported_session "
+            "(id, longitude, latitude, country, location_name) "
+            "VALUES (1, 13.4, 52.5, 'DE', 'Berlin')"
+        )
+        cur.execute(
+            'INSERT INTO imported_rate (id, session_id, "start", "end", '
+            't_eff, f, lm, method, "number") '
+            "VALUES (1, 1, '2023-08-12 22:00', '2023-08-12 23:00', "
+            "1.0, 1.0, 6.5, 'a', 12)"
+        )
+        cur.execute(
+            'INSERT INTO imported_rate (id, session_id, "start", "end", '
+            't_eff, f, lm, method, "number") '
+            "VALUES (2, 1, '2023-08-12 23:00', '2023-08-13 00:00', "
+            "1.0, 1.0, 6.5, 'a', 7)"
+        )
+        cur.execute(
+            'INSERT INTO imported_magnitude (id, session_id, "start", "end", magn) '
+            "VALUES (1, 1, '2023-08-12 22:00', '2023-08-12 23:00', "
+            '\'{"3": 5, "4": 8, "5": 2}\')'
+        )
+        seeded_db.commit()
+
+        meta = StatsService(seeded_db).meta()
+        assert meta.imported_sessions == 1
+        assert meta.imported_rates == 2
+        assert meta.imported_magnitudes == 1
+        assert meta.imported_rate_meteors == 19  # 12 + 7
+        assert meta.imported_magnitude_meteors == 15  # 5 + 8 + 2
 
     def test_by_shower(self, observation_db):
         result = StatsService(observation_db).by_shower()

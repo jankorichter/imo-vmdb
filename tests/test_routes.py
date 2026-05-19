@@ -29,6 +29,12 @@ class TestIndex:
         r = client.get("/")
         assert b"imo-vmdb" in r.data
 
+    def test_renders_stats_panel(self, client):
+        r = client.get("/")
+        assert b"Database Contents" in r.data
+        assert b'id="stats-imported"' in r.data
+        assert b'id="stats-normalized"' in r.data
+
 
 class TestExport:
     def test_shower_returns_csv(self, client):

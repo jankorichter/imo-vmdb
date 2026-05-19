@@ -2,6 +2,24 @@
 
 ## [2.0.0] — Unreleased
 
+### Added
+
+- **Web UI** — small "Database Contents" panel at the top of the
+  control panel showing the totals for the imported (raw CSV) stage
+  and the normalized stage: sessions, rate observations (with total
+  meteors and covered date range), and magnitude observations (with
+  total meteors and covered date range).  Auto-refreshes after each
+  background job completes.
+- **REST API (`/api/v1/stats/meta`)** — response gains eleven
+  backward-compatible fields: `imported_sessions`, `imported_rates`,
+  `imported_magnitudes`, `rate_meteors`, `magnitude_meteors`,
+  `imported_rate_meteors`, `imported_magnitude_meteors`,
+  `rate_period_start`, `rate_period_end`, `magnitude_period_start`,
+  `magnitude_period_end`.  The imported-magnitude meteor total is
+  computed from the JSON `magn` column on `imported_magnitude`.
+  Existing `period_start`/`period_end` remain the union of the two
+  per-table ranges.
+
 ### BREAKING
 
 - **`rate_magnitude` table dropped; its payload moves onto `rate`.**

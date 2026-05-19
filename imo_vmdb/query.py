@@ -1,4 +1,5 @@
 import datetime
+import json
 from dataclasses import dataclass, field
 
 from imo_vmdb.db import DBAdapter
@@ -187,13 +188,32 @@ class Sessions:
 
 @dataclass
 class StatsMeta:
-    """Database scope summary returned by :meth:`StatsService.meta`."""
+    """Database scope summary returned by :meth:`StatsService.meta`.
+
+    ``sessions``/``rates``/``magnitudes`` and ``*_meteors`` cover the
+    normalized tables; the ``imported_*`` fields cover the raw imported
+    tables that feed normalization.  ``*_meteors`` are the sum of the
+    ``freq`` column on the rate/magnitude rows.  ``period_start`` /
+    ``period_end`` is the union of ``rate_period_*`` and
+    ``magnitude_period_*`` (kept for backward compatibility).
+    """
 
     sessions: int
     rates: int
     magnitudes: int
     period_start: str | None
     period_end: str | None
+    rate_meteors: int = 0
+    magnitude_meteors: int = 0
+    rate_period_start: str | None = None
+    rate_period_end: str | None = None
+    magnitude_period_start: str | None = None
+    magnitude_period_end: str | None = None
+    imported_sessions: int = 0
+    imported_rates: int = 0
+    imported_magnitudes: int = 0
+    imported_rate_meteors: int = 0
+    imported_magnitude_meteors: int = 0
 
 
 @dataclass
@@ -606,6 +626,7 @@ def _rate_from_row(d: dict) -> Rate:
         d = {**d, "magn_solo": bool(d["magn_solo"])}
     return Rate(**d)
 
+
 _MAGNITUDE_SELECT = """
     SELECT
         m.id, m.shower, m.period_start, m.period_end, m.sl_start, m.sl_end,
@@ -965,25 +986,69 @@ class StatsService:
         self._db = db_conn
 
     def meta(self) -> StatsMeta:
-        """Return overall counts and the covered date range."""
+        """Return overall counts and the covered date range.
+
+        Tolerates missing tables: a database where ``initdb`` has not yet
+        been run (or which is mid-rebuild) yields zeros and ``None``
+        date bounds instead of raising, so the Web UI can poll the
+        endpoint at any time without crashing.
+        """
         cur = self._db.cursor()
-        cur.execute("SELECT COUNT(*) FROM obs_session")
-        sessions = int(cur.fetchone()[0])
-        cur.execute("SELECT COUNT(*), MIN(period_start), MAX(period_end) FROM rate")
-        rates_cnt, r_min, r_max = cur.fetchone()
-        cur.execute(
-            "SELECT COUNT(*), MIN(period_start), MAX(period_end) FROM magnitude"
+
+        def _row(sql, default):
+            try:
+                cur.execute(sql)
+                return cur.fetchone()
+            except Exception:
+                return default
+
+        (sessions,) = _row("SELECT COUNT(*) FROM obs_session", (0,))
+        rates_cnt, rate_meteors, r_min, r_max = _row(
+            "SELECT COUNT(*), COALESCE(SUM(freq), 0), "
+            "MIN(period_start), MAX(period_end) FROM rate",
+            (0, 0, None, None),
         )
-        magn_cnt, m_min, m_max = cur.fetchone()
+        magn_cnt, magn_meteors, m_min, m_max = _row(
+            "SELECT COUNT(*), COALESCE(SUM(freq), 0), "
+            "MIN(period_start), MAX(period_end) FROM magnitude",
+            (0, 0, None, None),
+        )
+        (imported_sessions,) = _row("SELECT COUNT(*) FROM imported_session", (0,))
+        # imported_rate uses `number` instead of `freq`.
+        imp_rates_cnt, imp_rate_meteors = _row(
+            'SELECT COUNT(*), COALESCE(SUM("number"), 0) FROM imported_rate',
+            (0, 0),
+        )
+        # imported_magnitude.magn is a JSON object {class: count}; sum the
+        # values in Python to get the total meteor count.
+        (imp_magn_cnt,) = _row("SELECT COUNT(*) FROM imported_magnitude", (0,))
+        try:
+            cur.execute("SELECT magn FROM imported_magnitude")
+            imp_magn_meteors = sum(
+                sum(json.loads(row[0]).values()) for row in cur.fetchall()
+            )
+        except Exception:
+            imp_magn_meteors = 0
 
         starts = [x for x in (r_min, m_min) if x is not None]
         ends = [x for x in (r_max, m_max) if x is not None]
         return StatsMeta(
-            sessions=sessions,
+            sessions=int(sessions),
             rates=int(rates_cnt),
             magnitudes=int(magn_cnt),
             period_start=str(min(starts)) if starts else None,
             period_end=str(max(ends)) if ends else None,
+            rate_meteors=int(rate_meteors),
+            magnitude_meteors=int(magn_meteors),
+            rate_period_start=str(r_min) if r_min is not None else None,
+            rate_period_end=str(r_max) if r_max is not None else None,
+            magnitude_period_start=str(m_min) if m_min is not None else None,
+            magnitude_period_end=str(m_max) if m_max is not None else None,
+            imported_sessions=int(imported_sessions),
+            imported_rates=int(imp_rates_cnt),
+            imported_magnitudes=int(imp_magn_cnt),
+            imported_rate_meteors=int(imp_rate_meteors),
+            imported_magnitude_meteors=int(imp_magn_meteors),
         )
 
     def by_shower(

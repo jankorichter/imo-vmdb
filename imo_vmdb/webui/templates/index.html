@@ -35,6 +35,11 @@
             background: #1a202c; color: #e2e8f0; border-radius: 6px; padding: 16px;
             height: 380px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
   .clear-btn { font-size: .78rem; background: none; border: 1px solid #cbd5e0; color: #718096; padding: 3px 10px; border-radius: 6px; }
+  .stats { background: #fff; border-radius: 8px; padding: 14px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 24px; }
+  .stats h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: #666; margin-bottom: 8px; }
+  .stats-row { display: flex; gap: 14px; font-size: .85rem; line-height: 1.6; }
+  .stats-label { font-weight: 600; min-width: 92px; color: #2d3748; }
+  .stats-values { color: #4a5568; }
   .downloads { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 24px; }
   .downloads h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: #666; margin-bottom: 14px; }
   .download-links { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -47,6 +52,12 @@
   <h1>imo-vmdb Control Panel</h1>
   <a href="/docs/webui.html" target="_blank">Documentation</a>
 </header>
+
+<div class="stats">
+  <h2>Database Contents</h2>
+  <div class="stats-row"><span class="stats-label">Imported</span><span class="stats-values" id="stats-imported">—</span></div>
+  <div class="stats-row"><span class="stats-label">Normalized</span><span class="stats-values" id="stats-normalized">—</span></div>
+</div>
 
 <div class="grid">
   <div class="card">
@@ -108,6 +119,33 @@
 
 <script>
 const allButtons = () => document.querySelectorAll('button:not(.clear-btn)');
+const _fmt = n => Number(n || 0).toLocaleString();
+
+async function refreshStats() {
+  try {
+    // cache: 'no-store' bypasses the browser's heuristic GET cache,
+    // so the post-job refresh doesn't serve the pre-job response.
+    const res = await fetch('/api/v1/stats/meta', { cache: 'no-store' });
+    if (!res.ok) return;
+    const s = await res.json();
+    document.getElementById('stats-imported').textContent =
+      `${_fmt(s.imported_sessions)} sessions · ` +
+      `${_fmt(s.imported_rates)} rates (${_fmt(s.imported_rate_meteors)} meteors) · ` +
+      `${_fmt(s.imported_magnitudes)} magnitudes (${_fmt(s.imported_magnitude_meteors)} meteors)`;
+    // Per-table date ranges, inlined into the Normalized row.
+    // period_*_{start,end} arrive as "YYYY-MM-DD HH:MM:SS"; keep only the date.
+    const _dates = (ps, pe) =>
+      (ps && pe) ? ` · ${ps.slice(0, 10)} — ${pe.slice(0, 10)}` : '';
+    const rateDates = _dates(s.rate_period_start, s.rate_period_end);
+    const magnDates = _dates(s.magnitude_period_start, s.magnitude_period_end);
+    document.getElementById('stats-normalized').textContent =
+      `${_fmt(s.sessions)} sessions · ` +
+      `${_fmt(s.rates)} rates (${_fmt(s.rate_meteors)} meteors${rateDates}) · ` +
+      `${_fmt(s.magnitudes)} magnitudes (${_fmt(s.magnitude_meteors)} meteors${magnDates})`;
+  } catch (_) { /* keep placeholders */ }
+}
+
+window.addEventListener('DOMContentLoaded', refreshStats);
 
 function setBusy(busy) {
   allButtons().forEach(b => b.disabled = busy);
@@ -165,6 +203,7 @@ function startStream(jobId) {
   es.onmessage = e => appendLog(e.data);
   es.addEventListener('done', () => {
     es.close();
+    refreshStats();
     fetch('/status/' + jobId)
       .then(r => r.json())
       .then(data => {
@@ -178,6 +217,7 @@ function startStream(jobId) {
     appendLog('[connection lost]');
     setBusy(false);
     setStatus('Error', 'error');
+    refreshStats();
   };
 }
 

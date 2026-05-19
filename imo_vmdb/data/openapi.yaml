@@ -984,14 +984,53 @@ components:
       properties:
         sessions:
           type: integer
+          description: Row count of the normalized `obs_session` table.
         rates:
           type: integer
+          description: Row count of the normalized `rate` table.
         magnitudes:
           type: integer
+          description: Row count of the normalized `magnitude` table.
         period_start:
           type: ["string", "null"]
         period_end:
           type: ["string", "null"]
+        rate_meteors:
+          type: integer
+          description: Sum of `freq` across all rows of `rate`.
+        magnitude_meteors:
+          type: integer
+          description: Sum of `freq` across all rows of `magnitude`.
+        rate_period_start:
+          type: ["string", "null"]
+          description: Earliest `period_start` across all rows of `rate`.
+        rate_period_end:
+          type: ["string", "null"]
+          description: Latest `period_end` across all rows of `rate`.
+        magnitude_period_start:
+          type: ["string", "null"]
+          description: Earliest `period_start` across all rows of `magnitude`.
+        magnitude_period_end:
+          type: ["string", "null"]
+          description: Latest `period_end` across all rows of `magnitude`.
+        imported_sessions:
+          type: integer
+          description: Row count of the raw `imported_session` table.
+        imported_rates:
+          type: integer
+          description: Row count of the raw `imported_rate` table.
+        imported_magnitudes:
+          type: integer
+          description: Row count of the raw `imported_magnitude` table.
+        imported_rate_meteors:
+          type: integer
+          description: Sum of the `number` column across all rows of `imported_rate`.
+        imported_magnitude_meteors:
+          type: integer
+          description: >
+            Sum of meteor counts across all rows of `imported_magnitude`
+            (computed by summing the values of the JSON `magn` column,
+            which maps magnitude class → count).
 
     ShowerStat:
       type: object
