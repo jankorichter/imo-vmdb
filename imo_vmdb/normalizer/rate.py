@@ -148,6 +148,7 @@ class Record(BaseRecord):
         rad_alt = None
         rad_az = None
         if radiant is not None:
+            assert shower is not None  # radiant is set only when shower is set
             rad_radec = Sphere(math.radians(radiant.ra), math.radians(radiant.dec))
             rad_coord = sky.alt_az(rad_radec, t_mean, self.loc)
             rad_az = math.degrees(rad_coord.lng)

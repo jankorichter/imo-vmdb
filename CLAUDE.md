@@ -39,18 +39,19 @@ The project documentation serves three distinct roles. Keep their docs separate.
 | Role | Tools | Docs live in |
 |---|---|---|
 | **User** — end-user of the software | `python -m imo_vmdb`, Docker image `ghcr.io/jankorichter/imo-vmdb` | `docs/` |
-| **Developer** — develops this software itself | `make`, `poetry`, `ruff`, `pytest`, `docker compose` | `README.md`, `CLAUDE.md` |
+| **Developer** — develops this software itself | `make`, `poetry`, `ruff`, `pyright`, `pytest`, `docker compose` | `README.md`, `CLAUDE.md` |
 | **Programmer** — uses the public Python API and REST API | `pip install imo-vmdb`, Gunicorn + `imo_vmdb.httpd:wsgi_app` | `docs/` (especially `api.rst`, `rest_api.rst`) |
 
-**Hard rule**: developer-only tools (`poetry`, `make`, `ruff`, `pytest`, `docker compose`, source-tree git workflows) must not appear anywhere under `docs/`. Users install via pip or Docker; programmers via pip. Only README.md and CLAUDE.md describe the developer setup.
+**Hard rule**: developer-only tools (`poetry`, `make`, `ruff`, `pyright`, `pytest`, `docker compose`, source-tree git workflows) must not appear anywhere under `docs/`. Users install via pip or Docker; programmers via pip. Only README.md and CLAUDE.md describe the developer setup.
 
 ## Common Commands
 
 ```bash
-make            # lint + test + docs + build
-make review     # lint + test + docs (no build)
+make            # lint + typecheck + test + docs + build
+make review     # lint + typecheck + test + docs (no build)
 make test       # pytest
 make lint       # ruff check + ruff format --check
+make typecheck  # pyright
 
 # Auto-fix linting
 poetry run ruff check --fix .

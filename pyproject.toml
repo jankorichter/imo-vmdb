@@ -51,12 +51,19 @@ imo-vmdb = "imo_vmdb.__main__:main"
 pytest = "^9.0"
 ruff = "^0.5.3"
 openapi-spec-validator = "^0.8.5"
+pyright = "^1.1.409"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/jankorichter/imo-vmdb/issues"
+
+[tool.pyright]
+include = ["imo_vmdb", "tests"]
+exclude = ["**/__pycache__", "imo_vmdb/built_docs"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
 
 [tool.ruff]
 line-length = 88

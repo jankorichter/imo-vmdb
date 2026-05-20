@@ -108,7 +108,10 @@ class TestRateServiceQuery:
 
     def test_period_filter_does_not_error(self, seeded_db):
         result = RateService(seeded_db).query(
-            RateFilter(period_start="2020-01-01", period_end="2020-12-31")
+            RateFilter(
+                period_start=datetime.datetime(2020, 1, 1),
+                period_end=datetime.datetime(2020, 12, 31),
+            )
         )
         assert isinstance(result, Rates)
 
@@ -150,6 +153,7 @@ class TestRateServiceQuery:
 
     def test_include_sessions_returns_session_content(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_sessions=True))
+        assert result.sessions is not None
         assert len(result.sessions) > 0
         assert isinstance(result.sessions[0], Session)
 
@@ -177,7 +181,10 @@ class TestMagnitudeServiceQuery:
 
     def test_period_filter_does_not_error(self, seeded_db):
         result = MagnitudeService(seeded_db).query(
-            MagnitudeFilter(period_start="2020-01-01", period_end="2020-12-31"),
+            MagnitudeFilter(
+                period_start=datetime.datetime(2020, 1, 1),
+                period_end=datetime.datetime(2020, 12, 31),
+            ),
         )
         assert isinstance(result, Magnitudes)
 
@@ -216,11 +223,13 @@ class TestRateShape:
 
     def test_session_isinstance(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_sessions=True))
+        assert result.sessions is not None
         assert len(result.sessions) > 0
         assert all(isinstance(s, Session) for s in result.sessions)
 
     def test_include_magnitudes_returns_full_observations(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_magnitudes=True))
+        assert result.magnitudes is not None
         assert len(result.magnitudes) > 0
         assert all(isinstance(m, Magnitude) for m in result.magnitudes)
 
@@ -228,6 +237,7 @@ class TestRateShape:
         result = RateService(observation_db).query(
             RateFilter(include_magnitudes=True, include_magnitude_details=True)
         )
+        assert result.magnitude_details is not None
         assert len(result.magnitude_details) > 0
         assert all(isinstance(d, MagnitudeDetail) for d in result.magnitude_details)
 
@@ -242,6 +252,7 @@ class TestMagnitudeShape:
         result = MagnitudeService(observation_db).query(
             MagnitudeFilter(include_sessions=True)
         )
+        assert result.sessions is not None
         assert len(result.sessions) > 0
         assert all(isinstance(s, Session) for s in result.sessions)
 
@@ -249,6 +260,7 @@ class TestMagnitudeShape:
         result = MagnitudeService(observation_db).query(
             MagnitudeFilter(include_magnitude_details=True)
         )
+        assert result.magnitude_details is not None
         assert len(result.magnitude_details) > 0
         assert all(isinstance(d, MagnitudeDetail) for d in result.magnitude_details)
 
@@ -256,6 +268,7 @@ class TestMagnitudeShape:
 class TestSessionFields:
     def test_numeric_geo_fields_are_float(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_sessions=True))
+        assert result.sessions is not None
         session = result.sessions[0]
         assert isinstance(session.longitude, float)
         assert isinstance(session.latitude, float)
@@ -263,6 +276,7 @@ class TestSessionFields:
 
     def test_string_location_fields(self, observation_db):
         result = RateService(observation_db).query(RateFilter(include_sessions=True))
+        assert result.sessions is not None
         session = result.sessions[0]
         assert isinstance(session.country, str)
         assert isinstance(session.location_name, str)
@@ -359,6 +373,7 @@ class TestMagnitudeDetailFields:
         result = RateService(observation_db).query(
             RateFilter(include_magnitudes=True, include_magnitude_details=True)
         )
+        assert result.magnitude_details is not None
         detail = result.magnitude_details[0]
         assert isinstance(detail.magn, int)
 
@@ -366,6 +381,7 @@ class TestMagnitudeDetailFields:
         result = RateService(observation_db).query(
             RateFilter(include_magnitudes=True, include_magnitude_details=True)
         )
+        assert result.magnitude_details is not None
         detail = result.magnitude_details[0]
         assert isinstance(detail.freq, float)
 
@@ -451,6 +467,8 @@ class TestPaginatedIncludes:
                 include_magnitude_details=True,
             )
         )
+        assert result.magnitudes is not None
+        assert result.magnitude_details is not None
         assert [r.id for r in result.observations] == [1]
         assert sorted(m.id for m in result.magnitudes) == [1]
         assert sorted(d.magn for d in result.magnitude_details) == [3, 4]
@@ -465,6 +483,8 @@ class TestPaginatedIncludes:
                 include_magnitude_details=True,
             )
         )
+        assert result.magnitudes is not None
+        assert result.magnitude_details is not None
         assert [r.id for r in result.observations] == [2]
         assert sorted(m.id for m in result.magnitudes) == [2]
         assert sorted(d.magn for d in result.magnitude_details) == [2]
@@ -474,6 +494,7 @@ class TestPaginatedIncludes:
         result = MagnitudeService(observation_db).query(
             MagnitudeFilter(limit=1, include_magnitude_details=True)
         )
+        assert result.magnitude_details is not None
         assert [m.id for m in result.observations] == [1]
         assert sorted(d.magn for d in result.magnitude_details) == [3, 4]
 
@@ -486,6 +507,8 @@ class TestPaginatedIncludes:
                 include_magnitude_details=True,
             )
         )
+        assert result.magnitudes is not None
+        assert result.magnitude_details is not None
         assert [r.shower for r in result.observations] == ["PER"]
         assert [m.shower for m in result.magnitudes] == ["PER"]
         assert sorted(d.magn for d in result.magnitude_details) == [3, 4]
@@ -577,13 +600,19 @@ class TestSessionService:
 
     def test_query_period_filter_includes_matching(self, observation_db):
         result = SessionService(observation_db).query(
-            SessionFilter(period_start="2023-01-01", period_end="2023-12-31")
+            SessionFilter(
+                period_start=datetime.datetime(2023, 1, 1),
+                period_end=datetime.datetime(2023, 12, 31),
+            )
         )
         assert len(result.sessions) == 1
 
     def test_query_period_filter_excludes_outside(self, observation_db):
         result = SessionService(observation_db).query(
-            SessionFilter(period_start="2030-01-01", period_end="2030-12-31")
+            SessionFilter(
+                period_start=datetime.datetime(2030, 1, 1),
+                period_end=datetime.datetime(2030, 12, 31),
+            )
         )
         assert result.sessions == []
 
@@ -842,7 +871,8 @@ class TestStatsService:
 
     def test_by_shower_period_filter(self, observation_db):
         result = StatsService(observation_db).by_shower(
-            period_start="2023-08-01", period_end="2023-09-30"
+            period_start=datetime.datetime(2023, 8, 1),
+            period_end=datetime.datetime(2023, 9, 30),
         )
         codes = {r.shower for r in result}
         assert codes == {"PER"}
@@ -873,7 +903,8 @@ class TestStatsService:
     def test_by_year_period_filter(self, observation_db):
         _insert_extra_year_data(observation_db)
         result = StatsService(observation_db).by_year(
-            period_start="2024-01-01", period_end="2024-12-31"
+            period_start=datetime.datetime(2024, 1, 1),
+            period_end=datetime.datetime(2024, 12, 31),
         )
         assert {r.year for r in result} == {2024}
 

@@ -26,5 +26,8 @@ jobs:
           poetry run ruff check .
           poetry run ruff format --check .
 
+      - name: Type-check with pyright
+        run: poetry run pyright
+
       - name: Run tests
         run: poetry run pytest --tb=short

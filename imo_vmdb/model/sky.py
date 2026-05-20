@@ -19,7 +19,7 @@ class Sphere:
         and ``r`` are derived from it.
     """
 
-    def __init__(self, lng=None, lat=None, r=1.0, c=None):
+    def __init__(self, lng=0.0, lat=0.0, r=1.0, c=None):
         if c is None:
             self.r = r
             self.lng = lng if lng > 0.0 else lng + 2 * math.pi
@@ -47,7 +47,7 @@ class Location(Sphere):
     :param lat: Geographic latitude in radians (north positive).
     """
 
-    def __init__(self, lng=None, lat=None):
+    def __init__(self, lng=0.0, lat=0.0):
         super().__init__(lng, lat)
 
 
@@ -64,7 +64,7 @@ class Cartesian:
         are ignored.
     """
 
-    def __init__(self, x=None, y=None, z=None, s=None):
+    def __init__(self, x=0.0, y=0.0, z=0.0, s=None):
         if s is None:
             self.x = x
             self.y = y
@@ -235,7 +235,7 @@ class Sky:
         :return: Local mean sidereal time in radians.
         """
         at = AstropyTime(t, format="datetime", scale="utc")
-        return at.sidereal_time("mean", longitude=loc.lng * u.rad).rad
+        return at.sidereal_time("mean", longitude=loc.lng * u.rad).rad  # type: ignore[attr-defined]
 
     @classmethod
     def alt_az(cls, s, t, loc):

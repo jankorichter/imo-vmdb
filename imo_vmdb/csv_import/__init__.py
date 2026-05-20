@@ -32,7 +32,7 @@ class CsvParser:
         self._do_delete = do_delete
         self._is_permissive = is_permissive
         self._try_repair = try_repair
-        self.column_names = ()
+        self.column_names: tuple[str, ...] = ()
         self.has_errors = False
 
     @classmethod

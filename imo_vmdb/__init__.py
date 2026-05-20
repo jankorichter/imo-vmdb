@@ -1,6 +1,7 @@
 import csv
 import logging
 import os
+from collections.abc import Sequence
 from pathlib import Path
 
 from imo_vmdb.csv_import.magnitudes import MagnitudesParser
@@ -132,7 +133,7 @@ class CSVImporter:
         self.counter_write = 0
         self.has_errors = False
 
-    def run(self, file_list: list[str]) -> None:
+    def run(self, file_list: Sequence[str]) -> None:
         """
         Import CSV files specified in the files_list into the database.
 
@@ -219,6 +220,7 @@ class CSVImporter:
                 continue
 
             self.counter_read += 1
+            assert csv_parser is not None
             if csv_parser.parse_row(row, cur):
                 self.counter_write += 1
 

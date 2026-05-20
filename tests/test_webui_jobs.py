@@ -9,7 +9,9 @@ class TestJobManager:
     def _wait_for_job(self, jm, job_id, timeout=10.0):
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            if not jm.get_status(job_id)["running"]:
+            status = jm.get_status(job_id)
+            assert status is not None
+            if not status["running"]:
                 return
             time.sleep(0.2)
         raise TimeoutError(f"Job {job_id} did not finish within {timeout}s")
@@ -23,7 +25,9 @@ class TestJobManager:
     def test_get_status_returns_dict_with_expected_keys(self, db_conn_factory):
         jm = JobManager()
         job_id = jm.start_initdb(db_conn_factory)
+        assert job_id is not None
         status = jm.get_status(job_id)
+        assert status is not None
         assert "running" in status
         assert "exit_code" in status
         self._wait_for_job(jm, job_id)
@@ -47,13 +51,19 @@ class TestJobManager:
     def test_initdb_completes_with_exit_code_zero(self, db_conn_factory):
         jm = JobManager()
         job_id = jm.start_initdb(db_conn_factory)
+        assert job_id is not None
         self._wait_for_job(jm, job_id)
-        assert jm.get_status(job_id)["exit_code"] == 0
+        status = jm.get_status(job_id)
+        assert status is not None
+        assert status["exit_code"] == 0
 
     def test_iter_logs_yields_strings(self, db_conn_factory):
         jm = JobManager()
         job_id = jm.start_initdb(db_conn_factory)
-        lines = list(jm.iter_logs(job_id))
+        assert job_id is not None
+        logs = jm.iter_logs(job_id)
+        assert logs is not None
+        lines = list(logs)
         assert len(lines) > 0
         assert all(isinstance(line, str) for line in lines)
 
@@ -68,7 +78,9 @@ class TestJobManager:
         job_id = jm.start_export(db_conn_factory, "shower", out)
         assert job_id is not None
         self._wait_for_job(jm, job_id)
-        assert jm.get_status(job_id)["exit_code"] == 0
+        status = jm.get_status(job_id)
+        assert status is not None
+        assert status["exit_code"] == 0
         assert os.path.isfile(out)
         content = open(out).read()
         assert "iau_code" in content

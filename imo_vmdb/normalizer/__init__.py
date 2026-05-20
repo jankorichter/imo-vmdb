@@ -28,7 +28,8 @@ class BaseRecord:
         self.observer_id = record["observer_id"]
         self.session_observer_id = record["session_observer_id"]
         self.loc = EarthLocation(
-            lat=record["latitude"] * u.deg, lon=record["longitude"] * u.deg
+            lat=record["latitude"] * u.deg,  # type: ignore[attr-defined]
+            lon=record["longitude"] * u.deg,  # type: ignore[attr-defined]
         )
 
         if isinstance(record["start"], datetime):

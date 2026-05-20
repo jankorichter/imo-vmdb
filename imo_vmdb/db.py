@@ -3,6 +3,7 @@ import importlib
 import re
 import sqlite3
 import warnings
+from collections.abc import Mapping
 from typing import Any
 
 # Replace the Python 3.12-deprecated default sqlite3 adapter / converter
@@ -103,20 +104,20 @@ class DBAdapter:
         *imo-vmdb* configuration file.
     """
 
-    def __init__(self, config: dict[str, str]) -> None:
+    def __init__(self, config: Mapping[str, Any]) -> None:
         # Accept any mapping (including `configparser.SectionProxy`, which
         # rejects non-string values on Python 3.14+ when we add
         # `detect_types` below).  Copying also avoids mutating the
         # caller's configuration object.
-        config = dict(config)
-        self.db_module = config.pop("module", "sqlite3")
+        kwargs: dict[str, Any] = dict(config)
+        self.db_module = kwargs.pop("module", "sqlite3")
         db = importlib.import_module(self.db_module)
         if "sqlite3" == self.db_module:
             # PARSE_DECLTYPES triggers the registered "timestamp" converter
             # so `period_start` / `period_end` reads come back as
             # `datetime.datetime`, matching the PostgreSQL / MySQL drivers.
-            config.setdefault("detect_types", sqlite3.PARSE_DECLTYPES)
-        self.conn = db.connect(**config)
+            kwargs.setdefault("detect_types", sqlite3.PARSE_DECLTYPES)
+        self.conn = db.connect(**kwargs)
         if "sqlite3" == self.db_module:
             self.conn.execute("PRAGMA foreign_keys = ON")
 

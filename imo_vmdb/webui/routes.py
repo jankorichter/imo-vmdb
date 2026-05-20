@@ -84,7 +84,7 @@ def _export_table_route(table, filename, reimport=False):
     :return: CSV download response, or a JSON error response with status 503.
     """
     db_conn, err = _get_db()
-    if err:
+    if db_conn is None:
         return jsonify({"error": err}), 503
     try:
         cols, rows = export_table(db_conn, table, reimport=reimport)

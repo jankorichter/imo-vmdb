@@ -1,13 +1,16 @@
-.PHONY: build docs lint review test
+.PHONY: build docs lint review test typecheck
 
 build: review
 	poetry build
 
-review: lint test docs
+review: lint typecheck test docs
 
 lint:
 	poetry run ruff check .
 	poetry run ruff format --check .
+
+typecheck:
+	poetry run pyright
 
 test:
 	poetry run pytest
