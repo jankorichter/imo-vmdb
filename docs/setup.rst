@@ -10,10 +10,10 @@ store the data.
 
 There are two ways to run *imo-vmdb*:
 
-* **Docker** — no Python installation required; runs as a web application in
-  your browser.  Recommended for most users.
-* **Python** — install directly and use the command-line interface.  Suited
-  for developers and scripted workflows.
+* **Python** — install with pipx or pip and use the command-line interface.
+  Recommended for most users.
+* **Docker** — no Python installation required; suited for server deployments
+  or environments without a Python installation.
 
 Both options require choosing a database.  Read the next section first, then
 follow the path that fits your setup.
@@ -23,7 +23,7 @@ follow the path that fits your setup.
 Database
 --------
 
-*imo-vmdb* supports three database systems. For most users, **SQLite** is
+*imo-vmdb* supports three database systems.  For most users, **SQLite** is
 the right choice.
 
 SQLite (recommended)
@@ -48,6 +48,167 @@ connections.  They make sense when:
 
 If you are unsure, use SQLite.
 
+
+.. _python:
+
+Python
+------
+
+If you already have Python 3.10 or newer installed, *imo-vmdb* can be
+installed in two ways: with **pipx** as a global command-line tool, or into
+a **virtual environment** with pip for use as a Python library.
+
+
+pipx
+****
+
+`pipx <https://pipx.pypa.io/>`_ installs Python applications into their own
+isolated environments and exposes their entry points as global commands — no
+virtual environment to activate manually.  This is the recommended way to
+install *imo-vmdb* as a command-line tool.
+
+Install pipx itself once (see the link above), then::
+
+    pipx install imo-vmdb
+
+The ``imo-vmdb`` command is now available globally.  Verify the
+installation::
+
+    imo-vmdb --help
+
+For SQLite, no configuration file is required.  Point *imo-vmdb* at a
+file path via the ``IMO_VMDB_DATABASE_DATABASE`` environment variable —
+the database file is created on first use.  Set the variable once for
+the current shell session, then run the commands.
+
+macOS / Linux (bash, zsh)::
+
+    export IMO_VMDB_DATABASE_DATABASE=/path/to/vmdb.db
+
+    imo-vmdb initdb
+    imo-vmdb import_csv observations-2024.csv
+    imo-vmdb normalize
+    imo-vmdb web_server   # REST API at /api/v1; Web UI optional via --enable-webui
+
+Windows PowerShell::
+
+    $env:IMO_VMDB_DATABASE_DATABASE = "C:\Users\YourName\vmdb.db"
+
+    imo-vmdb initdb
+    imo-vmdb import_csv observations-2024.csv
+    imo-vmdb normalize
+    imo-vmdb web_server
+
+Windows Command Prompt (``cmd.exe``)::
+
+    set IMO_VMDB_DATABASE_DATABASE=C:\Users\YourName\vmdb.db
+
+    imo-vmdb initdb
+    imo-vmdb import_csv observations-2024.csv
+    imo-vmdb normalize
+    imo-vmdb web_server
+
+For the full list of supported variables see
+`All Environment Variables`_ below.
+
+
+Virtual environment (pip)
+*************************
+
+A virtual environment is well suited when you want to use *imo-vmdb* as a
+Python library in your own scripts, or when you need to manage it alongside
+other packages in a project.
+
+A virtual environment keeps *imo-vmdb* isolated from other Python packages
+on your system::
+
+    python -m venv .venv
+    source .venv/bin/activate   # Windows: .venv\Scripts\activate
+    pip install imo-vmdb
+
+Activate the environment with ``source .venv/bin/activate`` each time you
+open a new terminal before running *imo-vmdb*.
+
+Verify the installation::
+
+    imo-vmdb --help
+
+A short help text listing the available commands should appear.
+
+
+PostgreSQL and MySQL
+********************
+
+For PostgreSQL or MySQL (see `Database`_ above), install the required driver.
+
+With pipx::
+
+    pipx install "imo-vmdb[pgsql]"   # PostgreSQL
+    pipx install "imo-vmdb[mysql]"   # MySQL
+
+In a virtual environment::
+
+    pip install "imo-vmdb[pgsql]"   # PostgreSQL
+    pip install "imo-vmdb[mysql]"   # MySQL
+
+PostgreSQL and MySQL need more parameters than fit comfortably on a
+command line.  Use a configuration file (see below) and pass it with
+``-c config.ini``.
+
+Configuration file
+******************
+
+A configuration file is the recommended way to manage **PostgreSQL** or
+**MySQL** connections, multi-section logging, or any setup more complex
+than a single SQLite path.  *imo-vmdb* reads database and logging
+settings from an INI file passed with ``-c config.ini``::
+
+    imo-vmdb initdb -c config.ini
+
+Settings from the file take precedence over environment variables, and
+both can be combined.
+
+Minimal SQLite configuration (alternative to the environment variable
+shown above)::
+
+    [database]
+    database = /path/to/database/file.db
+
+On Windows::
+
+    [database]
+    database = C:\Users\YourName\vmdb\database.db
+
+Minimal PostgreSQL configuration::
+
+    [database]
+    module = psycopg2
+    database = vmdb
+    user = vmdb
+
+Minimal MySQL configuration::
+
+    [database]
+    module = pymysql
+    database = vmdb
+    user = vmdb
+    sql_mode = ANSI
+    init_command = SET innodb_lock_wait_timeout=3600
+
+Logging
+*******
+
+By default, status messages are printed to the screen.  To write to a file
+instead::
+
+    [logging]
+    level = INFO
+    file = /path/to/logfile.log
+
+``level`` controls verbosity (least to most): ``CRITICAL``, ``ERROR``,
+``WARNING``, ``INFO``.
+
+----
 
 .. _docker:
 
@@ -155,158 +316,9 @@ environment variables.  If a file is provided it takes precedence::
         -v /your/local/data:/data \
         ghcr.io/jankorichter/imo-vmdb initdb -c /data/config.ini
 
-See the `Python`_ section below for the configuration file format.
+See the `Python`_ section above for the configuration file format.
 
 ----
-
-Python
-------
-
-If you already have Python 3.10 or newer installed, *imo-vmdb* can be
-installed in two equally supported ways: into a **virtual environment**
-with ``pip``, or globally for the current user with **pipx**.  Both work
-identically on macOS, Linux, and Windows.
-
-
-**Virtual environment**
-
-A virtual environment keeps *imo-vmdb* isolated from other Python packages
-on your system::
-
-    python -m venv .venv
-    source .venv/bin/activate   # Windows: .venv\Scripts\activate
-    pip install imo-vmdb
-
-Activate the environment with ``source .venv/bin/activate`` each time you
-open a new terminal before running *imo-vmdb*.
-
-Verify the installation::
-
-    imo-vmdb
-
-A short help text listing the available commands should appear.
-
-**pipx**
-
-`pipx <https://pipx.pypa.io/>`_ installs Python applications into their
-own isolated environments and exposes their entry points as global
-commands — no virtual environment to activate manually.  Install pipx
-itself once (see the link above), then::
-
-    pipx install imo-vmdb
-
-The ``imo-vmdb`` command is now available globally::
-
-    imo-vmdb --help
-
-Quick start with SQLite
-***********************
-
-For SQLite, no configuration file is required.  Point *imo-vmdb* at a
-file path via the ``IMO_VMDB_DATABASE_DATABASE`` environment variable —
-the database file is created on first use.  Set the variable once for
-the current shell session, then run the commands.
-
-macOS / Linux (bash, zsh)::
-
-    export IMO_VMDB_DATABASE_DATABASE=/path/to/vmdb.db
-
-    imo-vmdb initdb
-    imo-vmdb import_csv observations-2024.csv
-    imo-vmdb normalize
-    imo-vmdb web_server   # REST API at /api/v1; Web UI optional via --enable-webui
-
-Windows PowerShell::
-
-    $env:IMO_VMDB_DATABASE_DATABASE = "C:\Users\YourName\vmdb.db"
-
-    imo-vmdb initdb
-    imo-vmdb import_csv observations-2024.csv
-    imo-vmdb normalize
-    imo-vmdb web_server
-
-Windows Command Prompt (``cmd.exe``)::
-
-    set IMO_VMDB_DATABASE_DATABASE=C:\Users\YourName\vmdb.db
-
-    imo-vmdb initdb
-    imo-vmdb import_csv observations-2024.csv
-    imo-vmdb normalize
-    imo-vmdb web_server
-
-For the full list of supported variables see
-`All Environment Variables`_ above.
-
-**PostgreSQL and MySQL**
-
-For PostgreSQL or MySQL (see `Database`_ above), install the required driver.
-
-In a virtual environment::
-
-    pip install "imo-vmdb[pgsql]"   # PostgreSQL
-    pip install "imo-vmdb[mysql]"   # MySQL
-
-With pipx::
-
-    pipx install "imo-vmdb[pgsql]"   # PostgreSQL
-    pipx install "imo-vmdb[mysql]"   # MySQL
-
-PostgreSQL and MySQL need more parameters than fit comfortably on a
-command line.  Use a configuration file (see below) and pass it with
-``-c config.ini``.
-
-Configuration file
-******************
-
-A configuration file is the recommended way to manage **PostgreSQL** or
-**MySQL** connections, multi-section logging, or any setup more complex
-than a single SQLite path.  *imo-vmdb* reads database and logging
-settings from an INI file passed with ``-c config.ini``::
-
-    imo-vmdb initdb -c config.ini
-
-Settings from the file take precedence over environment variables, and
-both can be combined.
-
-Minimal SQLite configuration (alternative to the environment variable
-shown above)::
-
-    [database]
-    database = /path/to/database/file.db
-
-On Windows::
-
-    [database]
-    database = C:\Users\YourName\vmdb\database.db
-
-Minimal PostgreSQL configuration::
-
-    [database]
-    module = psycopg2
-    database = vmdb
-    user = vmdb
-
-Minimal MySQL configuration::
-
-    [database]
-    module = pymysql
-    database = vmdb
-    user = vmdb
-    sql_mode = ANSI
-    init_command = SET innodb_lock_wait_timeout=3600
-
-Logging
-*******
-
-By default, status messages are printed to the screen.  To write to a file
-instead::
-
-    [logging]
-    level = INFO
-    file = /path/to/logfile.log
-
-``level`` controls verbosity (least to most): ``CRITICAL``, ``ERROR``,
-``WARNING``, ``INFO``.
 
 Upgrading from earlier versions
 -------------------------------
