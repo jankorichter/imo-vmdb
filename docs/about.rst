@@ -50,14 +50,11 @@ Normalised data can be accessed in three ways:
   solar longitude, and more; see :ref:`rest-api`.
 * **CSV export** — download tables directly from the web UI or CLI;
   see :ref:`csv-export`.
-* **Direct database access** — SQLite, PostgreSQL, or MySQL;
-  field reference at :ref:`fields`.
+* **SQLite export** — export the whole database to a single ``.sqlite`` file
+  for direct SQL access; see :ref:`db-export`.
 
 Getting started
 ---------------
 
-The fastest way to get started is the Docker image — no local Python
-installation required:
-
-* **Docker / Web UI**: see :ref:`setup`.
-* **Python / CLI**: see :ref:`setup`.
+* **Python (pipx)**: recommended for most users; see :ref:`setup`.
+* **Docker**: no Python required; see :ref:`setup`.

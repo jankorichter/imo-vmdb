@@ -205,7 +205,7 @@ documented in :ref:`fields`.
 .. _db-export:
 
 Exporting the whole database
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 The special target ``db`` writes the entire database (normalized
 observations and reference data, but not the raw ``imported_*`` tables)
@@ -215,6 +215,7 @@ into a single SQLite file::
 
 The resulting file uses the same schema as a regular imo-vmdb database.
 The recipient can use it directly as their own imo-vmdb database.
+The field names are documented in :ref:`fields`.
 
 When ``db`` is the target, ``-o`` is required and ``--reimport`` is not
 supported.

@@ -1,17 +1,23 @@
 Introduction
 ============
 
-*imo-vmdb* imports, normalizes, and enriches visual meteor observation data
-from the `Visual Meteor Database (VMDB) <https://www.imo.net/members/imo_vmdb/>`_.
-Enriched observations can be accessed via a REST API, CSV export, direct
-database connection, or the :ref:`Python API <api>` (``imo_vmdb``, ``imo_vmdb.server``).
+*imo-vmdb* is a bridge between raw IMO visual meteor observation data and the
+tools you use to analyse it.  It imports CSV files downloaded from the
+`IMO VMDB <https://www.imo.net/members/imo_vmdb/>`_, enriches each record with
+computed astronomical values (radiant positions, solar longitude, limiting
+magnitude corrections), and makes the results available via a REST API, a CSV
+export, or the :ref:`Python API <api>` (``imo_vmdb``).  The enriched data is
+particularly useful in analysis environments that have no built-in astronomical
+algorithms — for example the R package
+`vismeteor <https://CRAN.R-project.org/package=vismeteor>`_ on CRAN builds
+directly on this API.
 
-The tool can be used in two ways:
+*imo-vmdb* prepares and delivers data.  It is not an analysis tool itself.
 
-- **Docker**: run the web-based control panel
-  without any local Python installation — see :ref:`setup`.
-- **Python package**: install via pip and use the command-line interface —
-  see :ref:`setup`.
+Install and run in two ways — see :ref:`setup` for details:
+
+- **Python (pipx)**: recommended for most users; one command installs the CLI.
+- **Docker**: no Python required; suited for server deployments.
 
 .. toctree::
    :maxdepth: 2
