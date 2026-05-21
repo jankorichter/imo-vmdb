@@ -10,16 +10,16 @@ class SessionParser(CsvParser):
     before import.
     """
 
-    _required_columns = {
-        "session id",
-        "observer id",
-        "actual observer name",
-        "latitude",
-        "longitude",
-        "elevation",
-        "city",
-        "country",
-    }
+    _required_columns = (
+        ("id", "session_id", "session id"),
+        ("observer_id", "observer id"),
+        ("observer_name", "actual observer name"),
+        ("location_name", "city"),
+        ("latitude",),
+        ("longitude",),
+        ("elevation",),
+        ("country",),
+    )
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
@@ -67,15 +67,15 @@ class SessionParser(CsvParser):
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
-            session_id = self._parse_session_id(row["session id"])
+            session_id = self._parse_session_id(row["id"])
             lat = self._parse_latitude(row["latitude"], session_id)
             long = self._parse_longitude(row["longitude"], session_id)
             elevation = self._parse_elevation(row["elevation"], session_id)
-            observer_id = self._parse_observer_id(row["observer id"], session_id)
-            observer_name = self._parse_observer_name(
-                row["actual observer name"], session_id
+            observer_id = self._parse_observer_id(row["observer_id"], session_id)
+            observer_name = self._parse_observer_name(row["observer_name"], session_id)
+            location_name = self._parse_text(
+                row["location_name"], "location_name", session_id
             )
-            location_name = self._parse_text(row["city"], "city", session_id)
             country = self._parse_text(row["country"], "country", session_id)
         except ImportException as err:
             self._log_error(str(err))

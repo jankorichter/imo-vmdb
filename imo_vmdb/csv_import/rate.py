@@ -12,21 +12,21 @@ class RateParser(CsvParser):
     import.
     """
 
-    _required_columns = {
-        "rate id",
-        "user id",
-        "obs session id",
-        "start date",
-        "end date",
-        "ra",
-        "decl",
-        "teff",
-        "f",
-        "lm",
-        "shower",
-        "method",
-        "number",
-    }
+    _required_columns = (
+        ("id", "rate_id", "rate id"),
+        ("user_id", "user id"),
+        ("session_id", "obs session id"),
+        ("period_start", "start date"),
+        ("period_end", "end date"),
+        ("ra",),
+        ("dec", "decl"),
+        ("t_eff", "teff"),
+        ("f",),
+        ("lim_magn", "lm"),
+        ("shower",),
+        ("method",),
+        ("freq", "number"),
+    )
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
@@ -84,27 +84,27 @@ class RateParser(CsvParser):
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
-            rate_id = self._parse_rate_id(row["rate id"])
-            session_id = self._parse_session_id(row["obs session id"], rate_id)
+            rate_id = self._parse_rate_id(row["id"])
+            session_id = self._parse_session_id(row["session_id"], rate_id)
             observer_id = self._parse_observer_id(
-                row["user id"], row["user id"], session_id
+                row["user_id"], row["user_id"], session_id
             )
             shower = self._parse_shower(row["shower"])
             period_start = self._parse_date_time(
-                row["start date"], "start date", rate_id, session_id
+                row["period_start"], "period_start", rate_id, session_id
             )
             period_end = self._parse_date_time(
-                row["end date"], "end date", rate_id, session_id
+                row["period_end"], "period_end", rate_id, session_id
             )
             period_start, period_end = self._check_period(
                 period_start, period_end, timedelta(days=0.49), rate_id, session_id
             )
-            t_eff = self._parse_t_eff(row["teff"], rate_id, session_id)
+            t_eff = self._parse_t_eff(row["t_eff"], rate_id, session_id)
             f = self._parse_f(row["f"], rate_id, session_id)
-            freq = self._parse_freq(row["number"], rate_id, session_id)
-            lm = self._parse_lm(row["lm"], rate_id, session_id)
+            freq = self._parse_freq(row["freq"], rate_id, session_id)
+            lm = self._parse_lm(row["lim_magn"], rate_id, session_id)
             ra = self._parse_ra(row["ra"], rate_id, session_id)
-            dec = self._parse_dec(row["decl"], rate_id, session_id)
+            dec = self._parse_dec(row["dec"], rate_id, session_id)
             ra, dec = self._check_ra_dec(ra, dec, rate_id, session_id)
         except ImportException as err:
             self._log_error(str(err))

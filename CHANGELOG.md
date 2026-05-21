@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.1.0] — [unreleased]
+
+### Changed
+
+- **CSV import — consistent column names via aliases.**
+  `_required_columns` on every `CsvParser` subclass is now a list of
+  alias groups (`tuple[tuple[str, ...], ...]`).  The first name in each
+  group is the canonical name, matching the export column names and the
+  REST API; the remaining names are kept for backward compatibility with
+  the original IMO CSV files.  New protected classmethods
+  `_is_responsible()` and `_resolve_column_mapping()` handle group-based
+  header matching and canonical renaming.  If a CSV file supplies two
+  synonymous column names (e.g. both `session id` and `session_id`), the
+  import is rejected with a clear error message.
+- **Shower reimport export** (`--reimport`) now uses `dec` instead of
+  `de`; `de` remains accepted as an import alias, so old exported files
+  stay re-importable.
+
 ## [2.0.0] — 2026-05-19
 
 ### Added

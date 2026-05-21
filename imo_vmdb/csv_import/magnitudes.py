@@ -15,28 +15,28 @@ class MagnitudesParser(CsvParser):
     removed before import.
     """
 
-    _required_columns = {
-        "magnitude id",
-        "user id",
-        "obs session id",
-        "shower",
-        "start date",
-        "end date",
-        "mag n6",
-        "mag n5",
-        "mag n4",
-        "mag n3",
-        "mag n2",
-        "mag n1",
-        "mag 0",
-        "mag 1",
-        "mag 2",
-        "mag 3",
-        "mag 4",
-        "mag 5",
-        "mag 6",
-        "mag 7",
-    }
+    _required_columns = (
+        ("id", "magnitude_id", "magnitude id"),
+        ("user_id", "user id"),
+        ("session_id", "obs session id"),
+        ("shower",),
+        ("period_start", "start date"),
+        ("period_end", "end date"),
+        ("mag_n6", "mag n6"),
+        ("mag_n5", "mag n5"),
+        ("mag_n4", "mag n4"),
+        ("mag_n3", "mag n3"),
+        ("mag_n2", "mag n2"),
+        ("mag_n1", "mag n1"),
+        ("mag_0", "mag 0"),
+        ("mag_1", "mag 1"),
+        ("mag_2", "mag 2"),
+        ("mag_3", "mag 3"),
+        ("mag_4", "mag 4"),
+        ("mag_5", "mag 5"),
+        ("mag_6", "mag 6"),
+        ("mag_7", "mag 7"),
+    )
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
@@ -84,17 +84,17 @@ class MagnitudesParser(CsvParser):
         row = dict(zip(self.column_names, row, strict=False))
 
         try:
-            magn_id = self._parse_magn_id(row["magnitude id"])
-            session_id = self._parse_session_id(row["obs session id"], magn_id)
+            magn_id = self._parse_magn_id(row["id"])
+            session_id = self._parse_session_id(row["session_id"], magn_id)
             observer_id = self._parse_observer_id(
-                row["user id"], row["user id"], session_id
+                row["user_id"], row["user_id"], session_id
             )
             shower = self._parse_shower(row["shower"])
             period_start = self._parse_date_time(
-                row["start date"], "start date", magn_id, session_id
+                row["period_start"], "period_start", magn_id, session_id
             )
             period_end = self._parse_date_time(
-                row["end date"], "end date", magn_id, session_id
+                row["period_end"], "period_end", magn_id, session_id
             )
             period_start, period_end = self._check_period(
                 period_start, period_end, timedelta(days=0.49), magn_id, session_id
@@ -106,11 +106,11 @@ class MagnitudesParser(CsvParser):
         magn = {}
         try:
             for column in range(1, 7):
-                n = float(row["mag n" + str(column)])
+                n = float(row["mag_n" + str(column)])
                 magn[str(-column)] = n
 
             for column in range(0, 8):
-                n = float(row["mag " + str(column)])
+                n = float(row["mag_" + str(column)])
                 magn[str(column)] = n
         except ValueError:
             self._log_error(

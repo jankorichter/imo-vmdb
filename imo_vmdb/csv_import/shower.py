@@ -25,19 +25,19 @@ class ShowerParser(CsvParser):
         "Dec": 12,
     }
 
-    _required_columns = {
-        "id",
-        "iau_code",
-        "name",
-        "start",
-        "end",
-        "peak",
-        "ra",
-        "de",
-        "v",
-        "r",
-        "zhr",
-    }
+    _required_columns = (
+        ("id",),
+        ("iau_code",),
+        ("name",),
+        ("start",),
+        ("end",),
+        ("peak",),
+        ("ra",),
+        ("dec", "de"),
+        ("v",),
+        ("r",),
+        ("zhr",),
+    )
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)
@@ -99,7 +99,7 @@ class ShowerParser(CsvParser):
         try:
             iau_code = self._parse_iau_code(row["iau_code"])
             ra = self._parse_ra(row["ra"], iau_code)
-            dec = self._parse_dec(row["de"], iau_code)
+            dec = self._parse_dec(row["dec"], iau_code)
             v = self._parse_velocity(row["v"], iau_code)
             r = self._parse_r_value(row["r"], iau_code)
             peak = self._create_date(row["peak"], "peak", iau_code)

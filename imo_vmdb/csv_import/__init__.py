@@ -22,7 +22,7 @@ class CsvParser:
         raise :class:`ImportException`.
     """
 
-    _required_columns = {"MFpm+zb9fU7GUP9A"}
+    _required_columns: tuple[tuple[str, ...], ...] = (("MFpm+zb9fU7GUP9A",),)
 
     def __init__(
         self, db_conn, logger, do_delete=False, try_repair=False, is_permissive=False
@@ -36,13 +36,44 @@ class CsvParser:
         self.has_errors = False
 
     @classmethod
-    def is_responsible(cls, column_names):
+    def _is_responsible(cls, column_names: list[str]) -> bool:
         """Return ``True`` if this parser handles the given CSV column set.
 
         :param column_names: List of lowercased column header strings.
-        :return: ``True`` when :attr:`_required_columns` is a subset of *column_names*.
+        :return: ``True`` when every alias group in :attr:`_required_columns` has at
+            least one representative in *column_names*.
         """
-        return cls._required_columns.issubset(set(column_names))
+        col_set = set(column_names)
+        return all(
+            any(alias in col_set for alias in aliases)
+            for aliases in cls._required_columns
+        )
+
+    @classmethod
+    def _resolve_column_mapping(cls, column_names: list[str]) -> tuple[str, ...]:
+        """Return canonical column names in the same order as *column_names*.
+
+        For each column in *column_names*, if it belongs to an alias group the
+        first name of that group (the canonical name) is substituted; all other
+        columns are left unchanged.
+
+        :param column_names: Lowercased CSV header strings.
+        :return: Tuple of column names with aliases replaced by their canonical form.
+        :raises ImportException: When two names from the same alias group both appear
+            in *column_names*.
+        """
+        col_set = set(column_names)
+        alias_to_canonical: dict[str, str] = {}
+        for aliases in cls._required_columns:
+            found = [a for a in aliases if a in col_set]
+            if len(found) > 1:
+                raise ImportException(
+                    f"Columns {found[0]!r} and {found[1]!r} are synonymous; "
+                    "only one of them may be present."
+                )
+            if found:
+                alias_to_canonical[found[0]] = aliases[0]
+        return tuple(alias_to_canonical.get(name, name) for name in column_names)
 
     def on_start(self, cur):
         """Called once before the first row is processed (e.g. to truncate the table).

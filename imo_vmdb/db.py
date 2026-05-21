@@ -557,8 +557,7 @@ def export_db(src_db_conn: DBAdapter, dst_conn: sqlite3.Connection) -> None:
 def _export_shower_reimport(db_conn: DBAdapter) -> tuple[list[str], list[tuple]]:
     """Export the ``shower`` table in a format compatible with :class:`CSVImporter`.
 
-    Converts start/end/peak month–day pairs into ``'Mon DD'`` strings and
-    renames the ``dec`` column to ``de`` to match the import CSV schema.
+    Converts start/end/peak month–day pairs into ``'Mon DD'`` strings.
 
     :param db_conn: Open :class:`DBAdapter` connection.
     :return: Tuple ``(column_names, rows)`` ready for CSV serialisation.
@@ -577,7 +576,7 @@ def _export_shower_reimport(db_conn: DBAdapter) -> tuple[list[str], list[tuple]]
         "end",
         "peak",
         "ra",
-        "de",
+        "dec",
         "v",
         "r",
         "zhr",

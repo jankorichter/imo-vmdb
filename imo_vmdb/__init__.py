@@ -4,6 +4,7 @@ import os
 from collections.abc import Sequence
 from pathlib import Path
 
+from imo_vmdb.csv_import import ImportException
 from imo_vmdb.csv_import.magnitudes import MagnitudesParser
 from imo_vmdb.csv_import.radiant import RadiantParser
 from imo_vmdb.csv_import.rate import RateParser
@@ -85,6 +86,10 @@ class CSVFileException(Exception):
 
 
 class CSVParserException(Exception):
+    pass
+
+
+class CSVColumnConflictException(Exception):
     pass
 
 
@@ -172,6 +177,9 @@ class CSVImporter:
             except CSVParserException:
                 self._log_critical("File %s is an unknown CSV file." % file_path)
                 continue
+            except CSVColumnConflictException as e:
+                self._log_critical(str(e))
+                continue
 
             logger.info("Parsing of file %s has finished." % file_path)
 
@@ -243,19 +251,24 @@ class CSVImporter:
         column_names = [r.lower() for r in row]
         found_parser_cls = None
         for csv_parser_cls in self.csv_parser:
-            if csv_parser_cls.is_responsible(column_names):
+            if csv_parser_cls._is_responsible(column_names):
                 found_parser_cls = csv_parser_cls
                 break
 
         if found_parser_cls is None:
             return None
 
+        try:
+            canonical_names = found_parser_cls._resolve_column_mapping(column_names)
+        except ImportException as e:
+            raise CSVColumnConflictException(str(e))
+
         for csv_parser in self._active_parsers:
             if isinstance(csv_parser, found_parser_cls):
                 return csv_parser
 
         csv_parser = found_parser_cls(*args, **kwargs)
-        csv_parser.column_names = column_names
+        csv_parser.column_names = canonical_names
 
         return csv_parser
 

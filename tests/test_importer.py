@@ -63,3 +63,26 @@ class TestCSVImporter:
         )
         assert not importer.has_errors
         assert importer.counter_write == 4
+
+    def test_import_sessions_canonical(self, seeded_db):
+        importer = CSVImporter(seeded_db, logger)
+        importer.run([str(FIXTURES / "sessions_canonical.csv")])
+        assert not importer.has_errors
+        assert importer.counter_write == 2
+
+    def test_import_rates_canonical(self, seeded_db):
+        importer = CSVImporter(seeded_db, logger)
+        importer.run([str(FIXTURES / "rates_canonical.csv")])
+        assert not importer.has_errors
+        assert importer.counter_write == 2
+
+    def test_import_magnitudes_canonical(self, seeded_db):
+        importer = CSVImporter(seeded_db, logger)
+        importer.run([str(FIXTURES / "magnitudes_canonical.csv")])
+        assert not importer.has_errors
+        assert importer.counter_write >= 1
+
+    def test_duplicate_column_sets_error(self, seeded_db):
+        importer = CSVImporter(seeded_db, logger)
+        importer.run([str(FIXTURES / "sessions_duplicate_column.csv")])
+        assert importer.has_errors

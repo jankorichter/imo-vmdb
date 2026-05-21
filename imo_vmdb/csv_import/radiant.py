@@ -9,7 +9,13 @@ class RadiantParser(CsvParser):
     existing radiant rows are removed before import.
     """
 
-    _required_columns = {"shower", "ra", "dec", "day", "month"}
+    _required_columns = (
+        ("shower",),
+        ("ra",),
+        ("dec",),
+        ("day",),
+        ("month",),
+    )
 
     def __init__(self, *args, **kwars):
         super().__init__(*args, **kwars)

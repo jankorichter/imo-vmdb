@@ -50,7 +50,7 @@ class TestExportTableReimport:
             "end",
             "peak",
             "ra",
-            "de",
+            "dec",
             "v",
             "r",
             "zhr",
@@ -76,7 +76,7 @@ class TestExportTableReimport:
             "end_day",
             "peak_month",
             "peak_day",
-            "dec",
+            "de",
         ):
             assert col not in cols
 

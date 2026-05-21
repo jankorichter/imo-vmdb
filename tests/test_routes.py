@@ -60,7 +60,7 @@ class TestExport:
             "end",
             "peak",
             "ra",
-            "de",
+            "dec",
             "v",
             "r",
             "zhr",
