@@ -69,6 +69,12 @@ class DBException(Exception):
     """Raised when a database operation fails."""
 
 
+def _to_sqlite_dialect(stmt: str) -> str:
+    """Rewrite ``%(name)s`` placeholders to SQLite ``:name`` form."""
+    stmt = stmt.replace(" %% ", " % ")
+    return re.sub(r"%\(([^)]*)\)s", r":\1", stmt)
+
+
 class DBAdapter:
     """Lightweight database connection adapter supporting SQLite, PostgreSQL, and MySQL.
 
@@ -132,6 +138,10 @@ class DBAdapter:
         """Commit the current transaction."""
         self.conn.commit()
 
+    def rollback(self) -> None:
+        """Roll back the current transaction."""
+        self.conn.rollback()
+
     def close(self) -> None:
         """Close the database connection."""
         self.conn.close()
@@ -162,11 +172,20 @@ class DBAdapter:
         :param stmt: SQL statement using ``%(name)s``-style named placeholders.
         :return: Dialect-adjusted SQL statement.
         """
-        if "sqlite3" == self.db_module:
-            stmt = stmt.replace(" %% ", " % ")
-            return re.sub("%\\(([^)]*)\\)s", ":\\1", stmt)
+        return _to_sqlite_dialect(stmt) if self.db_module == "sqlite3" else stmt
 
-        return stmt
+    @staticmethod
+    def _convert_stmt_for_cursor(stmt: str, cur) -> str:
+        """Convert *stmt* to the dialect required by *cur*'s underlying driver.
+
+        Counterpart to :meth:`_convert_stmt` for callers that hold only a
+        cursor (not a :class:`DBAdapter` instance).
+
+        :param stmt: SQL statement using ``%(name)s``-style named placeholders.
+        :param cur: An open DB-API 2.0 cursor.
+        :return: Dialect-adjusted SQL statement.
+        """
+        return _to_sqlite_dialect(stmt) if isinstance(cur, sqlite3.Cursor) else stmt
 
     def _year_expr(self, col: str) -> str:
         """Return a SQL fragment that extracts the year from a timestamp column.

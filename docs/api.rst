@@ -72,6 +72,71 @@ excluded.
 .. autoclass:: imo_vmdb.CSVImporter
    :members:
 
+Importing data
+~~~~~~~~~~~~~~
+
+:class:`~imo_vmdb.SessionImporter` is a programmatic alternative to CSV files
+when you need to persist a complete observation session (with its rates and
+magnitudes) directly from Python.  The caller controls the transaction:
+
+.. code-block:: python
+
+   from datetime import datetime
+   import imo_vmdb
+
+   db = imo_vmdb.DBAdapter({"database": "/path/to/vmdb.db"})
+
+   session = imo_vmdb.SessionImport(
+       id=12345,
+       latitude=52.0,
+       longitude=13.4,
+       country="DE",
+       location_name="Berlin",
+       rates=(
+           imo_vmdb.RateImport(
+               id=700001,
+               session_id=12345,
+               shower="PER",
+               period_start=datetime(2025, 8, 12, 22, 0, 0),
+               period_end=datetime(2025, 8, 12, 23, 0, 0),
+               t_eff=1.0,
+               f=1.0,
+               lim_magn=6.2,
+               method="C",
+               freq=17,
+           ),
+       ),
+   )
+
+   cur = db.cursor()
+   imp = imo_vmdb.SessionImporter(cur)
+   try:
+       imp.upload(session)  # raises DuplicateSessionError if session already exists
+       db.commit()
+   except Exception:
+       db.rollback()
+       raise
+
+Use ``upload(..., replace=True)`` to overwrite an existing session, or
+:meth:`~imo_vmdb.SessionImporter.delete` to remove one.  Call
+:func:`~imo_vmdb.normalize` afterwards to make the data visible in the
+normalized tables (``obs_session``, ``rate``, ``magnitude``).  Log verbosity
+can be adjusted via ``logging.getLogger("imo_vmdb").setLevel(...)``.
+
+.. autoclass:: imo_vmdb.SessionImporter
+   :members:
+
+.. autoclass:: imo_vmdb.SessionImport
+   :members:
+
+.. autoclass:: imo_vmdb.RateImport
+   :members:
+
+.. autoclass:: imo_vmdb.MagnitudeImport
+   :members:
+
+.. autoexception:: imo_vmdb.DuplicateSessionError
+
 Service classes
 ---------------
 

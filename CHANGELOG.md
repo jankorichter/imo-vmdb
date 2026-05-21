@@ -2,6 +2,26 @@
 
 ## [2.1.0] — [unreleased]
 
+### Added
+
+- **`SessionImporter` — programmatic session upload.**
+  New public API for persisting a complete observation session (with rates
+  and magnitudes) from Python code, without generating CSV files.
+  - `SessionImport`, `RateImport`, `MagnitudeImport` — pure-container
+    dataclasses; no validation, caller is responsible for data quality.
+  - `SessionImporter(cur)` — facade that issues all INSERTs on a
+    caller-supplied cursor.  The caller owns the transaction:
+    `db.commit()` / `db.rollback()` are never called by the facade.
+    Multiple operations can be composed in a single transaction.
+  - `upload(session, replace=False)` — inserts session and children;
+    raises `DuplicateSessionError` if the session id already exists
+    (unless `replace=True`).
+  - `delete(session_id)` — removes a session and its rates and magnitudes;
+    returns `True` if the session existed, `False` otherwise.
+  - `DuplicateSessionError` — raised by `upload()` on id conflict.
+- **`DBAdapter.rollback()`** — rolls back the current transaction
+  (counterpart to the existing `commit()`).
+
 ### Changed
 
 - **CSV import — consistent column names via aliases.**

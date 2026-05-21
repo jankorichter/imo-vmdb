@@ -17,6 +17,13 @@ from imo_vmdb.db import (
     export_db,
     export_table,
 )
+from imo_vmdb.import_api import (
+    DuplicateSessionError,
+    MagnitudeImport,
+    RateImport,
+    SessionImport,
+    SessionImporter,
+)
 from imo_vmdb.model.radiant import Storage as RadiantStorage
 from imo_vmdb.model.shower import Storage as ShowerStorage
 from imo_vmdb.model.sky import Sky
@@ -53,18 +60,23 @@ __all__ = [
     "CountryStat",
     "DBAdapter",
     "DBException",
+    "DuplicateSessionError",
     "Magnitude",
     "MagnitudeDetail",
     "MagnitudeFilter",
+    "MagnitudeImport",
     "MagnitudeService",
     "Magnitudes",
     "Radiant",
     "Rate",
     "RateFilter",
+    "RateImport",
     "RateService",
     "Rates",
     "Session",
     "SessionFilter",
+    "SessionImport",
+    "SessionImporter",
     "SessionService",
     "Sessions",
     "Shower",
